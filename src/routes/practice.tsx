@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { CheckCircle2, Flame, RotateCcw, X } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { CheckCircle2, Flame, Plus, RotateCcw, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -42,6 +42,39 @@ export const Route = createFileRoute("/practice")({
 // ─── LocalStorage ────────────────────────────────────────────────────────────
 
 const SESSIONS_KEY = "range-rat:sessions";
+const ACTIVE_KEY   = "range-rat:active-session";
+
+interface ActiveSessionData {
+  session: SessionDrill[];
+  sessionInput: GenerateInput;
+  done: string[];
+}
+
+function loadActiveSession(): ActiveSessionData | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_KEY);
+    return raw ? (JSON.parse(raw) as ActiveSessionData) : null;
+  } catch { return null; }
+}
+
+function persistActiveSession(session: SessionDrill[], sessionInput: GenerateInput, done: Set<string>) {
+  try {
+    const remaining = session.length - done.size;
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify({
+      type: "practice",
+      route: "/practice",
+      label: "Practice",
+      subtitle: `${remaining} drill${remaining === 1 ? "" : "s"} left`,
+      session,
+      sessionInput,
+      done: Array.from(done),
+    }));
+  } catch {}
+}
+
+function clearActiveSession() {
+  try { localStorage.removeItem(ACTIVE_KEY); } catch {}
+}
 
 interface SavedSession {
   id: string;
@@ -80,9 +113,9 @@ function PracticePage() {
   const [time, setTime] = useState<TimeAvailable | null>(null);
   const [goal, setGoal] = useState<Goal | null>(null);
 
-  const [session, setSession] = useState<SessionDrill[] | null>(null);
-  const [sessionInput, setSessionInput] = useState<GenerateInput | null>(null);
-  const [done, setDone] = useState<Set<string>>(new Set());
+  const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);
+  const [sessionInput, setSessionInput] = useState<GenerateInput | null>(() => loadActiveSession()?.sessionInput ?? null);
+  const [done, setDone] = useState<Set<string>>(() => new Set(loadActiveSession()?.done ?? []));
   const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
 
   // Custom input state — optional overrides for bucket and time
@@ -101,6 +134,11 @@ function PracticePage() {
     const base = next.filter((g) => g !== "full-bag");
     setClubGroups(base.length === BASE_CLUB_GROUPS.length ? ["full-bag"] : base);
   };
+
+  // Persist active session whenever session/done changes
+  useEffect(() => {
+    if (session && sessionInput) persistActiveSession(session, sessionInput, done);
+  }, [session, sessionInput, done]);
 
   const hasValidBucket = bucket !== null || (showCustomBucket && customBalls !== null);
   const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
@@ -125,6 +163,7 @@ function PracticePage() {
   };
 
   const reset = () => {
+    clearActiveSession();
     setSession(null);
     setDone(new Set());
     setSessionInput(null);
@@ -133,6 +172,7 @@ function PracticePage() {
 
   const handleComplete = () => {
     if (!session || !sessionInput) return;
+    clearActiveSession();
     const record = saveSession(session, sessionInput);
     setCompletedRecord(record);
   };
@@ -171,10 +211,17 @@ function PracticePage() {
   return (
     <AppShell showBack>
       <div className="pb-32 space-y-7">
-        <div className="pt-2">
-          <h1 className="font-display text-3xl font-bold">Build your session</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Optional warm-up, then pick your filters and generate.
+        {/* Heading block */}
+        <div className="pt-2 pb-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Build · Step 1 of 1</p>
+          <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
+          <p className="mt-2.5 text-[13px] text-muted-foreground">
+            {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
+              showCustomBucket && customBalls ? `${customBalls} balls` :
+              bucket === "small" ? "25 balls" : bucket === "medium" ? "50 balls" : bucket === "large" ? "100 balls" : "— balls"
+            } · {
+              showCustomTime && customMins ? `${customMins} min` : time ? `${time} min` : "— min"
+            }
           </p>
         </div>
 
@@ -182,7 +229,7 @@ function PracticePage() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-primary" />
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
               Warm Up · Optional
             </p>
           </div>
@@ -196,10 +243,10 @@ function PracticePage() {
                   onClick={() => setWarmUp((curr) => (curr === p.value ? null : p.value))}
                   aria-pressed={active}
                   className={cn(
-                    "min-h-12 rounded-full px-4 text-sm font-semibold transition-colors border",
+                    "min-h-[52px] rounded-full px-4 text-sm font-semibold transition-colors border",
                     active
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground border-border active:bg-muted",
+                      : "bg-muted/60 text-foreground border-border active:bg-muted",
                   )}
                 >
                   {p.label} · {p.minutes} min
@@ -227,7 +274,7 @@ function PracticePage() {
                 type="button"
                 onClick={() => setClubGroups([])}
                 aria-pressed
-                className="w-full min-h-12 rounded-full border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors active:opacity-90"
+                className="w-full min-h-[52px] rounded-full border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors active:opacity-90"
               >
                 Full Bag
               </button>
@@ -248,10 +295,10 @@ function PracticePage() {
                       }
                       aria-pressed={active}
                       className={cn(
-                        "min-h-12 rounded-full border px-4 text-sm font-semibold transition-colors",
+                        "min-h-[52px] rounded-full border px-4 text-sm font-semibold transition-colors",
                         active
                           ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-card text-foreground active:bg-muted",
+                          : "border-border bg-muted/60 text-foreground active:bg-muted",
                       )}
                     >
                       {opt.label}
@@ -264,7 +311,7 @@ function PracticePage() {
                   type="button"
                   onClick={() => setClubGroups(["full-bag"])}
                   aria-pressed={false}
-                  className="flex-1 min-w-[8rem] min-h-12 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors active:bg-muted"
+                  className="flex-1 min-w-[8rem] min-h-[52px] rounded-full border border-border bg-muted/60 px-4 text-sm font-semibold text-foreground transition-colors active:bg-muted"
                 >
                   Full Bag
                 </button>
@@ -281,10 +328,8 @@ function PracticePage() {
 
         {/* Bucket size */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Bucket size
-          </p>
-          <div className="flex flex-wrap gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Bucket Size</p>
+          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, 1fr) auto" }}>
             {BUCKET_SIZES.map((b) => {
               const active = !showCustomBucket && bucket === b.value;
               return (
@@ -294,19 +339,20 @@ function PracticePage() {
                   onClick={() => { setBucket(b.value); setShowCustomBucket(false); setCustomBallsStr(""); }}
                   aria-pressed={active}
                   className={cn(
-                    "min-h-12 rounded-full border px-4 text-sm font-semibold transition-colors",
+                    "h-[76px] rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-colors",
                     active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground active:bg-muted",
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-foreground border-border"
                   )}
                 >
-                  {b.label} · {b.balls}
+                  <span className="font-display text-[28px] leading-none tracking-[-0.01em]">{b.label.charAt(0)}</span>
+                  <span className={cn("text-[11px] font-bold uppercase tracking-[0.12em]", active ? "opacity-80" : "opacity-60")}>{b.balls} BALLS</span>
                 </button>
               );
             })}
-
+            {/* Custom tile */}
             {showCustomBucket ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/5 px-3 py-2">
+              <div className="h-[76px] w-[76px] rounded-[14px] border border-primary/50 bg-primary/5 flex flex-col items-center justify-center gap-1 px-2">
                 <input
                   type="number"
                   value={customBallsStr}
@@ -315,13 +361,12 @@ function PracticePage() {
                   min={1}
                   max={500}
                   autoFocus
-                  className="w-14 bg-transparent text-sm font-bold text-primary outline-none"
+                  className="w-full bg-transparent text-sm font-bold text-primary outline-none text-center"
                 />
-                <span className="shrink-0 text-xs text-muted-foreground">balls</span>
                 <button
                   type="button"
                   onClick={() => { setShowCustomBucket(false); setCustomBallsStr(""); setBucket(null); }}
-                  className="ml-0.5 text-muted-foreground transition active:text-foreground"
+                  className="text-muted-foreground"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -330,8 +375,9 @@ function PracticePage() {
               <button
                 type="button"
                 onClick={() => { setShowCustomBucket(true); setBucket(null); }}
-                className="min-h-12 rounded-full border border-dashed border-border px-4 text-sm font-semibold text-muted-foreground transition-colors active:bg-muted"
+                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[12px] font-semibold tracking-[0.06em]"
               >
+                <Plus className="h-4 w-4" />
                 Custom
               </button>
             )}
@@ -353,10 +399,10 @@ function PracticePage() {
                   onClick={() => { setTime(t); setShowCustomTime(false); setCustomMinsStr(""); }}
                   aria-pressed={active}
                   className={cn(
-                    "min-h-12 rounded-full border px-4 text-sm font-semibold transition-colors",
+                    "min-h-[52px] rounded-full border px-4 text-sm font-semibold transition-colors",
                     active
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground active:bg-muted",
+                      : "border-border bg-muted/60 text-foreground active:bg-muted",
                   )}
                 >
                   {t} min
@@ -389,7 +435,7 @@ function PracticePage() {
               <button
                 type="button"
                 onClick={() => { setShowCustomTime(true); setTime(null); }}
-                className="min-h-12 rounded-full border border-dashed border-border px-4 text-sm font-semibold text-muted-foreground transition-colors active:bg-muted"
+                className="min-h-[52px] rounded-full border border-dashed border-border px-4 text-sm font-semibold text-muted-foreground transition-colors active:bg-muted"
               >
                 Custom
               </button>
@@ -398,16 +444,16 @@ function PracticePage() {
         </div>
         <SegmentedControl label="Goal" options={GOALS} value={goal} onChange={setGoal} />
 
-        <QuitGameButton />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto w-full max-w-md px-4 py-3">
+      <div className="fixed inset-x-0 z-40"
+           style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.97) 32%)", backdropFilter: "blur(8px)" }}>
+        <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
           <Button
             size="lg"
             disabled={!canGenerate}
             onClick={generate}
-            className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
+            className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em]"
           >
             Generate Session
           </Button>
@@ -445,18 +491,16 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   return (
     <AppShell showBack>
       <div className="pb-12">
-        <div className="flex items-baseline justify-between">
-          <h1 className="font-display text-3xl font-bold">Your session</h1>
-          <button
-            onClick={onReset}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground active:text-foreground"
-          >
-            <RotateCcw className="h-4 w-4" /> New
-          </button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your Session</p>
+            <h1 className="mt-1 font-display text-[36px] leading-[1.0] tracking-[-0.01em]">In progress.</h1>
+          </div>
+          <div className="text-right leading-none pb-1">
+            <span className="font-stats text-[48px] leading-none tabular-nums text-primary">{completedCount}</span>
+            <span className="font-stats text-[22px] leading-none tabular-nums text-muted-foreground">/{session.length}</span>
+          </div>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {completedCount} of {session.length} items complete
-        </p>
 
         <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
@@ -472,12 +516,15 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
               <section key={club}>
                 <h2
                   className={cn(
-                    "font-display text-xl font-bold uppercase tracking-tight flex items-center gap-2",
+                    "font-ui text-[12px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 pb-2 border-b border-border",
                     isWarmUp && "text-primary",
                   )}
                 >
-                  {isWarmUp ? <Flame className="h-5 w-5" /> : null}
+                  {isWarmUp ? <Flame className="h-4 w-4" /> : null}
                   {club}
+                  <span className="ml-auto font-stats text-[18px] text-muted-foreground tabular-nums">
+                    {drills.filter(d => done.has(d.id)).length}/{drills.length}
+                  </span>
                 </h2>
                 <ul className="mt-3 space-y-2">
                   {drills.map((d) => {
@@ -513,17 +560,13 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
                               ) : null}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline justify-between gap-2">
+                              <div className="flex items-center justify-between gap-2">
                                 <p className={cn("font-semibold", isDone && "line-through text-muted-foreground")}>
                                   {d.drillName}
                                 </p>
-                                <span
-                                  className={cn(
-                                    "shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-primary",
-                                    isDone && "opacity-50",
-                                  )}
-                                >
-                                  {d.balls} {d.unit ?? "balls"}
+                                <span className={cn("font-stats text-[17px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-primary")}>
+                                  {d.balls > 0 ? d.balls : d.unit ?? "—"}
+                                  {d.balls > 0 && <span className="text-[10px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>}
                                 </span>
                               </div>
                               <p className={cn("mt-1 text-sm text-muted-foreground", isDone && "line-through")}>
@@ -582,14 +625,14 @@ function CompletionView({
     <AppShell>
       <div className="flex flex-col items-center pt-10 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
-          <CheckCircle2 className="h-12 w-12" />
+          <Trophy className="h-12 w-12" />
         </div>
 
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
           Session Complete
         </p>
-        <h1 className="mt-2 font-display text-5xl font-extrabold leading-none">
-          {name ? `Locked In, ${name}.` : "Locked In."}
+        <h1 className="mt-2 font-display text-[54px] leading-[0.95] tracking-[-0.015em]">
+          Locked In,<br/><em className="italic">{name ? `${name}.` : "champ."}</em>
         </h1>
 
         <div className="mt-8 w-full rounded-2xl border border-border bg-card p-5 text-left">
@@ -599,8 +642,8 @@ function CompletionView({
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
             <Stat label="Balls Hit" value={String(drillBalls)} />
             <Stat label="Drills Done" value={String(record.drillCount)} />
-            <Stat label="Goal" value={goalLabel} />
-            <Stat label="Bucket" value={bucketLabel} />
+            <Stat label="Goal" value={goalLabel} serif />
+            <Stat label="Bucket" value={bucketLabel} serif />
           </div>
         </div>
 
@@ -624,11 +667,14 @@ function CompletionView({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, serif = false }: { label: string; value: string; serif?: boolean }) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 font-display text-2xl font-bold">{value}</p>
+      <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      {serif
+        ? <p className="mt-1.5 font-display text-[26px] leading-[0.95] tracking-[-0.005em]">{value}</p>
+        : <p className="mt-1.5 font-stats text-[32px] leading-none tabular-nums text-primary">{value}</p>
+      }
     </div>
   );
 }

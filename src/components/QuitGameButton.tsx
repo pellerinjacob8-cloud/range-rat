@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { Flag } from "lucide-react";
+import { clearActiveSession } from "@/lib/active-session";
 
 interface QuitGameButtonProps {
   onBeforeQuit?: () => void;
@@ -12,6 +13,7 @@ export function QuitGameButton({ onBeforeQuit, label = "Quit Game" }: QuitGameBu
     <button
       type="button"
       onClick={() => {
+        clearActiveSession();
         onBeforeQuit?.();
         navigate({ to: "/" });
       }}

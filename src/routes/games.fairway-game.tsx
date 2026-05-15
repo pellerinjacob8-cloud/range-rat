@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { saveActiveMarker } from "@/lib/active-session";
 import { ArrowRight, Check, Sparkles, Target, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
@@ -28,13 +29,13 @@ export const Route = createFileRoute("/games/fairway-game")({
 });
 
 type Mode = "solo" | "vs";
+type ShotOrder = "sequential" | "alternating";
 
 interface MatchConfig {
   mode: Mode;
+  shotOrder: ShotOrder; // only applies in vs mode
   p1: string;
   p2: string; // unused in solo
-  leftMarker: string;
-  rightMarker: string;
   totalShots: number;
 }
 
@@ -46,6 +47,17 @@ function FairwayGame() {
   const [results, setResults] = useState<[boolean[], boolean[]]>([[], []]);
   // Transition card shown between Player 1's last shot and Player 2's first shot.
   const [showHandoff, setShowHandoff] = useState(false);
+
+  useEffect(() => {
+    if (config) {
+      saveActiveMarker({
+        type: "fairway",
+        route: "/games/fairway-game",
+        label: "Fairway Game",
+        subtitle: "Game in progress",
+      });
+    }
+  }, [config]);
 
   if (!config) {
     return (
@@ -89,12 +101,22 @@ function FairwayGame() {
   }
 
   // Whose shot it is right now.
-  const currentPlayer: 0 | 1 = config.mode === "solo" ? 0 : p1Done ? 1 : 0;
+  let currentPlayer: 0 | 1;
+  if (config.mode === "solo") {
+    currentPlayer = 0;
+  } else if (config.shotOrder === "alternating") {
+    // Strict alternation: P1 goes first each round.
+    // If P1 has taken more shots than P2, it's P2's turn; otherwise P1's.
+    currentPlayer = results[0].length > results[1].length ? 1 : 0;
+  } else {
+    // Sequential: P1 finishes all shots first, then P2.
+    currentPlayer = p1Done ? 1 : 0;
+  }
   const currentName = currentPlayer === 0 ? config.p1 : config.p2;
   const currentShotNumber = results[currentPlayer].length + 1;
 
-  // Show a handoff card the moment Player 1 finishes (vs mode) before P2 starts.
-  if (config.mode === "vs" && p1Done && !p2Done && showHandoff) {
+  // Show handoff card only in sequential mode when P1 just finished.
+  if (config.mode === "vs" && config.shotOrder === "sequential" && p1Done && !p2Done && showHandoff) {
     return (
       <HandoffView
         nextName={config.p2}
@@ -111,8 +133,8 @@ function FairwayGame() {
     setResults((prev) => {
       const next: [boolean[], boolean[]] = [prev[0].slice(), prev[1].slice()];
       next[currentPlayer].push(didHit);
-      // If P1 just finished their final shot in vs mode, queue the handoff.
-      if (config.mode === "vs" && currentPlayer === 0 && next[0].length === total) {
+      // Queue handoff only in sequential mode when P1 finishes.
+      if (config.mode === "vs" && config.shotOrder === "sequential" && currentPlayer === 0 && next[0].length === total) {
         setShowHandoff(true);
       }
       return next;
@@ -122,18 +144,30 @@ function FairwayGame() {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {config.mode === "vs" ? `${currentName} · Shot` : "Shot"}
-        </p>
-        <p className="font-display text-5xl font-bold leading-none">
-          {currentShotNumber}
-          <span className="text-2xl text-muted-foreground"> / {total}</span>
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Fairway: <span className="font-semibold text-foreground">{config.leftMarker}</span>
-          {" → "}
-          <span className="font-semibold text-foreground">{config.rightMarker}</span>
-        </p>
+        {config.mode === "vs" && config.shotOrder === "alternating" ? (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Shot {results[0].length + results[1].length + 1} of {total * 2}
+            </p>
+            <p className="mt-1 font-display text-5xl leading-none">{currentName}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Their shot {currentShotNumber} of {total} — hit or miss?
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              {config.mode === "vs" ? `${currentName} · Shot` : "Shot"}
+            </p>
+            <p className="font-display text-5xl leading-none">
+              {currentShotNumber}
+              <span className="text-2xl text-muted-foreground"> / {total}</span>
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Hit between your two markers. Count every shot.
+            </p>
+          </>
+        )}
       </div>
 
       {config.mode === "vs" ? (
@@ -172,7 +206,7 @@ function FairwayGame() {
         <p className="text-center text-sm text-muted-foreground">
           {config.mode === "vs" ? `${currentName}'s shot` : "Hit it?"}
         </p>
-        <p className="mt-1 text-center font-display text-2xl font-bold">Hit or Miss?</p>
+        <p className="mt-1 text-center font-display text-2xl">Hit or Miss?</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
           <Button onClick={() => record(true)} className="h-16 text-base font-semibold">
             <Check className="h-5 w-5" />
@@ -226,7 +260,7 @@ function HandoffView({
         <p className="mt-5 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
           Switch players
         </p>
-        <h1 className="mt-2 font-display text-4xl font-bold">{nextName}, you're up</h1>
+        <h1 className="mt-2 font-display text-4xl">{nextName}, you're up</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Hit {totalShots} shots into the fairway.
         </p>
@@ -260,7 +294,7 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 font-display text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 font-display text-2xl leading-none">{value}</p>
     </div>
   );
 }
@@ -296,7 +330,7 @@ function PlayerCard({
         {name}
         {done ? " · Done" : ""}
       </p>
-      <p className="mt-2 font-display text-3xl font-bold leading-none">{hits}</p>
+      <p className="mt-2 font-display text-3xl leading-none">{hits}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         {shots}/{total} · {pct}%
       </p>
@@ -330,7 +364,7 @@ function ResultsView({
           <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             Session complete
           </p>
-          <h1 className="mt-2 font-display text-4xl font-bold">{config.p1}</h1>
+          <h1 className="mt-2 font-display text-4xl">{config.p1}</h1>
         </div>
 
         <div className="mt-8 rounded-2xl border border-border bg-card p-5">
@@ -339,9 +373,7 @@ function ResultsView({
             <Stat label="Misses" value={String(misses)} />
             <Stat label="Fairway %" value={`${pct}%`} />
           </div>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Fairway: {config.leftMarker} → {config.rightMarker}
-          </p>
+
         </div>
 
         <div className="mt-8 space-y-3">
@@ -383,7 +415,7 @@ function ResultsView({
         <p className="mt-4 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
           {winnerIdx === "tie" ? "All square" : "Winner"}
         </p>
-        <h1 className="mt-2 font-display text-4xl font-bold">{winnerName}</h1>
+        <h1 className="mt-2 font-display text-4xl">{winnerName}</h1>
       </div>
 
       <div className="mt-8 grid grid-cols-2 gap-3">
@@ -402,10 +434,6 @@ function ResultsView({
           highlight={winnerIdx === 1}
         />
       </div>
-
-      <p className="mt-4 text-center text-xs text-muted-foreground">
-        Fairway: {config.leftMarker} → {config.rightMarker}
-      </p>
 
       <div className="mt-8 space-y-3">
         <Button onClick={onPlayAgain} className="h-12 w-full text-base font-semibold">
@@ -447,7 +475,7 @@ function ResultCard({
       <p className="truncate text-xs font-semibold uppercase tracking-widest text-muted-foreground">
         {name}
       </p>
-      <p className="mt-2 font-display text-3xl font-bold leading-none">{hits}</p>
+      <p className="mt-2 font-display text-3xl leading-none">{hits}</p>
       <p className="mt-1 text-xs text-muted-foreground">
         {shots} shots · {pct}%
       </p>
@@ -457,10 +485,9 @@ function ResultCard({
 
 function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
   const [mode, setMode] = useState<Mode>("vs");
+  const [shotOrder, setShotOrder] = useState<ShotOrder>("sequential");
   const [p1, setP1] = useState(() => loadProfileName() || "Player 1");
   const [p2, setP2] = useState("Player 2");
-  const [leftMarker, setLeftMarker] = useState("");
-  const [rightMarker, setRightMarker] = useState("");
   const [shotsChoice, setShotsChoice] = useState<number | "custom">(9);
   const [customShots, setCustomShots] = useState("12");
 
@@ -468,18 +495,16 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
     shotsChoice === "custom" ? Math.max(1, parseInt(customShots, 10) || 0) : shotsChoice;
 
   const namesValid = mode === "solo" ? p1.trim().length > 0 : p1.trim().length > 0 && p2.trim().length > 0;
-  const markersValid = leftMarker.trim().length > 0 && rightMarker.trim().length > 0;
   const shotsValid = totalShots > 0;
-  const canStart = namesValid && markersValid && shotsValid;
+  const canStart = namesValid && shotsValid;
 
   const submit = () => {
     if (!canStart) return;
     onStart({
       mode,
+      shotOrder: mode === "vs" ? shotOrder : "sequential",
       p1: p1.trim(),
       p2: mode === "vs" ? p2.trim() : "",
-      leftMarker: leftMarker.trim(),
-      rightMarker: rightMarker.trim(),
       totalShots,
     });
   };
@@ -492,7 +517,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
             <Target className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-display text-3xl font-bold leading-none">Fairway Game</h1>
+            <h1 className="font-display text-3xl leading-none">Fairway Game</h1>
             <p className="mt-1 text-sm text-muted-foreground">Pick your fairway. Track your %.</p>
           </div>
         </div>
@@ -509,6 +534,28 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
           </div>
         </div>
 
+        {mode === "vs" && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Shot order
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <ShotOrderCard
+                label="All in a row"
+                description="P1 hits all their shots first, then P2 hits all of theirs."
+                active={shotOrder === "sequential"}
+                onClick={() => setShotOrder("sequential")}
+              />
+              <ShotOrderCard
+                label="Alternating"
+                description="Players take turns shot by shot — P1, P2, P1, P2…"
+                active={shotOrder === "alternating"}
+                onClick={() => setShotOrder("alternating")}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             {mode === "vs" ? "Players" : "Player"}
@@ -524,34 +571,11 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
           ) : null}
         </div>
 
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Fairway markers
+        <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3.5 flex gap-3 items-start">
+          <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+          <p className="text-sm text-muted-foreground leading-snug">
+            Pick two objects on the range as your left and right fairway edges — a flag, yardage sign, or mat edge. Count every shot between them as a hit.
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Left
-              </p>
-              <Input
-                value={leftMarker}
-                onChange={(e) => setLeftMarker(e.target.value)}
-                placeholder="e.g. 150 sign"
-                className="h-12"
-              />
-            </div>
-            <div>
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Right
-              </p>
-              <Input
-                value={rightMarker}
-                onChange={(e) => setRightMarker(e.target.value)}
-                placeholder="e.g. red flag"
-                className="h-12"
-              />
-            </div>
-          </div>
         </div>
 
         <div>
@@ -598,6 +622,37 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
         <QuitGameButton />
       </div>
     </AppShell>
+  );
+}
+
+function ShotOrderCard({
+  label,
+  description,
+  active,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "rounded-2xl border p-3.5 text-left transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-foreground active:bg-muted",
+      )}
+    >
+      <p className={cn("text-sm font-bold", active ? "text-white" : "text-foreground")}>{label}</p>
+      <p className={cn("mt-1 text-[11.5px] leading-snug", active ? "text-white/75" : "text-muted-foreground")}>
+        {description}
+      </p>
+    </button>
   );
 }
 

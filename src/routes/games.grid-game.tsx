@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { saveActiveMarker } from "@/lib/active-session";
 import { Check, Sparkles, Star, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
@@ -47,6 +48,17 @@ function GridGame() {
   const [caller, setCaller] = useState<0 | 1>(0);
   const [letters, setLetters] = useState<[number, number]>([0, 0]);
   const [phase, setPhase] = useState<Phase>({ kind: "pick" });
+
+  useEffect(() => {
+    if (config) {
+      saveActiveMarker({
+        type: "grid",
+        route: "/games/grid-game",
+        label: "Grid Game",
+        subtitle: "Game in progress",
+      });
+    }
+  }, [config]);
 
   if (!config) {
     return (
@@ -135,7 +147,7 @@ function GridGame() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
           Grid Game · {config.word}
         </p>
-        <h1 className="mt-1 font-display text-3xl font-bold">
+        <h1 className="mt-1 font-display text-3xl">
           {phase.kind === "pick" ? `${callerName}'s call` : "Did it land?"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -158,7 +170,7 @@ function GridGame() {
               disabled={!interactive}
               aria-pressed={active}
               className={cn(
-                "aspect-square rounded-2xl border font-display text-5xl font-extrabold transition active:scale-[0.97]",
+                "aspect-square rounded-2xl border font-display text-5xl transition active:scale-[0.97]",
                 active
                   ? "border-primary bg-primary text-primary-foreground ring-4 ring-primary/30 shadow-lg"
                   : "border-border bg-card text-foreground",
@@ -284,7 +296,7 @@ function PlayerLetters({
             <span
               key={`${c}-${i}`}
               className={cn(
-                "flex h-9 w-7 sm:w-8 items-center justify-center rounded-md border font-display text-lg font-extrabold transition-colors",
+                "flex h-9 w-7 sm:w-8 items-center justify-center rounded-md border font-display text-lg transition-colors",
                 filled
                   ? "border-destructive bg-destructive text-destructive-foreground"
                   : "border-border bg-background text-muted-foreground/50",
@@ -309,7 +321,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl font-bold">Grid Game</h1>
+        <h1 className="font-display text-3xl">Grid Game</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Call your square. Don't get spelled out.
         </p>
@@ -397,7 +409,7 @@ function WordPill({
           : "border-border bg-card text-foreground",
       )}
     >
-      <p className="font-display text-2xl font-extrabold leading-none">{label}</p>
+      <p className="font-display text-2xl leading-none">{label}</p>
       <p
         className={cn(
           "mt-1 text-xs font-semibold uppercase tracking-wide",
@@ -455,7 +467,7 @@ function WinnerView({
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
           Winner
         </p>
-        <h1 className="mt-3 font-display text-6xl font-extrabold leading-[0.95] break-words">
+        <h1 className="mt-3 font-display text-6xl leading-[0.95] break-words">
           {winnerName}
         </h1>
 
@@ -468,7 +480,7 @@ function WinnerView({
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-primary">
                 {winnerName}
               </p>
-              <p className="mt-1 font-display text-2xl font-bold tracking-widest">
+              <p className="mt-1 font-display text-2xl tracking-widest">
                 {progress(winnerIdx)}
               </p>
             </div>
@@ -476,7 +488,7 @@ function WinnerView({
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {loserName}
               </p>
-              <p className="mt-1 font-display text-2xl font-bold tracking-widest text-muted-foreground">
+              <p className="mt-1 font-display text-2xl tracking-widest text-muted-foreground">
                 {progress(winnerIdx === 0 ? 1 : 0)}
               </p>
             </div>

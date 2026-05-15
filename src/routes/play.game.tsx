@@ -168,7 +168,7 @@ function ScoreHeader({
       >
         {name}
       </p>
-      <p className="mt-1 font-display text-3xl font-bold leading-none tabular-nums">{score}</p>
+      <p className="mt-1 font-display text-3xl leading-none tabular-nums">{score}</p>
     </div>
   );
 }
@@ -230,7 +230,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl font-bold">Game Mode</h1>
+        <h1 className="font-display text-3xl">Game Mode</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Same shot, both players. First to the target wins.
         </p>
@@ -274,7 +274,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
               <Minus className="h-5 w-5" />
             </button>
             <div className="flex-1 rounded-xl border border-border bg-card py-3 text-center">
-              <p className="font-display text-4xl font-bold leading-none tabular-nums">
+              <p className="font-display text-4xl leading-none tabular-nums">
                 {target}
               </p>
             </div>
@@ -331,7 +331,7 @@ function WinnerView({
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
           Winner
         </p>
-        <h1 className="mt-3 font-display text-6xl font-extrabold leading-[0.95] break-words">
+        <h1 className="mt-3 font-display text-6xl leading-[0.95] break-words">
           {winnerName}
         </h1>
 
@@ -344,13 +344,13 @@ function WinnerView({
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-primary">
                 {winnerName}
               </p>
-              <p className="mt-1 font-display text-4xl font-bold tabular-nums">{winnerScore}</p>
+              <p className="mt-1 font-display text-4xl tabular-nums">{winnerScore}</p>
             </div>
             <div>
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {loserName}
               </p>
-              <p className="mt-1 font-display text-4xl font-bold tabular-nums text-muted-foreground">
+              <p className="mt-1 font-display text-4xl tabular-nums text-muted-foreground">
                 {loserScore}
               </p>
             </div>

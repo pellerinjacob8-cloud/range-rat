@@ -1,7 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronRight, Flag, Flame, Shuffle, Target, User } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
+import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,81 +24,189 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+interface Session {
+  totalBalls?: number;
+  completedAt?: string;
+}
+
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function calcStreak(sessions: Session[]): number {
+  const dates = new Set(
+    sessions
+      .filter(s => s.completedAt)
+      .map(s => dayKey(new Date(s.completedAt!)))
+  );
+  if (dates.size === 0) return 0;
+
+  // Start from today; if no session today, start from yesterday
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  if (!dates.has(dayKey(start))) start.setDate(start.getDate() - 1);
+
+  let streak = 0;
+  const cur = new Date(start);
+  while (dates.has(dayKey(cur))) {
+    streak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return streak;
+}
+
+function loadStats() {
+  try {
+    const raw = localStorage.getItem("range-rat:sessions");
+    if (!raw) return { sessions: 0, balls: 0, streak: 0 };
+    const sessions: Session[] = JSON.parse(raw);
+    const balls = sessions.reduce((sum, s) => sum + (s.totalBalls ?? 0), 0);
+    const streak = calcStreak(sessions);
+    return { sessions: sessions.length, balls, streak };
+  } catch {
+    return { sessions: 0, balls: 0, streak: 0 };
+  }
+}
+
+function StatNum({ value, size }: { value: number; size: number }) {
+  return (
+    <span
+      className="font-stats leading-none tabular-nums text-primary"
+      style={{ fontSize: size }}
+    >
+      {value}
+    </span>
+  );
+}
+
+function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p className={`text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground ${className ?? ""}`}>
+      {children}
+    </p>
+  );
+}
+
 function Home() {
+  const navigate = useNavigate();
   const name = loadProfileName();
+  const stats = loadStats();
+  const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
+
+  const dismissResume = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    clearActiveSession();
+    setActiveSession(null);
+  };
+
   return (
     <AppShell>
-      <section className="pt-6 pb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          {name ? `Hey, ${name}.` : "Driving range"}
+      {/* Greeting */}
+      <section className="pt-6 pb-2">
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          {name ? `Hey, ${name}.` : "Hey."}
         </p>
-        <h1 className="mt-2 font-display text-4xl font-bold leading-tight">
+        <h1 className="mt-2 font-display text-[44px] leading-[0.98] tracking-[-0.01em] font-normal">
           Make every bucket count.
         </h1>
-        <p className="mt-3 text-base text-muted-foreground">
-          Build a focused practice session or play a quick game with a friend.
-        </p>
       </section>
 
-      <div className="space-y-4">
-        <HomeCard
-          to="/round-warmup"
-          title="Round Warm Up"
-          subtitle="A timed pre-round checklist. Stretches, wedges, irons, driver, putts."
-          Icon={Flame}
-        />
-        <HomeCard
-          to="/practice"
-          title="Practice"
-          subtitle="Generate a drill session tailored to your bucket and goal."
-          Icon={Target}
-        />
-        <HomeCard
-          to="/play"
-          title="Practice Like You Play"
-          subtitle="Random club, shape, and distance. Commit to every shot."
-          Icon={Shuffle}
-        />
-        <HomeCard
-          to="/games"
-          title="Games"
-          subtitle="Friendly range games to keep score with a buddy."
-          Icon={Flag}
-        />
-        <HomeCard
-          to="/profile"
-          title="My Profile"
-          subtitle="Your bag, yardages, and all-time practice stats."
-          Icon={User}
-        />
+      {/* Resume card — only shown when there's a saved in-progress session */}
+      {activeSession && (
+        <div className="mt-4 relative">
+          <button
+            onClick={() => navigate({ to: activeSession.route as "/" })}
+            className="w-full rounded-[22px] bg-primary p-4 shadow-[0_12px_30px_-14px_rgba(13,45,90,0.5)] flex items-center gap-3.5 text-left active:opacity-90 transition-opacity"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 border border-white/[0.18]">
+              <RotateCcw className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/70">
+                RESUME
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold text-white leading-tight truncate">
+                {activeSession.label}
+              </p>
+              <p className="text-[11px] text-white/60 mt-0.5">{activeSession.subtitle}</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-white/70 shrink-0" />
+          </button>
+          {/* Dismiss button */}
+          <button
+            onClick={dismissResume}
+            aria-label="Dismiss session"
+            className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-foreground text-background flex items-center justify-center shadow-sm"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Quick stats strip */}
+      <div className="mt-4 grid grid-cols-3 gap-2.5">
+        {[
+          { eyebrow: "This week", value: stats.sessions, sub: "sessions" },
+          { eyebrow: "Balls", value: stats.balls, sub: "hit" },
+          { eyebrow: "Streak", value: stats.streak, sub: "days" },
+        ].map(({ eyebrow, value, sub }) => (
+          <div
+            key={eyebrow}
+            className="rounded-[22px] border border-border bg-card p-3 text-center"
+          >
+            <Eyebrow>{eyebrow}</Eyebrow>
+            <div className="mt-1">
+              <StatNum value={value} size={32} />
+            </div>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              {sub}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Train section */}
+      <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        Train
+      </p>
+      <div className="mt-3 space-y-2.5">
+        <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
+        <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
+        <NavCard to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
+      </div>
+
+      {/* Compete section */}
+      <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        Compete
+      </p>
+      <div className="mt-3 space-y-2.5">
+        <NavCard to="/games" title="Games" subtitle="Friendly bets and bragging rights." Icon={Flag} />
       </div>
     </AppShell>
   );
 }
 
-interface HomeCardProps {
-  to: "/practice" | "/games" | "/play" | "/round-warmup" | "/profile";
+interface NavCardProps {
+  to: string;
   title: string;
   subtitle: string;
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-function HomeCard({ to, title, subtitle, Icon }: HomeCardProps) {
+function NavCard({ to, title, subtitle, Icon }: NavCardProps) {
   return (
     <Link
-      to={to}
-      className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
+      to={to as "/practice" | "/games" | "/play" | "/round-warmup" | "/profile"}
+      className="group block rounded-[22px] border border-border bg-card p-3.5 flex items-center gap-3.5 transition active:scale-[0.99]"
     >
-      <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Icon className="h-7 w-7" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-display text-2xl font-bold leading-none">{title}</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">{subtitle}</p>
-        </div>
-        <ChevronRight className="h-6 w-6 text-muted-foreground" />
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-primary text-white">
+        <Icon className="h-5 w-5" />
       </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="font-display text-[22px] leading-none">{title}</h2>
+        <p className="mt-1 text-[12.5px] text-muted-foreground line-clamp-2">{subtitle}</p>
+      </div>
+      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
     </Link>
   );
 }

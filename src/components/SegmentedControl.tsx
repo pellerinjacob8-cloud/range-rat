@@ -58,10 +58,10 @@ export function SegmentedControl<T extends string | number>(props: SegmentedCont
               onClick={() => handleClick(opt.value)}
               aria-pressed={active}
               className={cn(
-                "min-h-12 rounded-full px-4 text-sm font-semibold transition-colors border",
+                "min-h-[52px] rounded-full px-4 text-sm font-semibold transition-colors border",
                 active
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-foreground border-border active:bg-muted",
+                  : "bg-muted/60 text-foreground border-border active:bg-muted",
               )}
             >
               {opt.label}

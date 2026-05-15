@@ -28,8 +28,9 @@ function GamesPage() {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl font-bold">Games</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Pick a game. More coming soon.</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Compete</p>
+        <h1 className="mt-1 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Games</h1>
+        <p className="mt-2.5 text-[13.5px] text-muted-foreground">Friendly bets and bragging rights.</p>
       </div>
 
       <div className="mt-6 space-y-4">
@@ -38,11 +39,12 @@ function GamesPage() {
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Flag className="h-7 w-7" />
+            <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Flag className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-display text-xl font-bold leading-none">Closest to Pin</h2>
+              <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">2 PLAYERS · QUICK</p>
+              <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Closest to Pin</h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Two players. First to the target score wins.
               </p>
@@ -56,11 +58,12 @@ function GamesPage() {
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Grid3x3 className="h-7 w-7" />
+            <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Grid3x3 className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-display text-xl font-bold leading-none">Grid Game</h2>
+              <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">2 PLAYERS · RAT/RANGE</p>
+              <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Grid Game</h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 RAT or RANGE. Call your square, don't get spelled out.
               </p>
@@ -74,11 +77,12 @@ function GamesPage() {
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
         >
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Target className="h-7 w-7" />
+            <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <Target className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-display text-xl font-bold leading-none">Fairway Game</h2>
+              <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">SOLO · TRACKING</p>
+              <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Fairway Game</h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
                 Pick two markers. Hit your fairway. Track your %.
               </p>
@@ -87,6 +91,8 @@ function GamesPage() {
           </div>
         </Link>
       </div>
+
+      <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">More coming soon</p>
     </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { saveActiveMarker } from "@/lib/active-session";
 import { Minus, Plus, Sparkles, Star, Trophy, Undo2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
@@ -46,6 +47,17 @@ function ClosestToPin() {
     };
   }, []);
 
+  useEffect(() => {
+    if (config) {
+      saveActiveMarker({
+        type: "ctp",
+        route: "/games/closest-to-pin",
+        label: "Closest to Pin",
+        subtitle: "Game in progress",
+      });
+    }
+  }, [config]);
+
   if (!config) {
     return <SetupView onStart={(c) => setConfig(c)} />;
   }
@@ -84,51 +96,132 @@ function ClosestToPin() {
     }, 700);
   };
 
+  // Players data for the new vertical layout
+  const players = [
+    { id: 0 as 0 | 1, name: config.p1, score: score[0] },
+    { id: 1 as 0 | 1, name: config.p2, score: score[1] },
+  ];
+
+  const maxScore = Math.max(score[0], score[1]);
 
   return (
     <AppShell showBack>
-      <div className="pt-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Pin #
-        </p>
-        <p className="font-display text-5xl font-bold leading-none">{round}</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          First to {config.target} wins
-        </p>
+      {/* Header */}
+      <div className="py-2 flex items-end justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Pin #</p>
+          <span className="font-stats text-[44px] leading-none tabular-nums text-foreground">{round}</span>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Race to</p>
+          <span className="font-stats text-[44px] leading-none tabular-nums text-primary">{config.target}</span>
+        </div>
+      </div>
+      <hr className="border-border" />
+
+      {/* Player rows */}
+      <div className="mt-4 space-y-3">
+        {players.map((player) => {
+          const isLeading = player.score > 0 && player.score === maxScore && player.score > (player.id === 0 ? score[1] : score[0]);
+          return (
+            <div
+              key={player.id}
+              className={cn(
+                "rounded-3xl p-4 border flex items-center gap-3 transition-all",
+                isLeading
+                  ? "bg-primary text-white border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
+                  : "bg-card text-foreground border-border"
+              )}
+            >
+              {/* Player info */}
+              <div className="flex-1 min-w-0">
+                <p className={cn("text-[10.5px] font-bold uppercase tracking-[0.2em]", isLeading ? "text-white/65" : "text-muted-foreground")}>
+                  {isLeading ? "★ Leading" : "Player"}
+                </p>
+                <p className={cn("mt-1 font-display text-[26px] leading-none tracking-[-0.005em]", isLeading && "italic")}>
+                  {player.name}
+                </p>
+                {/* Dots progress */}
+                <div className="mt-2 flex gap-1.5">
+                  {Array.from({ length: config.target }).map((_, idx) => (
+                    <span
+                      key={idx}
+                      className={cn(
+                        "inline-block w-2 h-2 rounded-full",
+                        idx < player.score
+                          ? (isLeading ? "bg-white" : "bg-primary")
+                          : (isLeading ? "bg-white/22" : "bg-border")
+                      )}
+                    />
+                  ))}
+                </div>
+              </div>
+              {/* Score */}
+              <div className="min-w-[72px] text-right">
+                <span className={cn("font-stats text-[68px] leading-none tabular-nums", isLeading ? "text-white" : "text-primary")}>
+                  {player.score}
+                </span>
+              </div>
+              {/* Steppers — these are visual only for display; awardPoint is the real action */}
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => awardPoint(player.id)}
+                  disabled={celebrating !== null}
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-50",
+                    isLeading
+                      ? "bg-white/18 border border-white/20 text-white"
+                      : "bg-primary text-white"
+                  )}
+                >
+                  <Plus className="h-5 w-5" strokeWidth={2} />
+                </button>
+                <button
+                  onClick={() => {
+                    // decrement: remove last point for this player from history
+                    const lastIdx = [...history].reverse().findIndex((w) => w === player.id);
+                    if (lastIdx === -1) return;
+                    const realIdx = history.length - 1 - lastIdx;
+                    setHistory((h) => [...h.slice(0, realIdx), ...h.slice(realIdx + 1)]);
+                  }}
+                  disabled={celebrating !== null || player.score === 0}
+                  className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-30",
+                    isLeading
+                      ? "bg-white/8 border border-white/15 text-white/70"
+                      : "bg-card border border-border text-muted-foreground"
+                  )}
+                >
+                  <Minus className="h-[18px] w-[18px]" strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
-        <ScorePanel
-          name={config.p1}
-          score={score[0]}
-          leading={score[0] > score[1]}
-          celebrating={celebrating === 0}
-        />
-        <ScorePanel
-          name={config.p2}
-          score={score[1]}
-          leading={score[1] > score[0]}
-          celebrating={celebrating === 1}
-        />
+      {/* Award round */}
+      <p className="text-center text-[10.5px] font-bold uppercase tracking-[0.22em] text-muted-foreground mt-5 mb-2.5">
+        Who won the round?
+      </p>
+      <div className="grid grid-cols-2 gap-2.5">
+        {players.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => awardPoint(p.id)}
+            disabled={celebrating !== null}
+            className="h-14 rounded-2xl border border-border bg-card font-bold text-[13px] uppercase tracking-[0.08em] disabled:opacity-50 active:bg-muted transition"
+          >
+            {p.name} won
+          </button>
+        ))}
       </div>
 
-      <div className="mt-8 space-y-3">
-        <RoundButton
-          label={`${config.p1} won`}
-          onClick={() => awardPoint(0)}
-          disabled={celebrating !== null}
-        />
-        <RoundButton
-          label={`${config.p2} won`}
-          onClick={() => awardPoint(1)}
-          disabled={celebrating !== null}
-        />
-      </div>
-
+      {/* Undo */}
       {history.length > 0 && celebrating === null ? (
         <button
           onClick={() => setHistory((h) => h.slice(0, -1))}
-          className="mx-auto mt-6 flex items-center gap-2 text-sm font-semibold text-muted-foreground active:text-foreground"
+          className="text-[12.5px] font-semibold text-muted-foreground flex items-center gap-1.5 justify-center mt-4"
         >
           <Undo2 className="h-4 w-4" /> Undo last round
         </button>
@@ -147,76 +240,6 @@ function ClosestToPin() {
   );
 }
 
-function ScorePanel({
-  name,
-  score,
-  leading,
-  celebrating,
-}: {
-  name: string;
-  score: number;
-  leading: boolean;
-  celebrating: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border p-4 transition-all duration-200",
-        leading ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card",
-        celebrating && "scale-[1.04] ring-4 ring-primary/40 shadow-lg",
-      )}
-    >
-      {celebrating ? (
-        <Sparkles
-          className="absolute right-2 top-2 h-5 w-5 text-primary-foreground animate-[scale-in_0.2s_ease-out]"
-          aria-hidden
-        />
-      ) : null}
-      <p
-        className={cn(
-          "truncate text-xs font-bold uppercase tracking-wider",
-          leading ? "text-primary-foreground/80" : "text-muted-foreground",
-        )}
-      >
-        {name}
-      </p>
-      <p
-        className={cn(
-          "mt-1 font-display text-5xl font-bold leading-none tabular-nums transition-transform",
-          celebrating && "scale-110",
-        )}
-      >
-        {score}
-      </p>
-      {celebrating ? (
-        <p className="mt-1 text-[11px] font-bold uppercase tracking-widest animate-[fade-in_0.2s_ease-out]">
-          +1 Point!
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function RoundButton({
-  label,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full rounded-2xl border border-border bg-card px-5 py-5 text-left text-lg font-bold transition active:scale-[0.99] active:bg-muted disabled:opacity-50 disabled:active:scale-100"
-    >
-      <span className="block truncate">{label}</span>
-    </button>
-  );
-}
-
 function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
   const [p1, setP1] = useState(() => loadProfileName() || "Player 1");
   const [p2, setP2] = useState("Player 2");
@@ -227,7 +250,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl font-bold">Closest to Pin</h1>
+        <h1 className="font-display text-3xl">Closest to Pin</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Enter names and pick a target score to start.
         </p>
@@ -271,7 +294,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
               <Minus className="h-5 w-5" />
             </button>
             <div className="flex-1 rounded-xl border border-border bg-card py-3 text-center">
-              <p className="font-display text-4xl font-bold leading-none tabular-nums">
+              <p className="font-display text-4xl leading-none tabular-nums">
                 {target}
               </p>
             </div>
@@ -343,7 +366,7 @@ function WinnerView({
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
           Winner
         </p>
-        <h1 className="mt-3 font-display text-6xl font-extrabold leading-[0.95] break-words">
+        <h1 className="mt-3 font-display text-6xl leading-[0.95] break-words">
           {winnerName}
         </h1>
 
@@ -356,7 +379,7 @@ function WinnerView({
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-primary">
                 {winnerName}
               </p>
-              <p className="mt-1 font-display text-4xl font-bold tabular-nums">
+              <p className="mt-1 font-display text-4xl tabular-nums">
                 {winnerScore}
               </p>
             </div>
@@ -364,7 +387,7 @@ function WinnerView({
               <p className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {loserName}
               </p>
-              <p className="mt-1 font-display text-4xl font-bold tabular-nums text-muted-foreground">
+              <p className="mt-1 font-display text-4xl tabular-nums text-muted-foreground">
                 {loserScore}
               </p>
             </div>
