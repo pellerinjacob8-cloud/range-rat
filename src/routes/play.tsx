@@ -28,7 +28,7 @@ function PlayPage() {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl font-bold">Practice Like You Play</h1>
+        <h1 className="font-display text-3xl">Practice Like You Play</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Random shots, real commitment. Pick a mode.
         </p>
@@ -70,7 +70,7 @@ function ModeCard({ to, title, subtitle, Icon }: ModeCardProps) {
           <Icon className="h-7 w-7" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-display text-2xl font-bold leading-none">{title}</h2>
+          <h2 className="font-display text-2xl leading-none">{title}</h2>
           <p className="mt-1.5 text-sm text-muted-foreground line-clamp-2">{subtitle}</p>
         </div>
         <ChevronRight className="h-6 w-6 text-muted-foreground" />

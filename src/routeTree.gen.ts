@@ -10,25 +10,28 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticeRouteImport } from './routes/practice'
 import { Route as PlayRouteImport } from './routes/play'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlaySoloRouteImport } from './routes/play.solo'
 import { Route as PlayGameRouteImport } from './routes/play.game'
+import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welcome'
+import { Route as OnboardingNameRouteImport } from './routes/onboarding.name'
+import { Route as OnboardingBagRouteImport } from './routes/onboarding.bag'
 import { Route as GamesGridGameRouteImport } from './routes/games.grid-game'
 import { Route as GamesFairwayGameRouteImport } from './routes/games.fairway-game'
 import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to-pin'
 
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RoundWarmupRoute = RoundWarmupRouteImport.update({
   id: '/round-warmup',
   path: '/round-warmup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PracticeRoute = PracticeRouteImport.update({
@@ -61,6 +64,21 @@ const PlayGameRoute = PlayGameRouteImport.update({
   path: '/game',
   getParentRoute: () => PlayRoute,
 } as any)
+const OnboardingWelcomeRoute = OnboardingWelcomeRouteImport.update({
+  id: '/onboarding/welcome',
+  path: '/onboarding/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingNameRoute = OnboardingNameRouteImport.update({
+  id: '/onboarding/name',
+  path: '/onboarding/name',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingBagRoute = OnboardingBagRouteImport.update({
+  id: '/onboarding/bag',
+  path: '/onboarding/bag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesGridGameRoute = GamesGridGameRouteImport.update({
   id: '/grid-game',
   path: '/grid-game',
@@ -87,6 +105,9 @@ export interface FileRoutesByFullPath {
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
+  '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
 }
@@ -100,6 +121,9 @@ export interface FileRoutesByTo {
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
+  '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
 }
@@ -114,6 +138,9 @@ export interface FileRoutesById {
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
+  '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
 }
@@ -129,6 +156,9 @@ export interface FileRouteTypes {
     | '/games/closest-to-pin'
     | '/games/fairway-game'
     | '/games/grid-game'
+    | '/onboarding/bag'
+    | '/onboarding/name'
+    | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +172,9 @@ export interface FileRouteTypes {
     | '/games/closest-to-pin'
     | '/games/fairway-game'
     | '/games/grid-game'
+    | '/onboarding/bag'
+    | '/onboarding/name'
+    | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
   id:
@@ -155,6 +188,9 @@ export interface FileRouteTypes {
     | '/games/closest-to-pin'
     | '/games/fairway-game'
     | '/games/grid-game'
+    | '/onboarding/bag'
+    | '/onboarding/name'
+    | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
   fileRoutesById: FileRoutesById
@@ -166,6 +202,9 @@ export interface RootRouteChildren {
   PracticeRoute: typeof PracticeRoute
   ProfileRoute: typeof ProfileRoute
   RoundWarmupRoute: typeof RoundWarmupRoute
+  OnboardingBagRoute: typeof OnboardingBagRoute
+  OnboardingNameRoute: typeof OnboardingNameRoute
+  OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -177,18 +216,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RoundWarmupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/practice': {
-      id: '/practice'
-      path: '/practice'
-      fullPath: '/practice'
-      preLoaderRoute: typeof PracticeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/practice': {
+      id: '/practice'
+      path: '/practice'
+      fullPath: '/practice'
+      preLoaderRoute: typeof PracticeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/play': {
@@ -225,6 +264,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/play/game'
       preLoaderRoute: typeof PlayGameRouteImport
       parentRoute: typeof PlayRoute
+    }
+    '/onboarding/welcome': {
+      id: '/onboarding/welcome'
+      path: '/onboarding/welcome'
+      fullPath: '/onboarding/welcome'
+      preLoaderRoute: typeof OnboardingWelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/name': {
+      id: '/onboarding/name'
+      path: '/onboarding/name'
+      fullPath: '/onboarding/name'
+      preLoaderRoute: typeof OnboardingNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/bag': {
+      id: '/onboarding/bag'
+      path: '/onboarding/bag'
+      fullPath: '/onboarding/bag'
+      preLoaderRoute: typeof OnboardingBagRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/games/grid-game': {
       id: '/games/grid-game'
@@ -283,14 +343,10 @@ const rootRouteChildren: RootRouteChildren = {
   PracticeRoute: PracticeRoute,
   ProfileRoute: ProfileRoute,
   RoundWarmupRoute: RoundWarmupRoute,
+  OnboardingBagRoute: OnboardingBagRoute,
+  OnboardingNameRoute: OnboardingNameRoute,
+  OnboardingWelcomeRoute: OnboardingWelcomeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

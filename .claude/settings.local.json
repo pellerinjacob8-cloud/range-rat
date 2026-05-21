@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git init *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(unzip -p \"/Users/jacob/Downloads/UI Update.zip\" \"design_handoff_range_rat_redesign/README.md\")"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronDown, Clock, Flame, RotateCcw, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import {
@@ -9,6 +9,7 @@ import {
   type RoundWarmUpItem,
 } from "@/lib/roundWarmUp";
 import { cn } from "@/lib/utils";
+import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 
 export const Route = createFileRoute("/round-warmup")({
   head: () => ({
@@ -64,6 +65,17 @@ function formatDuration(mins: number): string {
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// ─── Duration card helpers ────────────────────────────────────────────────────
+
+function durationName(d: RoundDuration): string {
+  switch (d) {
+    case 15: return "Quick Warm Up";
+    case 30: return "Standard";
+    case 45: return "Full Routine";
+    case 60: return "Pro Session";
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -124,138 +136,171 @@ function RoundWarmUpPage() {
   return (
     <AppShell showBack>
       <div className="pt-2">
-        <div className="flex items-center gap-2">
-          <Flame className="h-5 w-5 text-primary" />
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Round Warm Up
-          </p>
+        <div className="flex items-center gap-1.5 mt-2">
+          <Flame className="h-3.5 w-3.5 text-primary" />
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Round Warm Up</p>
         </div>
-        <h1 className="mt-2 font-display text-3xl font-bold">How long do you have?</h1>
+        <h1 className="mt-2 font-display text-[36px] leading-[0.98] tracking-[-0.01em]">How long<br/>do you have?</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Pick a time and we'll build a structured pre-round checklist.
         </p>
       </div>
 
-      {/* ── Tee Time section ── */}
-      <div className="mt-6">
-        {!hasTeeTime && !showPicker ? (
-          // Add Tee Time button
+      {/* ── Tee Time card ── */}
+      <div className="rounded-[22px] border border-border bg-card p-4 flex items-center justify-between mt-5 mb-3.5">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-primary" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">Tee Time</span>
+        </div>
+        {hasTeeTime && !showPicker ? (
+          <div className="flex items-center gap-2">
+            <span className="font-stats text-[24px] text-primary tabular-nums leading-none">
+              {displayTeeTime(teeTime).split(" ")[0]}
+              <span className="text-[11px] font-bold tracking-[0.1em] ml-1">
+                {displayTeeTime(teeTime).split(" ")[1]}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowPicker(true)}
+              className="text-xs font-semibold text-muted-foreground underline-offset-2 active:opacity-70"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={clearTime}
+              aria-label="Remove tee time"
+              className="rounded-full p-1 text-muted-foreground transition active:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : showPicker ? (
+          <button
+            type="button"
+            onClick={clearTime}
+            aria-label="Cancel"
+            className="rounded-full p-1 text-muted-foreground transition active:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : (
           <button
             type="button"
             onClick={() => setShowPicker(true)}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-sm font-bold text-primary-foreground transition active:scale-[0.99] active:opacity-90"
+            className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary active:opacity-70"
           >
-            <Clock className="h-4 w-4" />
-            Add Tee Time
+            — Add
           </button>
-        ) : (
-          // Inline time picker card
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-            {/* Header row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 shrink-0 text-primary" />
-                <span className="text-sm font-semibold text-primary">Tee Time</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {hasTeeTime && (
-                  <span className="text-sm font-bold text-primary">
-                    {displayTeeTime(teeTime)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={clearTime}
-                  aria-label="Remove tee time"
-                  className="rounded-full p-1 text-muted-foreground transition active:text-foreground"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Custom time selectors */}
-            <div className="flex gap-2">
-              <select
-                value={pickerHour}
-                onChange={(e) => setPickerHour(e.target.value)}
-                className="flex-1 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
-              >
-                {HOURS.map((h) => (
-                  <option key={h} value={h}>{h.padStart(2, "0")}</option>
-                ))}
-              </select>
-              <select
-                value={pickerMinute}
-                onChange={(e) => setPickerMinute(e.target.value)}
-                className="flex-1 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
-              >
-                {MINUTES.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={pickerAmPm}
-                onChange={(e) => setPickerAmPm(e.target.value as "AM" | "PM")}
-                className="w-24 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
-              >
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
-              </select>
-            </div>
-
-            {/* Enter Time — full-width, brand blue, easy one-hand tap */}
-            <button
-              type="button"
-              onClick={commitTime}
-              className="h-14 w-full rounded-2xl bg-primary text-base font-bold text-primary-foreground transition active:scale-[0.99] active:opacity-90"
-            >
-              Enter Time
-            </button>
-          </div>
         )}
       </div>
 
+      {/* Inline time picker — shown when showPicker */}
+      {showPicker && (
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3 mb-3.5">
+          <div className="flex gap-2">
+            <select
+              value={pickerHour}
+              onChange={(e) => setPickerHour(e.target.value)}
+              className="flex-1 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
+            >
+              {HOURS.map((h) => (
+                <option key={h} value={h}>{h.padStart(2, "0")}</option>
+              ))}
+            </select>
+            <select
+              value={pickerMinute}
+              onChange={(e) => setPickerMinute(e.target.value)}
+              className="flex-1 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
+            >
+              {MINUTES.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={pickerAmPm}
+              onChange={(e) => setPickerAmPm(e.target.value as "AM" | "PM")}
+              className="w-24 rounded-xl border border-border bg-muted py-3 text-center text-xl font-bold text-foreground outline-none focus:border-primary"
+            >
+              <option value="AM">AM</option>
+              <option value="PM">PM</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={commitTime}
+            className="h-14 w-full rounded-2xl bg-primary text-base font-bold text-primary-foreground transition active:scale-[0.99] active:opacity-90"
+          >
+            Enter Time
+          </button>
+        </div>
+      )}
+
       {/* ── Duration cards ── */}
-      <div className="mt-4 space-y-3">
+      <div className="space-y-2.5">
         {ROUND_DURATIONS.map((d) => {
           const arrival = hasTeeTime ? calcArrival(teeTime, d) : null;
+          const itemCount = countFor(d);
+          const isActive = false; // no selection state on this screen; user taps to start
           return (
             <button
               key={d}
               type="button"
               onClick={() => setDuration(d)}
-              className="flex w-full items-center justify-between rounded-2xl border border-border bg-card p-5 text-left transition active:scale-[0.99] active:bg-muted"
+              className={cn(
+                "flex w-full items-center gap-3.5 rounded-[18px] p-4 border text-left transition active:scale-[0.99]",
+                isActive
+                  ? "bg-primary text-white border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
+                  : "bg-card text-foreground border-border"
+              )}
             >
+              {/* Left: big minute number + name + description + arrival */}
               <div className="flex-1 min-w-0">
-                <p className="font-display text-2xl font-bold leading-none">{d} min</p>
-                <p className="mt-1.5 text-sm text-muted-foreground">{descriptionFor(d)}</p>
+                <p className={cn("text-[10.5px] font-bold uppercase tracking-[0.2em]", isActive ? "text-white/65" : "text-muted-foreground")}>
+                  {d} MIN · {durationName(d)}
+                </p>
+                <p className={cn("mt-0.5 font-stats text-[36px] leading-none tabular-nums", isActive ? "text-white" : "text-primary")}>
+                  {d}
+                </p>
+                <p className={cn("mt-1 text-[12px]", isActive ? "text-white/70" : "text-muted-foreground")}>
+                  {descriptionFor(d)}
+                </p>
                 {arrival && (
-                  <p className="mt-2 text-xs font-semibold text-primary">
+                  <p className={cn("mt-1.5 text-[11px] font-semibold", isActive ? "text-white/85" : "text-primary")}>
                     Arrive by {arrival}
                   </p>
                 )}
               </div>
-              <span className="ml-3 shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
-                {countFor(d)} items
+              {/* Right: items badge */}
+              <span className={cn(
+                "shrink-0 rounded-full px-2 py-1 text-[11px] font-bold tracking-[0.18em]",
+                isActive
+                  ? "bg-white/20 text-white"
+                  : "bg-primary/8 text-primary"
+              )}>
+                {itemCount} ITEMS
               </span>
             </button>
           );
         })}
 
         {/* ── Custom duration card ── */}
-        <div className="rounded-2xl border border-border bg-card">
+        <div className="rounded-[18px] border border-border bg-card">
           {/* Header row — always visible, tapping toggles expanded state */}
           <button
             type="button"
             onClick={() => setShowCustom((v) => !v)}
-            className="flex w-full items-center justify-between p-5 text-left active:opacity-70"
+            className="flex w-full items-center gap-3.5 p-4 text-left active:opacity-70"
           >
             <div className="flex-1 min-w-0">
-              <p className="font-display text-2xl font-bold leading-none">Custom</p>
-              <p className="mt-1.5 text-sm text-muted-foreground">Set your own warm-up duration.</p>
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Custom · Set Your Own
+              </p>
+              <p className="mt-0.5 font-stats text-[36px] leading-none tabular-nums text-primary">—</p>
+              <p className="mt-1 text-[12px] text-muted-foreground">Set your own warm-up duration.</p>
               {showCustom && customTotal > 0 && hasTeeTime && (
-                <p className="mt-2 text-xs font-semibold text-primary">
+                <p className="mt-1.5 text-[11px] font-semibold text-primary">
                   Arrive by {calcArrival(teeTime, customTotal)}
                 </p>
               )}
@@ -268,7 +313,7 @@ function RoundWarmUpPage() {
             />
           </button>
 
-          {/* Expandable picker — same select style as tee time input */}
+          {/* Expandable picker */}
           <div
             className={cn(
               "overflow-hidden transition-all duration-200 ease-in-out",
@@ -352,6 +397,17 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
   const items = useMemo(() => buildRoundWarmUp(snapped), [snapped]);
   const total = items.length;
   const completed = done.size;
+
+  useEffect(() => {
+    if (total > 0) {
+      saveActiveMarker({
+        type: "round-warmup",
+        route: "/round-warmup",
+        label: "Round Warm Up",
+        subtitle: `${total - completed} drills left`,
+      });
+    }
+  }, [done, total, completed]);
   const progress = (completed / total) * 100;
   const isComplete = completed === total;
 
@@ -386,6 +442,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
       existing.push(session);
       localStorage.setItem("rr-warmup-sessions", JSON.stringify(existing));
     } catch { /* private/quota */ }
+    clearActiveSession();
     navigate({ to: "/" });
   };
 
@@ -403,7 +460,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
                 Round Warm Up · {formatDuration(duration)}
               </p>
             </div>
-            <h1 className="mt-1 font-display text-3xl font-bold">Get ready.</h1>
+            <h1 className="mt-1 font-display text-3xl">Get ready.</h1>
           </div>
           <button
             onClick={onReset}
@@ -413,27 +470,27 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
           </button>
         </div>
 
-        {/* Schedule strip — only shown when tee time is set */}
+        {/* Schedule strip — sticky floating bar when tee time is set */}
         {arrival && teeTime && (
-          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3">
-            <div className="grid grid-cols-3 divide-x divide-primary/15 text-center">
+          <div className="sticky top-14 z-20 -mx-4 px-4 pt-3 pb-3 bg-background/95 backdrop-blur border-b border-border shadow-sm">
+            <div className="grid grid-cols-3 divide-x divide-border text-center">
               <div className="pr-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Arrive
                 </p>
-                <p className="mt-1 font-display text-base font-bold leading-none">{arrival}</p>
+                <p className="mt-1.5 font-stats text-[22px] leading-none tabular-nums">{arrival}</p>
               </div>
               <div className="px-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Warm-up
                 </p>
-                <p className="mt-1 font-display text-base font-bold leading-none">{formatDuration(duration)}</p>
+                <p className="mt-1.5 font-stats text-[22px] leading-none tabular-nums">{formatDuration(duration)}</p>
               </div>
               <div className="pl-3">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   Tee Time
                 </p>
-                <p className="mt-1 font-display text-base font-bold leading-none text-primary">
+                <p className="mt-1.5 font-stats text-[22px] leading-none tabular-nums text-primary">
                   {displayTeeTime(teeTime)}
                 </p>
               </div>
@@ -456,7 +513,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
         <div className="mt-6 space-y-6">
           {bySection.map(([section, sectionItems]) => (
             <section key={section}>
-              <h2 className="font-display text-xl font-bold uppercase tracking-tight">
+              <h2 className="font-display text-xl uppercase tracking-tight">
                 {section}
               </h2>
               <ul className="mt-3 space-y-2">
@@ -533,7 +590,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
           )}
           <button
             type="button"
-            onClick={() => navigate({ to: "/" })}
+            onClick={() => { clearActiveSession(); navigate({ to: "/" }); }}
             className="w-full rounded-2xl border border-border bg-card py-4 text-base font-semibold text-muted-foreground transition active:scale-[0.99]"
           >
             Quit Warm Up

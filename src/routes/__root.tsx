@@ -1,4 +1,6 @@
-import { Outlet, Link, createRootRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
+import { loadProfileName } from "@/lib/profile";
 
 function NotFoundComponent() {
   return (
@@ -28,5 +30,14 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (!pathname.startsWith("/onboarding") && !loadProfileName()) {
+      navigate({ to: "/onboarding/welcome" });
+    }
+  }, [pathname, navigate]);
+
   return <Outlet />;
 }
