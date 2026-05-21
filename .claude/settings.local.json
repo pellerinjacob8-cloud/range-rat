@@ -3,8 +3,9 @@
     "allow": [
       "Bash(git init *)",
       "Bash(git add *)",
-      "mcp__Claude_Preview__preview_start",
-      "Bash(unzip -p \"/Users/jacob/Downloads/UI Update.zip\" \"design_handoff_range_rat_redesign/README.md\")"
+      "Bash(npm run *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__browser_batch"
     ]
   }
 }
