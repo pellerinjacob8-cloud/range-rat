@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, Pencil, Plus, Ruler, Trash2, User } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, Pencil, Plus, Ruler, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 
@@ -84,8 +84,14 @@ function ProfilePage() {
 
         {/* ── Profile header ── */}
         <div className="flex items-start gap-4 pb-6 pt-2 border-b border-border">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
-            <User className="h-8 w-8" />
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary shadow overflow-hidden p-2">
+            {/* Always white on the navy circle background */}
+            <img
+              src="/brand/monogram-rr-white.png"
+              alt=""
+              className="h-full w-full object-contain"
+              draggable={false}
+            />
           </div>
 
           <div className="flex-1 min-w-0">

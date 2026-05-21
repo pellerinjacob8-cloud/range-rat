@@ -45,8 +45,9 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Instrument Serif", "Canela", Georgia, serif;
+  --font-sans:    "Inter Tight", "Söhne", "Inter", system-ui, sans-serif;
+  --font-stats:   "Barlow Condensed", "DIN Condensed", "Oswald", system-ui, sans-serif;
 }
 
 /* Range Rat palette
@@ -166,6 +167,44 @@
   h3,
   .font-display {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.005em;
+    font-weight: 400;
   }
+
+  h1 { font-size: clamp(2rem, 5vw, 3rem);          line-height: 1.05; }
+  h2 { font-size: clamp(1.5rem, 3.5vw, 2rem);      line-height: 1.1;  }
+  h3 { font-size: clamp(1.125rem, 2.5vw, 1.25rem); line-height: 1.2;  }
 }
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.stat {
+  font-family: var(--font-stats);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Logo size utility — apply to both imgs in a dual-mode pair */
+.rr-logo-sm  { height: 2rem;  width: auto; display: block; }   /* 32px */
+.rr-logo-md  { height: 2.5rem; width: auto; display: block; }  /* 40px */
+.rr-logo-lg  { height: 4rem;  width: auto; display: block; }   /* 64px */
