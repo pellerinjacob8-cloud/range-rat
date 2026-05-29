@@ -1,22 +1,35 @@
-import { Link, useRouter } from "@tanstack/react-router";
-import { ChevronLeft, Moon, Sun } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
+import { Link, useRouter, useLocation } from "@tanstack/react-router";
+import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AppShellProps {
   children: React.ReactNode;
   showBack?: boolean;
+  hideTabBar?: boolean;
 }
 
-export function AppShell({ children, showBack = false }: AppShellProps) {
-  const { theme, toggle } = useTheme();
+const tabs = [
+  { href: "/", label: "Home", Icon: Home },
+  { href: "/practice", label: "Practice", Icon: Target },
+  { href: "/games", label: "Games", Icon: Flag },
+  { href: "/profile", label: "Profile", Icon: User },
+] as const;
+
+export function AppShell({ children, showBack = false, hideTabBar = false }: AppShellProps) {
   const router = useRouter();
+  const location = useLocation();
+
+  function isActive(href: string) {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname.startsWith(href);
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col pt-[env(safe-area-inset-top)]">
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex w-full max-w-md items-center justify-between px-4 h-16">
-          {/* Left — back button or spacer */}
-          <div className="flex items-center min-w-11">
+        <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-14">
+          {/* Left */}
+          <div className="flex items-center gap-2 min-w-12">
             {showBack ? (
               <button
                 onClick={() => router.history.back()}
@@ -25,40 +38,72 @@ export function AppShell({ children, showBack = false }: AppShellProps) {
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
-            ) : null}
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
+                <span className="font-serif italic text-[17px] leading-none text-white">R</span>
+              </div>
+            )}
           </div>
 
-          {/* Center — RR monogram + wordmark */}
-          <Link
-            to="/"
-            className="flex flex-col items-center gap-0.5"
-            aria-label="Range Rat home"
-          >
-            {/* Light mode logo */}
-            <img src="/brand/monogram-rr-navy.png" alt="Range Rat"
-              className="block dark:hidden h-9 w-auto" draggable={false} />
-            {/* Dark mode logo */}
-            <img src="/brand/monogram-rr-white.png" alt="Range Rat"
-              className="hidden dark:block h-9 w-auto" draggable={false} />
-            <span className="block font-sans text-[9px] font-bold tracking-[0.25em] uppercase text-foreground/40 leading-none">
-              Range Rat
-            </span>
-          </Link>
+          {/* Center */}
+          <span className="text-[13px] font-bold tracking-[0.16em] uppercase text-primary">
+            RANGE RAT
+          </span>
 
-          {/* Right — theme toggle */}
-          <div className="flex items-center justify-end min-w-11">
-            <button
-              onClick={toggle}
-              aria-label="Toggle theme"
+          {/* Right */}
+          <div className="flex items-center justify-end min-w-12">
+            <Link
+              to="/profile"
+              aria-label="Settings"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground active:bg-muted"
             >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
+              <Settings className="h-5 w-5" />
+            </Link>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pb-24 pt-4">{children}</main>
+      <main
+        className={cn(
+          "mx-auto w-full max-w-[430px] flex-1 px-4 pt-4",
+          hideTabBar
+            ? "pb-8"
+            : "pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+        )}
+      >
+        {children}
+      </main>
+
+      {!hideTabBar && (
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/94 backdrop-blur-md border-t border-border">
+          <div className="mx-auto flex w-full max-w-[430px] items-end justify-around pt-2 pb-[calc(18px+env(safe-area-inset-bottom))]">
+            {tabs.map(({ href, label, Icon }) => {
+              const active = isActive(href);
+              return (
+                <Link
+                  key={href}
+                  to={href}
+                  className="flex flex-col items-center gap-0.5"
+                >
+                  <Icon
+                    size={22}
+                    strokeWidth={active ? 2 : 1.6}
+                    className={active ? "text-primary" : "text-muted-foreground"}
+                  />
+                  <span
+                    className={cn(
+                      "text-[10px] uppercase tracking-[0.06em]",
+                      active ? "font-bold text-primary" : "font-semibold text-muted-foreground"
+                    )}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

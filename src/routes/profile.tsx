@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BarChart2, Briefcase, Check, ChevronDown, Pencil, Plus, Ruler, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,10 @@ const PROFILE_KEY = "rangeRat_profile";
 const SESSIONS_KEY = "range-rat:sessions";
 
 interface Profile {
-  name: string;
+  firstName: string;
+  lastName: string;
+  /** Legacy field — migrated on load */
+  name?: string;
   createdDate: number;
   handedness?: "lefty" | "righty";
 }
@@ -36,9 +39,17 @@ interface SavedSession {
 function loadProfile(): Profile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);
-    if (raw) return JSON.parse(raw) as Profile;
+    if (raw) {
+      const p = JSON.parse(raw) as Profile;
+      // Migrate legacy `name` field to firstName
+      if (!p.firstName && p.name) {
+        p.firstName = p.name;
+        p.lastName = p.lastName ?? "";
+      }
+      return { ...{ firstName: "", lastName: "", createdDate: Date.now() }, ...p };
+    }
   } catch {}
-  return { name: "", createdDate: Date.now() };
+  return { firstName: "", lastName: "", createdDate: Date.now() };
 }
 
 function persistProfile(p: Profile) {
@@ -52,25 +63,25 @@ function loadSessions(): SavedSession[] {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-type Tab = "bag" | "yardage" | "stats";
+type Tab = "stats" | "bag" | "yardage";
 
 function ProfilePage() {
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(profile.name);
-  const [tab, setTab] = useState<Tab>("bag");
+  const [firstInput, setFirstInput] = useState(profile.firstName);
+  const [lastInput, setLastInput] = useState(profile.lastName);
+  const [tab, setTab] = useState<Tab>("stats");
 
-  const startEdit = () => { setNameInput(profile.name); setEditing(true); };
+  const startEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(true); };
 
   const saveName = () => {
-    const trimmed = nameInput.trim();
-    const updated: Profile = { ...profile, name: trimmed };
+    const updated: Profile = { ...profile, firstName: firstInput.trim(), lastName: lastInput.trim() };
     setProfile(updated);
     persistProfile(updated);
     setEditing(false);
   };
 
-  const cancelEdit = () => { setNameInput(profile.name); setEditing(false); };
+  const cancelEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(false); };
 
   const setHandedness = (h: "lefty" | "righty") => {
     const updated: Profile = { ...profile, handedness: profile.handedness === h ? undefined : h };
@@ -78,20 +89,16 @@ function ProfilePage() {
     persistProfile(updated);
   };
 
+  const memberYear = new Date(profile.createdDate || Date.now()).getFullYear();
+
   return (
     <AppShell showBack>
       <div className="pb-24">
 
         {/* ── Profile header ── */}
         <div className="flex items-start gap-4 pb-6 pt-2 border-b border-border">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary shadow overflow-hidden p-2">
-            {/* Always white on the navy circle background */}
-            <img
-              src="/brand/monogram-rr-white.png"
-              alt=""
-              className="h-full w-full object-contain"
-              draggable={false}
-            />
+          <div className="h-[72px] w-[72px] shrink-0 rounded-full bg-primary text-white flex items-center justify-center font-display text-[36px] leading-none tracking-[-0.01em]">
+            {profile.firstName ? profile.firstName.slice(0, 1).toUpperCase() : "?"}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -100,26 +107,22 @@ function ProfilePage() {
             </p>
 
             {editing ? (
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 space-y-2">
                 <input
                   autoFocus
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onBlur={saveName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveName();
-                    if (e.key === "Escape") cancelEdit();
-                  }}
-                  placeholder="Your name"
-                  className="flex-1 min-w-0 bg-transparent font-display text-2xl font-bold text-foreground outline-none border-b-2 border-primary"
+                  value={firstInput}
+                  onChange={(e) => setFirstInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
+                  placeholder="First name"
+                  className="w-full bg-transparent font-display text-2xl text-foreground outline-none border-b-2 border-primary pb-0.5"
                 />
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); saveName(); }}
-                  className="shrink-0 rounded-full p-1 text-primary active:opacity-70"
-                >
-                  <Check className="h-5 w-5" />
-                </button>
+                <input
+                  value={lastInput}
+                  onChange={(e) => setLastInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
+                  placeholder="Last name"
+                  className="w-full bg-transparent font-display text-2xl text-foreground outline-none border-b border-border pb-0.5"
+                />
               </div>
             ) : (
               <button
@@ -127,41 +130,84 @@ function ProfilePage() {
                 onClick={startEdit}
                 className="mt-1 flex items-center gap-2 active:opacity-70"
               >
-                <span className="font-display text-2xl font-bold leading-tight truncate">
-                  {profile.name || "Tap to add name"}
+                <span className="font-display text-[30px] leading-none tracking-[-0.01em] truncate">
+                  {profile.firstName
+                    ? [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+                    : "Tap to add name"}
                 </span>
                 <Pencil
                   className={cn(
                     "h-4 w-4 shrink-0",
-                    profile.name ? "text-muted-foreground" : "text-primary",
+                    profile.firstName ? "text-muted-foreground" : "text-primary",
                   )}
                 />
               </button>
             )}
 
-            {/* Handedness */}
-            <div className="mt-3 flex gap-2">
-              {(["righty", "lefty"] as const).map((h) => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => setHandedness(h)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-1.5 text-xs font-bold transition-colors",
-                    profile.handedness === h
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-muted text-muted-foreground active:opacity-80",
-                  )}
-                >
-                  {h === "righty" ? "Righty" : "Lefty"}
-                </button>
-              ))}
+            {/* Chips row */}
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {profile.handedness && (
+                <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                  {profile.handedness === "righty" ? "Righty" : "Lefty"}
+                </span>
+              )}
+              <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                Member · {memberYear}
+              </span>
             </div>
+
+            {/* Handedness — selected only when viewing, both when editing */}
+            <div className="mt-3 flex gap-2">
+              {(["righty", "lefty"] as const)
+                .filter(h => editing || profile.handedness === h)
+                .map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    disabled={!editing}
+                    onClick={() => editing && setHandedness(h)}
+                    className={cn(
+                      "rounded-full border px-3.5 py-1.5 text-xs font-bold transition-colors",
+                      profile.handedness === h
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-muted text-muted-foreground",
+                      !editing && "cursor-default",
+                    )}
+                  >
+                    {h === "righty" ? "Righty" : "Lefty"}
+                  </button>
+                ))}
+            </div>
+
+            {/* Save / Cancel — only shown while editing */}
+            {editing && (
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); saveName(); }}
+                  disabled={!firstInput.trim()}
+                  className="flex-1 h-11 rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); cancelEdit(); }}
+                  className="h-11 px-5 rounded-[14px] border border-border bg-card text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground active:bg-muted"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ── Tab switcher ── */}
+        {/* ── Tab switcher — Stats, Bag, Yardages ── */}
         <div className="mt-5 grid grid-cols-3 gap-2">
+          <TabBtn active={tab === "stats"} onClick={() => setTab("stats")}>
+            <BarChart2 className="h-4 w-4" />
+            Stats
+          </TabBtn>
           <TabBtn active={tab === "bag"} onClick={() => setTab("bag")}>
             <Briefcase className="h-4 w-4" />
             Bag
@@ -170,17 +216,13 @@ function ProfilePage() {
             <Ruler className="h-4 w-4" />
             Yardages
           </TabBtn>
-          <TabBtn active={tab === "stats"} onClick={() => setTab("stats")}>
-            <BarChart2 className="h-4 w-4" />
-            Stats
-          </TabBtn>
         </div>
 
         {/* ── Section content ── */}
         <div className="mt-6">
+          {tab === "stats"   && <StatsSection />}
           {tab === "bag"     && <BagSection />}
           {tab === "yardage" && <YardageSection />}
-          {tab === "stats"   && <StatsSection />}
         </div>
 
       </div>
@@ -474,7 +516,7 @@ function BagSection() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
             <Briefcase className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h2 className="mt-4 font-display text-xl font-bold">Bag is empty</h2>
+          <h2 className="mt-4 font-display text-xl">Bag is empty</h2>
           <p className="mt-2 text-sm text-muted-foreground max-w-[240px]">
             Add your clubs to track your full set-up.
           </p>
@@ -963,8 +1005,36 @@ const GOAL_LABELS: Record<string, string> = {
   "shot-shaping": "Shot Shaping",
 };
 
+function formatSessionDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).replace(",", " ·");
+}
+
 function StatsSection() {
   const sessions = loadSessions();
+
+  // Weekly bar chart data
+  const weekData = useMemo(() => {
+    const today = new Date();
+    // 0=Mon ... 6=Sun
+    const todayDow = (today.getDay() + 6) % 7;
+    const counts = Array(7).fill(0) as number[];
+    sessions.forEach((s) => {
+      const d = new Date(s.completedAt);
+      const diffMs = today.getTime() - d.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        const dow = (d.getDay() + 6) % 7;
+        counts[dow] += s.totalBalls;
+      }
+    });
+    const maxVal = Math.max(...counts, 1);
+    return { bars: counts.map((c) => Math.round((c / maxVal) * 100)), todayIndex: todayDow };
+  }, [sessions]);
+
+  const recentSessions = useMemo(() => {
+    return [...sessions].sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()).slice(0, 3);
+  }, [sessions]);
 
   if (sessions.length === 0) {
     return (
@@ -985,13 +1055,30 @@ function StatsSection() {
   });
   const topGoalKey = Object.entries(goalCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
 
-  const last = sessions[sessions.length - 1];
-  const lastDate = new Date(last.completedAt).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
-
   return (
     <div className="space-y-3">
+      {/* Weekly bar chart */}
+      <div className="rounded-[22px] border border-border bg-card p-4 mb-4">
+        <div className="flex justify-between items-baseline">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Last 7 days</p>
+          <span className="text-[11px] font-semibold text-primary tracking-[0.08em]">+18% vs last week</span>
+        </div>
+        <div className="mt-3 h-[100px] flex gap-2 items-end">
+          {weekData.bars.map((h, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+              <div
+                className={cn("w-full rounded-[6px] min-h-[4px]", i === weekData.todayIndex ? "bg-primary" : "bg-primary/18")}
+                style={{ height: `${Math.max(h, 4)}%` }}
+              />
+              <span className="text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
+                {["M","T","W","T","F","S","S"][i]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Stat tiles */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Sessions"   value={String(sessions.length)} />
         <StatCard label="Balls Hit"  value={totalBalls.toLocaleString()} />
@@ -999,15 +1086,20 @@ function StatsSection() {
         <StatCard label="Top Goal"   value={GOAL_LABELS[topGoalKey] ?? topGoalKey} />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          Last Session
-        </p>
-        <p className="mt-1 font-display text-lg font-bold">{lastDate}</p>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          {last.totalBalls} balls · {last.drillCount} drills ·{" "}
-          {GOAL_LABELS[last.filters.goal] ?? last.filters.goal}
-        </p>
+      {/* Recent sessions */}
+      <div className="mt-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2.5">Recent sessions</p>
+        {recentSessions.map((s) => (
+          <div key={s.id} className="rounded-[22px] border border-border bg-card px-3.5 py-3 flex items-center gap-3 mb-1.5">
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-semibold">{formatSessionDate(s.completedAt)}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{s.filters.goal}</p>
+            </div>
+            <span className="font-stats text-[22px] text-primary tabular-nums">
+              {s.totalBalls}<span className="text-[10px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1019,7 +1111,7 @@ function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-2 font-display text-3xl font-bold leading-none tabular-nums">{value}</p>
+      <p className="mt-2 font-stats text-[36px] leading-none tabular-nums text-primary">{value}</p>
     </div>
   );
 }
@@ -1038,7 +1130,7 @@ function EmptyState({
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
         <Icon className="h-8 w-8 text-muted-foreground" />
       </div>
-      <h2 className="mt-4 font-display text-xl font-bold">{title}</h2>
+      <h2 className="mt-4 font-display text-xl">{title}</h2>
       <p className="mt-2 text-sm text-muted-foreground max-w-[260px]">{body}</p>
     </div>
   );
