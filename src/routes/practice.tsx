@@ -213,9 +213,9 @@ function PracticePage() {
       <div className="pb-32 space-y-7">
         {/* Heading block */}
         <div className="pt-2 pb-2">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Build · Step 1 of 1</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Build · Step 1 of 1</p>
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
-          <p className="mt-2.5 text-[13px] text-muted-foreground">
+          <p className="mt-2.5 text-[15px] text-muted-foreground">
             {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
               showCustomBucket && customBalls ? `${customBalls} balls` :
               bucket === "small" ? "25 balls" : bucket === "medium" ? "50 balls" : bucket === "large" ? "100 balls" : "— balls"
@@ -229,7 +229,7 @@ function PracticePage() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Flame className="h-4 w-4 text-primary" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-primary">
               Warm Up · Optional
             </p>
           </div>
@@ -328,7 +328,7 @@ function PracticePage() {
 
         {/* Bucket size */}
         <div className="space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Bucket Size</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Bucket Size</p>
           <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, 1fr) auto" }}>
             {BUCKET_SIZES.map((b) => {
               const active = !showCustomBucket && bucket === b.value;
@@ -346,7 +346,7 @@ function PracticePage() {
                   )}
                 >
                   <span className="font-display text-[28px] leading-none tracking-[-0.01em]">{b.label.charAt(0)}</span>
-                  <span className={cn("text-[11px] font-bold uppercase tracking-[0.12em]", active ? "opacity-80" : "opacity-60")}>{b.balls} BALLS</span>
+                  <span className={cn("text-[13px] font-bold uppercase tracking-[0.12em]", active ? "opacity-80" : "opacity-60")}>{b.balls} BALLS</span>
                 </button>
               );
             })}
@@ -375,7 +375,7 @@ function PracticePage() {
               <button
                 type="button"
                 onClick={() => { setShowCustomBucket(true); setBucket(null); }}
-                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[12px] font-semibold tracking-[0.06em]"
+                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[14px] font-semibold tracking-[0.06em]"
               >
                 <Plus className="h-4 w-4" />
                 Custom
@@ -446,8 +446,8 @@ function PracticePage() {
 
       </div>
 
-      <div className="fixed inset-x-0 z-40"
-           style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", background: "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.97) 32%)", backdropFilter: "blur(8px)" }}>
+      <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
+           style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
         <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
           <Button
             size="lg"
@@ -493,7 +493,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
       <div className="pb-12">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your Session</p>
+            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your Session</p>
             <h1 className="mt-1 font-display text-[36px] leading-[1.0] tracking-[-0.01em]">In progress.</h1>
           </div>
           <div className="text-right leading-none pb-1">
@@ -516,7 +516,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
               <section key={club}>
                 <h2
                   className={cn(
-                    "font-ui text-[12px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 pb-2 border-b border-border",
+                    "font-ui text-[14px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 pb-2 border-b border-border",
                     isWarmUp && "text-primary",
                   )}
                 >
@@ -564,9 +564,9 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
                                 <p className={cn("font-semibold", isDone && "line-through text-muted-foreground")}>
                                   {d.drillName}
                                 </p>
-                                <span className={cn("font-stats text-[17px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-primary")}>
+                                <span className={cn("font-stats text-[22px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-foreground")}>
                                   {d.balls > 0 ? d.balls : d.unit ?? "—"}
-                                  {d.balls > 0 && <span className="text-[10px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>}
+                                  {d.balls > 0 && <span className="text-[13px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>}
                                 </span>
                               </div>
                               <p className={cn("mt-1 text-sm text-muted-foreground", isDone && "line-through")}>

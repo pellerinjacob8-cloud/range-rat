@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, Pencil, Plus, Ruler, Trash2 } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, Moon, Pencil, Plus, Ruler, Sun, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -71,6 +72,7 @@ function ProfilePage() {
   const [firstInput, setFirstInput] = useState(profile.firstName);
   const [lastInput, setLastInput] = useState(profile.lastName);
   const [tab, setTab] = useState<Tab>("stats");
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const startEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(true); };
 
@@ -186,20 +188,48 @@ function ProfilePage() {
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); saveName(); }}
                   disabled={!firstInput.trim()}
-                  className="flex-1 h-11 rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90"
+                  className="flex-1 h-11 rounded-[14px] bg-primary text-white text-[15px] font-bold uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90"
                 >
                   Save
                 </button>
                 <button
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); cancelEdit(); }}
-                  className="h-11 px-5 rounded-[14px] border border-border bg-card text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground active:bg-muted"
+                  className="h-11 px-5 rounded-[14px] border border-border bg-card text-[15px] font-bold uppercase tracking-[0.06em] text-muted-foreground active:bg-muted"
                 >
                   Cancel
                 </button>
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Appearance toggle ── */}
+        <div className="mt-5 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            {theme === "dark" ? (
+              <Moon className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Sun className="h-4 w-4 text-muted-foreground" />
+            )}
+            <span className="text-sm font-semibold">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
+          </div>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className={cn(
+              "relative h-8 w-14 rounded-full transition-colors duration-200 shrink-0",
+              theme === "dark" ? "bg-primary" : "bg-border",
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200",
+                theme === "dark" ? "translate-x-6" : "translate-x-0",
+              )}
+            />
+          </button>
         </div>
 
         {/* ── Tab switcher — Stats, Bag, Yardages ── */}
@@ -225,8 +255,39 @@ function ProfilePage() {
           {tab === "yardage" && <YardageSection />}
         </div>
 
+
       </div>
     </AppShell>
+  );
+}
+
+// ─── Golf Bag Icon ────────────────────────────────────────────────────────────
+
+function GolfBagIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Bag body — elongated */}
+      <path d="M7 12 L7 22 Q7 23.5 9 23.5 L15 23.5 Q17 23.5 17 22 L17 12 Z" />
+      {/* Top collar */}
+      <path d="M7 12 Q7 10 12 10 Q17 10 17 12" />
+      {/* Carry handle */}
+      <path d="M10 10 Q10 8.5 12 8.5 Q14 8.5 14 10" />
+      {/* Single club shaft */}
+      <line x1="12" y1="10" x2="11" y2="4" />
+      {/* Club head (hooked iron) */}
+      <path d="M11 4 L9.5 3.5" />
+      {/* Front pocket */}
+      <path d="M8.5 17 Q12 18.5 15.5 17" />
+    </svg>
   );
 }
 
@@ -623,7 +684,7 @@ function BagSection() {
                         className="flex flex-1 min-w-0 items-center gap-2 text-left active:opacity-70"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary mb-0.5">Iron Set</p>
+                          <p className="text-[12px] font-bold uppercase tracking-[0.15em] text-primary mb-0.5">Iron Set</p>
                           <p className="font-semibold leading-none">{header.name}</p>
                           {(header.brand || header.model) && (
                             <p className="mt-0.5 text-xs text-muted-foreground">{[header.brand, header.model].filter(Boolean).join(" · ")}</p>
@@ -906,13 +967,13 @@ function YardageSection() {
         <table className="w-full min-w-[320px]">
           <thead>
             <tr className="border-b border-border bg-muted/40">
-              <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+              <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-[13px] font-bold uppercase tracking-widest text-muted-foreground">
                 Club
               </th>
               {SWING_COLS.map((col) => (
                 <th
                   key={col.key}
-                  className="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-widest text-muted-foreground"
+                  className="px-3 py-3 text-center text-[13px] font-bold uppercase tracking-widest text-muted-foreground"
                 >
                   {col.label}
                 </th>
@@ -1060,8 +1121,8 @@ function StatsSection() {
       {/* Weekly bar chart */}
       <div className="rounded-[22px] border border-border bg-card p-4 mb-4">
         <div className="flex justify-between items-baseline">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Last 7 days</p>
-          <span className="text-[11px] font-semibold text-primary tracking-[0.08em]">+18% vs last week</span>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Last 7 days</p>
+          <span className="text-[13px] font-semibold text-primary tracking-[0.08em]">+18% vs last week</span>
         </div>
         <div className="mt-3 h-[100px] flex gap-2 items-end">
           {weekData.bars.map((h, i) => (
@@ -1070,7 +1131,7 @@ function StatsSection() {
                 className={cn("w-full rounded-[6px] min-h-[4px]", i === weekData.todayIndex ? "bg-primary" : "bg-primary/18")}
                 style={{ height: `${Math.max(h, 4)}%` }}
               />
-              <span className="text-[10px] font-semibold tracking-[0.06em] text-muted-foreground">
+              <span className="text-[12px] font-semibold tracking-[0.06em] text-muted-foreground">
                 {["M","T","W","T","F","S","S"][i]}
               </span>
             </div>
@@ -1088,15 +1149,15 @@ function StatsSection() {
 
       {/* Recent sessions */}
       <div className="mt-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2.5">Recent sessions</p>
+        <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2.5">Recent sessions</p>
         {recentSessions.map((s) => (
           <div key={s.id} className="rounded-[22px] border border-border bg-card px-3.5 py-3 flex items-center gap-3 mb-1.5">
             <div className="flex-1 min-w-0">
               <p className="text-[13.5px] font-semibold">{formatSessionDate(s.completedAt)}</p>
-              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{s.filters.goal}</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{s.filters.goal}</p>
             </div>
             <span className="font-stats text-[22px] text-primary tabular-nums">
-              {s.totalBalls}<span className="text-[10px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>
+              {s.totalBalls}<span className="text-[12px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>
             </span>
           </div>
         ))}

@@ -46,7 +46,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
           </div>
 
           {/* Center */}
-          <span className="text-[13px] font-bold tracking-[0.16em] uppercase text-primary">
+          <span className="text-[15px] font-bold tracking-[0.16em] uppercase text-primary">
             RANGE RAT
           </span>
 
@@ -92,7 +92,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
                   />
                   <span
                     className={cn(
-                      "text-[10px] uppercase tracking-[0.06em]",
+                      "text-[12px] uppercase tracking-[0.06em]",
                       active ? "font-bold text-primary" : "font-semibold text-muted-foreground"
                     )}
                   >

@@ -81,7 +81,7 @@ function StatNum({ value, size }: { value: number; size: number }) {
 
 function Eyebrow({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <p className={`text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground ${className ?? ""}`}>
+    <p className={`text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground ${className ?? ""}`}>
       {children}
     </p>
   );
@@ -122,13 +122,13 @@ function Home() {
               <RotateCcw className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/70">
+              <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-white/70">
                 RESUME
               </p>
-              <p className="mt-0.5 text-[15px] font-semibold text-white leading-tight truncate">
+              <p className="mt-0.5 text-[17px] font-semibold text-white leading-tight truncate">
                 {activeSession.label}
               </p>
-              <p className="text-[11px] text-white/60 mt-0.5">{activeSession.subtitle}</p>
+              <p className="text-[13px] text-white/60 mt-0.5">{activeSession.subtitle}</p>
             </div>
             <ChevronRight className="h-5 w-5 text-white/70 shrink-0" />
           </button>
@@ -158,7 +158,7 @@ function Home() {
             <div className="mt-1">
               <StatNum value={value} size={32} />
             </div>
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            <p className="mt-0.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
               {sub}
             </p>
           </div>
@@ -204,7 +204,7 @@ function NavCard({ to, title, subtitle, Icon }: NavCardProps) {
       </div>
       <div className="flex-1 min-w-0">
         <h2 className="font-display text-[22px] leading-none">{title}</h2>
-        <p className="mt-1 text-[12.5px] text-muted-foreground line-clamp-2">{subtitle}</p>
+        <p className="mt-1 text-[15px] text-muted-foreground line-clamp-2">{subtitle}</p>
       </div>
       <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
     </Link>
