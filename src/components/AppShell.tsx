@@ -47,7 +47,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
           <img
             src={theme === "dark" ? "/brand/logo-white.png" : "/brand/logo-navy.png"}
             alt="Range Rat"
-            className="h-8 w-8 object-contain"
+            className="h-8 w-auto max-w-[120px]"
           />
 
           {/* Right */}
