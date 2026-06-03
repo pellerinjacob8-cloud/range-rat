@@ -12,10 +12,9 @@ function OnboardingWelcome() {
 
       {/* Content fills the middle */}
       <div className="flex-1 flex flex-col justify-center">
-        {/* R monogram tile */}
-        <div className="h-16 w-16 rounded-2xl bg-primary text-white flex items-center justify-center font-display text-[36px] leading-none italic tracking-[-0.02em]">
-          R
-        </div>
+        {/* Logo */}
+        <img src="/brand/monogram-rr-navy.png" alt="Range Rat" className="h-16 w-auto dark:hidden" />
+        <img src="/brand/monogram-rr-white.png" alt="Range Rat" className="h-16 w-auto hidden dark:block" />
 
         {/* Hero heading */}
         <h1 className="mt-8 font-display text-[56px] leading-[0.95] tracking-[-0.015em]">

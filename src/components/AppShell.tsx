@@ -1,6 +1,7 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/context/ThemeContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ const tabs = [
 export function AppShell({ children, showBack = false, hideTabBar = false }: AppShellProps) {
   const router = useRouter();
   const location = useLocation();
+  const { theme } = useTheme();
 
   function isActive(href: string) {
     if (href === "/") return location.pathname === "/";
@@ -30,7 +32,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-14">
           {/* Left */}
           <div className="flex items-center gap-2 min-w-12">
-            {showBack ? (
+            {showBack && (
               <button
                 onClick={() => router.history.back()}
                 aria-label="Back"
@@ -38,17 +40,15 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
-            ) : (
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-                <span className="font-serif italic text-[17px] leading-none text-white">R</span>
-              </div>
             )}
           </div>
 
-          {/* Center */}
-          <span className="text-[15px] font-bold tracking-[0.16em] uppercase text-primary">
-            RANGE RAT
-          </span>
+          {/* Center — logo */}
+          <img
+            src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+            alt="Range Rat"
+            className="h-8 w-auto"
+          />
 
           {/* Right */}
           <div className="flex items-center justify-end min-w-12">
