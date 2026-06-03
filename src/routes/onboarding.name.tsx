@@ -12,19 +12,15 @@ function OnboardingName() {
   const [lastName, setLastName] = useState("");
   const [hand, setHand] = useState<"right" | "left">("right");
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!firstName.trim()) return;
-    const existing = (() => {
-      try {
-        return JSON.parse(localStorage.getItem("rangeRat_profile") ?? "{}") as Record<string, unknown>;
-      } catch {
-        return {} as Record<string, unknown>;
-      }
-    })();
-    localStorage.setItem(
-      "rangeRat_profile",
-      JSON.stringify({ ...existing, firstName: firstName.trim(), lastName: lastName.trim(), handedness: hand })
-    );
+    const { saveProfile } = await import("@/lib/db");
+    await saveProfile({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      handedness: hand === "right" ? "righty" : "lefty",
+      createdDate: Date.now(),
+    });
     navigate({ to: "/onboarding/bag" });
   };
 

@@ -1,4 +1,5 @@
 import type { GenerateInput, SessionDrill } from "./drills";
+import { fetchFavorites, insertFavorite, removeFavorite } from "./db";
 
 export const FAVORITES_KEY = "range-rat:favorites";
 export const FREE_LIMIT = 1;
@@ -11,19 +12,7 @@ export interface Favorite {
   createdAt: number;
 }
 
-export function loadFavorites(): Favorite[] {
-  try {
-    return JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as Favorite[];
-  } catch {
-    return [];
-  }
-}
-
-function persistFavorites(favs: Favorite[]) {
-  try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
-  } catch {}
-}
+export { fetchFavorites as loadFavoritesAsync };
 
 export function saveFavorite(name: string, sessionInput: GenerateInput, session: SessionDrill[]): Favorite {
   const fav: Favorite = {
@@ -33,16 +22,16 @@ export function saveFavorite(name: string, sessionInput: GenerateInput, session:
     session,
     createdAt: Date.now(),
   };
-  persistFavorites([...loadFavorites(), fav]);
+  insertFavorite(fav); // fire and forget
   return fav;
 }
 
 export function deleteFavorite(id: string) {
-  persistFavorites(loadFavorites().filter((f) => f.id !== id));
+  removeFavorite(id); // fire and forget
 }
 
-export function isAtFreeLimit(): boolean {
-  return loadFavorites().length >= FREE_LIMIT;
+export function isAtFreeLimit(favorites: Favorite[]): boolean {
+  return favorites.length >= FREE_LIMIT;
 }
 
 /** Generate a default name for a session based on its config and today's date */

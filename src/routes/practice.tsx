@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  loadFavorites,
+  loadFavoritesAsync,
   saveFavorite,
   deleteFavorite,
   isAtFreeLimit,
@@ -110,13 +110,20 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
       .reduce((sum, d) => sum + d.balls, 0),
     drillCount: session.length,
   };
-  try {
-    const existing = JSON.parse(localStorage.getItem(SESSIONS_KEY) ?? "[]") as SavedSession[];
-    existing.push(record);
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(existing));
-  } catch {
-    // localStorage unavailable (private/quota)
-  }
+  // Save to Supabase (fire and forget)
+  import("@/lib/db").then(({ saveSession: dbSave }) => {
+    dbSave({
+      id: record.id,
+      completedAt: record.completedAt,
+      filters: {
+        goal: (input as { goal?: string }).goal ?? "",
+        bucket: String((input as { bucket?: unknown }).bucket ?? ""),
+        time: Number((input as { time?: unknown }).time ?? 0),
+      },
+      totalBalls: record.totalBalls,
+      drillCount: record.drillCount,
+    });
+  });
   return record;
 }
 
@@ -135,7 +142,9 @@ function PracticePage() {
   const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
   const [sessionMode, setSessionMode] = useState<"pick" | "list" | "guided" | null>(null);
   const [practiceTab, setPracticeTab] = useState<"build" | "saved">("build");
-  const [favorites, setFavorites] = useState<Favorite[]>(loadFavorites);
+  const [favorites, setFavorites] = useState<Favorite[]>([]);
+
+  useEffect(() => { loadFavoritesAsync().then(setFavorites); }, []);
 
   // Custom input state — optional overrides for bucket and time
   const [showCustomBucket, setShowCustomBucket] = useState(false);
@@ -206,7 +215,7 @@ function PracticePage() {
         session={session}
         sessionInput={sessionInput}
         onNewSession={reset}
-        onFavoriteSaved={() => setFavorites(loadFavorites())}
+        onFavoriteSaved={() => loadFavoritesAsync().then(setFavorites)}
       />
     );
   }
@@ -331,7 +340,7 @@ function PracticePage() {
         {practiceTab === "saved" && (
           <SavedTab
             favorites={favorites}
-            onDelete={(id) => { deleteFavorite(id); setFavorites(loadFavorites()); }}
+            onDelete={(id) => { deleteFavorite(id); loadFavoritesAsync().then(setFavorites); }}
             onRun={(fav) => {
               setSessionInput(fav.sessionInput);
               setSession(fav.session);
@@ -768,9 +777,11 @@ function CompletionView({
   const [proOpen, setProOpen] = useState(false);
   const [favName, setFavName] = useState(() => defaultFavoriteName(sessionInput));
   const [saved, setSaved] = useState(false);
+  const [existingFavs, setExistingFavs] = useState<Favorite[]>([]);
+  useEffect(() => { loadFavoritesAsync().then(setExistingFavs); }, []);
 
   const handleSaveClick = () => {
-    if (isAtFreeLimit()) { setProOpen(true); return; }
+    if (isAtFreeLimit(existingFavs)) { setProOpen(true); return; }
     setSaveOpen(true);
   };
 

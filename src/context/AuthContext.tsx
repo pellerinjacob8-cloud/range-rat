@@ -25,6 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      // Run localStorage → Supabase migration on sign-in
+      if (session) {
+        import("@/lib/db").then(({ migrateFromLocalStorage }) => migrateFromLocalStorage());
+      }
     });
 
     return () => subscription.unsubscribe();

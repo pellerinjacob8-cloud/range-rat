@@ -1,10 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BarChart2, Briefcase, Check, ChevronDown, LogOut, Moon, Pencil, Plus, Ruler, Sun, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import {
+  fetchProfile, saveProfile as dbSaveProfile,
+  fetchSessions, fetchBag, saveBag as dbSaveBag,
+  fetchYardages, saveYardage as dbSaveYardage,
+  type SavedSession, type Club as DbClub, type YardageMap as DbYardageMap,
+} from "@/lib/db";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -16,51 +22,13 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-// ─── Storage ──────────────────────────────────────────────────────────────────
-
-const PROFILE_KEY = "rangeRat_profile";
-const SESSIONS_KEY = "range-rat:sessions";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Profile {
   firstName: string;
   lastName: string;
-  /** Legacy field — migrated on load */
-  name?: string;
   createdDate: number;
   handedness?: "lefty" | "righty";
-}
-
-interface SavedSession {
-  id: string;
-  completedAt: string;
-  filters: { goal: string; bucket: string; time: number };
-  totalBalls: number;
-  drillCount: number;
-}
-
-function loadProfile(): Profile {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (raw) {
-      const p = JSON.parse(raw) as Profile;
-      // Migrate legacy `name` field to firstName
-      if (!p.firstName && p.name) {
-        p.firstName = p.name;
-        p.lastName = p.lastName ?? "";
-      }
-      return { ...{ firstName: "", lastName: "", createdDate: Date.now() }, ...p };
-    }
-  } catch {}
-  return { firstName: "", lastName: "", createdDate: Date.now() };
-}
-
-function persistProfile(p: Profile) {
-  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch {}
-}
-
-function loadSessions(): SavedSession[] {
-  try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) ?? "[]") as SavedSession[]; }
-  catch { return []; }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -70,12 +38,20 @@ type Tab = "stats" | "bag" | "yardage";
 function ProfilePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [profile, setProfile] = useState<Profile>(loadProfile);
+  const defaultProfile: Profile = { firstName: "", lastName: "", createdDate: Date.now() };
+  const [profile, setProfile] = useState<Profile>(defaultProfile);
   const [editing, setEditing] = useState(false);
-  const [firstInput, setFirstInput] = useState(profile.firstName);
-  const [lastInput, setLastInput] = useState(profile.lastName);
+  const [firstInput, setFirstInput] = useState("");
+  const [lastInput, setLastInput] = useState("");
   const [tab, setTab] = useState<Tab>("stats");
   const { theme, toggle: toggleTheme } = useTheme();
+
+  // Load profile from Supabase on mount
+  useEffect(() => {
+    fetchProfile().then((p) => {
+      if (p) { setProfile(p); setFirstInput(p.firstName); setLastInput(p.lastName); }
+    });
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -87,7 +63,7 @@ function ProfilePage() {
   const saveName = () => {
     const updated: Profile = { ...profile, firstName: firstInput.trim(), lastName: lastInput.trim() };
     setProfile(updated);
-    persistProfile(updated);
+    dbSaveProfile(updated);
     setEditing(false);
   };
 
@@ -96,7 +72,7 @@ function ProfilePage() {
   const setHandedness = (h: "lefty" | "righty") => {
     const updated: Profile = { ...profile, handedness: profile.handedness === h ? undefined : h };
     setProfile(updated);
-    persistProfile(updated);
+    dbSaveProfile(updated);
   };
 
   const memberYear = new Date(profile.createdDate || Date.now()).getFullYear();
@@ -385,10 +361,6 @@ function loadBag(): Club[] {
   catch { return []; }
 }
 
-function persistBag(clubs: Club[]) {
-  try { localStorage.setItem(BAG_KEY, JSON.stringify(clubs)); } catch {}
-}
-
 /** Return clubs in golf-bag display order. Iron-set children follow their parent immediately. */
 function sortedForDisplay(clubs: Club[]): Club[] {
   const byType = (t: ClubType) => clubs.filter((c) => c.type === t && !c.parentSetId);
@@ -453,7 +425,20 @@ function BagSection() {
   const [editing, setEditing]     = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft>(EMPTY_EDIT);
 
-  const update = (next: Club[]) => { setClubs(next); persistBag(next); };
+  // Load from Supabase on mount; fall back to localStorage for instant render
+  useEffect(() => {
+    fetchBag().then((dbClubs) => {
+      if (dbClubs.length > 0) setClubs(dbClubs as Club[]);
+    });
+  }, []);
+
+  const update = (next: Club[]) => {
+    setClubs(next);
+    // Persist to localStorage for offline/instant reads
+    try { localStorage.setItem(BAG_KEY, JSON.stringify(next)); } catch {}
+    // Persist to Supabase
+    dbSaveBag(next as DbClub[]);
+  };
 
   // ── Add ──
   const addClub = () => {
@@ -948,10 +933,6 @@ function loadYardages(): YardageMap {
   catch { return {}; }
 }
 
-function persistYardages(y: YardageMap) {
-  try { localStorage.setItem(YARDAGE_KEY, JSON.stringify(y)); } catch {}
-}
-
 const SWING_COLS: { key: keyof SwingYardages; label: string }[] = [
   { key: "halfSwing",         label: "½ Swing" },
   { key: "threeQuarterSwing", label: "¾ Swing" },
@@ -959,18 +940,30 @@ const SWING_COLS: { key: keyof SwingYardages; label: string }[] = [
 ];
 
 function YardageSection() {
-  // Exclude iron-set headers (they are visual groupers, not hittable clubs)
-  const clubs = sortedForDisplay(loadBag()).filter((c) => c.type !== "iron-set" && c.type !== "putter");
+  const [clubs, setClubs] = useState<Club[]>(() =>
+    sortedForDisplay(loadBag()).filter((c) => c.type !== "iron-set" && c.type !== "putter")
+  );
   const [yardages, setYardages] = useState<YardageMap>(loadYardages);
+
+  useEffect(() => {
+    fetchBag().then((dbClubs) => {
+      if (dbClubs.length > 0)
+        setClubs(sortedForDisplay(dbClubs as Club[]).filter((c) => c.type !== "iron-set" && c.type !== "putter"));
+    });
+    fetchYardages().then((y) => { if (Object.keys(y).length > 0) setYardages(y); });
+  }, []);
 
   const updateYardage = (clubId: string, col: keyof SwingYardages, val: number | null) => {
     const current: SwingYardages = yardages[clubId] ?? { halfSwing: null, threeQuarterSwing: null, fullSwing: null };
-    const next: YardageMap = {
-      ...yardages,
-      [clubId]: { ...current, [col]: val },
-    };
-    setYardages(next);
-    persistYardages(next);
+    const next: SwingYardages = { ...current, [col]: val };
+    setYardages((prev) => ({ ...prev, [clubId]: next }));
+    // Persist to localStorage for fast reads
+    try {
+      const all = { ...loadYardages(), [clubId]: next };
+      localStorage.setItem(YARDAGE_KEY, JSON.stringify(all));
+    } catch {}
+    // Persist to Supabase
+    dbSaveYardage(clubId, next);
   };
 
   if (clubs.length === 0) {
@@ -1098,7 +1091,14 @@ function formatSessionDate(iso: string): string {
 }
 
 function StatsSection() {
-  const sessions = loadSessions();
+  const [sessions, setSessions] = useState<SavedSession[]>(() => {
+    try { return JSON.parse(localStorage.getItem("range-rat:sessions") ?? "[]") as SavedSession[]; }
+    catch { return []; }
+  });
+
+  useEffect(() => {
+    fetchSessions().then((s) => { if (s.length > 0) setSessions(s); });
+  }, []);
 
   // Weekly bar chart data
   const weekData = useMemo(() => {

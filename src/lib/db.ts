@@ -1,0 +1,319 @@
+/**
+ * Supabase data layer — replaces localStorage for all persistent user data.
+ * Falls back gracefully if the user is not logged in.
+ */
+import { supabase } from "./supabase";
+import type { GenerateInput, SessionDrill } from "./drills";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface Profile {
+  firstName: string;
+  lastName: string;
+  handedness?: "lefty" | "righty";
+  createdDate: number;
+}
+
+export interface SavedSession {
+  id: string;
+  completedAt: string;
+  filters: { goal: string; bucket: string; time: number };
+  totalBalls: number;
+  drillCount: number;
+}
+
+export interface Club {
+  id: string;
+  name: string;
+  type: string;
+  brand?: string;
+  model?: string;
+  parentSetId?: string;
+  ironNumber?: number;
+  sortOrder?: number;
+}
+
+export type SwingYardages = {
+  halfSwing: number | null;
+  threeQuarterSwing: number | null;
+  fullSwing: number | null;
+};
+
+export type YardageMap = Record<string, SwingYardages>;
+
+export interface Favorite {
+  id: string;
+  name: string;
+  sessionInput: GenerateInput;
+  session: SessionDrill[];
+  createdAt: number;
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+export async function fetchProfile(): Promise<Profile | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (!data) return null;
+
+  return {
+    firstName: data.first_name ?? "",
+    lastName: data.last_name ?? "",
+    handedness: data.handedness ?? undefined,
+    createdDate: data.created_date ?? Date.now(),
+  };
+}
+
+export async function saveProfile(profile: Partial<Profile>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("profiles").upsert({
+    id: user.id,
+    first_name: profile.firstName ?? "",
+    last_name: profile.lastName ?? "",
+    handedness: profile.handedness ?? null,
+    created_date: profile.createdDate ?? Date.now(),
+    updated_at: new Date().toISOString(),
+  });
+
+  // Keep localStorage in sync so loadProfileName() still works for nav
+  try {
+    localStorage.setItem("rangeRat_profile", JSON.stringify({
+      firstName: profile.firstName ?? "",
+      lastName: profile.lastName ?? "",
+      handedness: profile.handedness,
+      createdDate: profile.createdDate ?? Date.now(),
+    }));
+  } catch {}
+}
+
+// ─── Sessions ─────────────────────────────────────────────────────────────────
+
+export async function fetchSessions(): Promise<SavedSession[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("sessions")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("completed_at", { ascending: false });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    completedAt: r.completed_at,
+    filters: { goal: r.goal, bucket: r.bucket, time: r.time_minutes },
+    totalBalls: r.total_balls,
+    drillCount: r.drill_count,
+  }));
+}
+
+export async function saveSession(session: SavedSession): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("sessions").upsert({
+    id: session.id,
+    user_id: user.id,
+    completed_at: session.completedAt,
+    goal: session.filters.goal,
+    bucket: session.filters.bucket,
+    time_minutes: session.filters.time,
+    total_balls: session.totalBalls,
+    drill_count: session.drillCount,
+  });
+}
+
+// ─── Bag ──────────────────────────────────────────────────────────────────────
+
+export async function fetchBag(): Promise<Club[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("bag")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("sort_order", { ascending: true });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    type: r.type,
+    brand: r.brand ?? undefined,
+    model: r.model ?? undefined,
+    parentSetId: r.parent_set_id ?? undefined,
+    ironNumber: r.iron_number ?? undefined,
+    sortOrder: r.sort_order,
+  }));
+}
+
+export async function saveBag(clubs: Club[]): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Delete all then re-insert to handle removals cleanly
+  await supabase.from("bag").delete().eq("user_id", user.id);
+
+  if (clubs.length === 0) return;
+
+  await supabase.from("bag").insert(
+    clubs.map((c, i) => ({
+      id: c.id,
+      user_id: user.id,
+      name: c.name,
+      type: c.type,
+      brand: c.brand ?? null,
+      model: c.model ?? null,
+      parent_set_id: c.parentSetId ?? null,
+      iron_number: c.ironNumber ?? null,
+      sort_order: i,
+    }))
+  );
+}
+
+// ─── Yardages ─────────────────────────────────────────────────────────────────
+
+export async function fetchYardages(): Promise<YardageMap> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const { data } = await supabase
+    .from("yardages")
+    .select("*")
+    .eq("user_id", user.id);
+
+  const map: YardageMap = {};
+  for (const r of data ?? []) {
+    map[r.club_id] = {
+      halfSwing: r.half_swing ?? null,
+      threeQuarterSwing: r.three_quarter_swing ?? null,
+      fullSwing: r.full_swing ?? null,
+    };
+  }
+  return map;
+}
+
+export async function saveYardage(
+  clubId: string,
+  yardages: SwingYardages
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("yardages").upsert({
+    user_id: user.id,
+    club_id: clubId,
+    half_swing: yardages.halfSwing,
+    three_quarter_swing: yardages.threeQuarterSwing,
+    full_swing: yardages.fullSwing,
+  });
+}
+
+// ─── Favorites ────────────────────────────────────────────────────────────────
+
+export async function fetchFavorites(): Promise<Favorite[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("favorites")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true });
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    name: r.name,
+    sessionInput: r.session_input as GenerateInput,
+    session: r.session as SessionDrill[],
+    createdAt: r.created_at,
+  }));
+}
+
+export async function insertFavorite(fav: Favorite): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("favorites").insert({
+    id: fav.id,
+    user_id: user.id,
+    name: fav.name,
+    session_input: fav.sessionInput,
+    session: fav.session,
+    created_at: fav.createdAt,
+  });
+}
+
+export async function removeFavorite(id: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
+}
+
+// ─── Migration — copy localStorage data to Supabase on first login ────────────
+
+export async function migrateFromLocalStorage(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const migrationKey = `range-rat:migrated:${user.id}`;
+  if (localStorage.getItem(migrationKey)) return;
+
+  try {
+    // Profile
+    const rawProfile = localStorage.getItem("rangeRat_profile");
+    if (rawProfile) {
+      const p = JSON.parse(rawProfile);
+      await saveProfile({
+        firstName: p.firstName ?? p.name ?? "",
+        lastName: p.lastName ?? "",
+        handedness: p.handedness,
+        createdDate: p.createdDate ?? Date.now(),
+      });
+    }
+
+    // Sessions
+    const rawSessions = localStorage.getItem("range-rat:sessions");
+    if (rawSessions) {
+      const sessions = JSON.parse(rawSessions) as SavedSession[];
+      for (const s of sessions) await saveSession(s);
+    }
+
+    // Bag
+    const rawBag = localStorage.getItem("rangeRat_bag");
+    if (rawBag) {
+      const clubs = JSON.parse(rawBag) as Club[];
+      await saveBag(clubs);
+    }
+
+    // Yardages
+    const rawYardages = localStorage.getItem("rangeRat_yardages");
+    if (rawYardages) {
+      const yardages = JSON.parse(rawYardages) as YardageMap;
+      for (const [clubId, y] of Object.entries(yardages)) {
+        await saveYardage(clubId, y);
+      }
+    }
+
+    // Favorites
+    const rawFavs = localStorage.getItem("range-rat:favorites");
+    if (rawFavs) {
+      const favs = JSON.parse(rawFavs) as Favorite[];
+      for (const f of favs) await insertFavorite(f);
+    }
+  } catch (e) {
+    console.warn("Migration error:", e);
+  }
+
+  localStorage.setItem(migrationKey, "1");
+}
