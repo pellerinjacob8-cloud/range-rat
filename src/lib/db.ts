@@ -12,6 +12,7 @@ export interface Profile {
   lastName: string;
   handedness?: "lefty" | "righty";
   createdDate: number;
+  theme?: "light" | "dark";
 }
 
 export interface SavedSession {
@@ -68,6 +69,7 @@ export async function fetchProfile(): Promise<Profile | null> {
     lastName: data.last_name ?? "",
     handedness: data.handedness ?? undefined,
     createdDate: data.created_date ?? Date.now(),
+    theme: (data.theme as "light" | "dark") ?? undefined,
   };
 }
 
@@ -81,6 +83,7 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
     last_name: profile.lastName ?? "",
     handedness: profile.handedness ?? null,
     created_date: profile.createdDate ?? Date.now(),
+    theme: profile.theme ?? null,
     updated_at: new Date().toISOString(),
   });
 
@@ -93,6 +96,12 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
       createdDate: profile.createdDate ?? Date.now(),
     }));
   } catch {}
+}
+
+export async function saveTheme(theme: "light" | "dark"): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("profiles").update({ theme }).eq("id", user.id);
 }
 
 // ─── Sessions ─────────────────────────────────────────────────────────────────
