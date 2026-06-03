@@ -53,7 +53,7 @@ function OnboardingName() {
             type="text"
             value={firstName}
             onChange={e => setFirstName(e.target.value)}
-            placeholder="Jacob"
+            placeholder="First name"
             className="w-full bg-transparent border-0 border-b-2 border-primary outline-none font-display text-[40px] leading-none tracking-[-0.01em] pb-1.5 placeholder:text-muted-foreground/30"
             autoFocus
           />
@@ -64,7 +64,7 @@ function OnboardingName() {
             type="text"
             value={lastName}
             onChange={e => setLastName(e.target.value)}
-            placeholder="Pellerin"
+            placeholder="Last name"
             className="w-full bg-transparent border-0 border-b-2 border-border outline-none font-display text-[40px] leading-none tracking-[-0.01em] pb-1.5 placeholder:text-muted-foreground/30"
           />
         </div>
