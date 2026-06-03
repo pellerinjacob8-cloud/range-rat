@@ -35,21 +35,40 @@ interface Profile {
 
 type Tab = "stats" | "bag" | "yardage";
 
+function loadLocalProfile(): Profile {
+  try {
+    const raw = localStorage.getItem("rangeRat_profile");
+    if (raw) {
+      const p = JSON.parse(raw) as Profile & { name?: string };
+      return {
+        firstName: p.firstName ?? p.name ?? "",
+        lastName: p.lastName ?? "",
+        handedness: p.handedness,
+        createdDate: p.createdDate ?? Date.now(),
+      };
+    }
+  } catch {}
+  return { firstName: "", lastName: "", createdDate: Date.now() };
+}
+
 function ProfilePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const defaultProfile: Profile = { firstName: "", lastName: "", createdDate: Date.now() };
-  const [profile, setProfile] = useState<Profile>(defaultProfile);
+  const [profile, setProfile] = useState<Profile>(loadLocalProfile);
   const [editing, setEditing] = useState(false);
-  const [firstInput, setFirstInput] = useState("");
-  const [lastInput, setLastInput] = useState("");
+  const [firstInput, setFirstInput] = useState(() => loadLocalProfile().firstName);
+  const [lastInput, setLastInput] = useState(() => loadLocalProfile().lastName);
   const [tab, setTab] = useState<Tab>("stats");
   const { theme, toggle: toggleTheme } = useTheme();
 
-  // Load profile from Supabase on mount
+  // Load from Supabase — updates state and re-syncs localStorage cache
   useEffect(() => {
     fetchProfile().then((p) => {
-      if (p) { setProfile(p); setFirstInput(p.firstName); setLastInput(p.lastName); }
+      if (!p) return;
+      setProfile(p);
+      setFirstInput(p.firstName);
+      setLastInput(p.lastName);
+      try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
   }, []);
 
