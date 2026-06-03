@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, Moon, Pencil, Plus, Ruler, Sun, Trash2 } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, LogOut, Moon, Pencil, Plus, Ruler, Sun, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -67,12 +68,19 @@ function loadSessions(): SavedSession[] {
 type Tab = "stats" | "bag" | "yardage";
 
 function ProfilePage() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile>(loadProfile);
   const [editing, setEditing] = useState(false);
   const [firstInput, setFirstInput] = useState(profile.firstName);
   const [lastInput, setLastInput] = useState(profile.lastName);
   const [tab, setTab] = useState<Tab>("stats");
   const { theme, toggle: toggleTheme } = useTheme();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/login" });
+  };
 
   const startEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(true); };
 
@@ -204,8 +212,26 @@ function ProfilePage() {
           </div>
         </div>
 
+        {/* ── Account row ── */}
+        {user && (
+          <div className="mt-5 flex items-center justify-between py-4 border-b border-border">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Account</p>
+              <p className="mt-0.5 text-sm font-semibold truncate max-w-[220px]">{user.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-bold text-muted-foreground active:bg-muted transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Sign out
+            </button>
+          </div>
+        )}
+
         {/* ── Appearance toggle ── */}
-        <div className="mt-5 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5">
+        <div className="mt-3 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5">
           <div className="flex items-center gap-3">
             {theme === "dark" ? (
               <Moon className="h-4 w-4 text-muted-foreground" />

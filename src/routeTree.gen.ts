@@ -14,6 +14,7 @@ import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticeRouteImport } from './routes/practice'
 import { Route as PlayRouteImport } from './routes/play'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as GamesRouteImport } from './routes/games'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlaySoloRouteImport } from './routes/play.solo'
@@ -48,6 +49,11 @@ const PracticeRoute = PracticeRouteImport.update({
 const PlayRoute = PlayRouteImport.update({
   id: '/play',
   path: '/play',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GamesRoute = GamesRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
+  '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
+  '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
+  '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/combine'
     | '/games'
+    | '/login'
     | '/play'
     | '/practice'
     | '/profile'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/combine'
     | '/games'
+    | '/login'
     | '/play'
     | '/practice'
     | '/profile'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/combine'
     | '/games'
+    | '/login'
     | '/play'
     | '/practice'
     | '/profile'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CombineRoute: typeof CombineRoute
   GamesRoute: typeof GamesRouteWithChildren
+  LoginRoute: typeof LoginRoute
   PlayRoute: typeof PlayRouteWithChildren
   PracticeRoute: typeof PracticeRoute
   ProfileRoute: typeof ProfileRoute
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/play'
       fullPath: '/play'
       preLoaderRoute: typeof PlayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games': {
@@ -360,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CombineRoute: CombineRoute,
   GamesRoute: GamesRouteWithChildren,
+  LoginRoute: LoginRoute,
   PlayRoute: PlayRouteWithChildren,
   PracticeRoute: PracticeRoute,
   ProfileRoute: ProfileRoute,

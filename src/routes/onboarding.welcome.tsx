@@ -46,7 +46,7 @@ function OnboardingWelcome() {
 
         <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
           I have an account ·{" "}
-          <button onClick={() => navigate({ to: "/" })} className="text-primary font-semibold">Sign in</button>
+          <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>
         </p>
       </div>
     </div>

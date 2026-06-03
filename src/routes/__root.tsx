@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { loadProfileName } from "@/lib/profile";
 
 function NotFoundComponent() {
@@ -29,15 +30,47 @@ export const Route = createRootRoute({
   notFoundComponent: NotFoundComponent,
 });
 
-function RootComponent() {
+function AuthGate() {
+  const { session, loading } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
   useEffect(() => {
-    if (!pathname.startsWith("/onboarding") && !loadProfileName()) {
+    if (loading) return;
+
+    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding");
+
+    if (!session) {
+      if (!isAuthRoute) navigate({ to: "/login" });
+      return;
+    }
+
+    // Authenticated — send new users through onboarding
+    if (!isAuthRoute && !loadProfileName()) {
       navigate({ to: "/onboarding/welcome" });
     }
-  }, [pathname, navigate]);
+
+    // Authenticated user landing on /login → send home
+    if (pathname === "/login") {
+      navigate({ to: loadProfileName() ? "/" : "/onboarding/welcome" });
+    }
+  }, [session, loading, pathname, navigate]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return <Outlet />;
+}
+
+function RootComponent() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
 }
