@@ -47,7 +47,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
           <img
             src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
             alt="Range Rat"
-            className="h-8 w-auto"
+            className="h-8 w-8 object-contain"
           />
 
           {/* Right */}

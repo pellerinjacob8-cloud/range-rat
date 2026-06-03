@@ -51,8 +51,8 @@ function LoginPage() {
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {/* Logo */}
-        <img src="/brand/monogram-rr-navy.png" alt="Range Rat" className="h-16 w-auto mb-8 dark:hidden" />
-        <img src="/brand/monogram-rr-white.png" alt="Range Rat" className="h-16 w-auto mb-8 hidden dark:block" />
+        <img src="/brand/monogram-rr-navy.png" alt="Range Rat" className="h-16 w-16 object-contain mb-8 dark:hidden" />
+        <img src="/brand/monogram-rr-white.png" alt="Range Rat" className="h-16 w-16 object-contain mb-8 hidden dark:block" />
 
         <h1 className="font-display text-[38px] leading-[0.95] tracking-[-0.015em] mb-1">
           {isSignUp ? "Create account" : "Welcome back"}
