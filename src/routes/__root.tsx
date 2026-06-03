@@ -1,7 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { loadProfileName } from "@/lib/profile";
+import { fetchProfile } from "@/lib/db";
 
 function NotFoundComponent() {
   return (
@@ -34,6 +34,20 @@ function AuthGate() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // null = unknown, true = has name, false = needs onboarding
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!session) { setHasProfile(null); return; }
+    fetchProfile().then((p) => {
+      const has = !!(p?.firstName?.trim());
+      // Cache in localStorage so subsequent loads are instant
+      if (has) {
+        try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
+      }
+      setHasProfile(has);
+    });
+  }, [session]);
 
   useEffect(() => {
     if (loading) return;
@@ -45,18 +59,19 @@ function AuthGate() {
       return;
     }
 
-    // Authenticated — send new users through onboarding
-    if (!isAuthRoute && !loadProfileName()) {
+    // Still fetching profile — wait
+    if (hasProfile === null) return;
+
+    if (!isAuthRoute && !hasProfile) {
       navigate({ to: "/onboarding/welcome" });
     }
 
-    // Authenticated user landing on /login → send home
     if (pathname === "/login") {
-      navigate({ to: loadProfileName() ? "/" : "/onboarding/welcome" });
+      navigate({ to: hasProfile ? "/" : "/onboarding/welcome" });
     }
-  }, [session, loading, pathname, navigate]);
+  }, [session, loading, pathname, navigate, hasProfile]);
 
-  if (loading) {
+  if (loading || (session && hasProfile === null)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
