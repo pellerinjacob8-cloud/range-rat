@@ -54,9 +54,9 @@ function LoginPage() {
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {/* Logo */}
         <img
-          src="/brand/crest-shield.png"
+          src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
           alt="Range Rat"
-          className="h-16 w-16 object-contain mb-8"
+          className="h-24 w-auto -ml-3 mb-8"
         />
 
         <h1 className="font-display text-[38px] leading-[0.95] tracking-[-0.015em] mb-1">
