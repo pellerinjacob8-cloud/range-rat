@@ -1,10 +1,26 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { CheckCircle2, Flame, Plus, RotateCcw, Trophy, X } from "lucide-react";
+import { GuidedSessionView } from "@/components/GuidedSessionView";
+import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { SegmentedControl } from "@/components/SegmentedControl";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  loadFavorites,
+  saveFavorite,
+  deleteFavorite,
+  isAtFreeLimit,
+  defaultFavoriteName,
+  FREE_LIMIT,
+  type Favorite,
+} from "@/lib/favorites";
 import {
   BASE_CLUB_GROUPS,
   BUCKET_SIZES,
@@ -117,6 +133,9 @@ function PracticePage() {
   const [sessionInput, setSessionInput] = useState<GenerateInput | null>(() => loadActiveSession()?.sessionInput ?? null);
   const [done, setDone] = useState<Set<string>>(() => new Set(loadActiveSession()?.done ?? []));
   const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
+  const [sessionMode, setSessionMode] = useState<"pick" | "list" | "guided" | null>(null);
+  const [practiceTab, setPracticeTab] = useState<"build" | "saved">("build");
+  const [favorites, setFavorites] = useState<Favorite[]>(loadFavorites);
 
   // Custom input state — optional overrides for bucket and time
   const [showCustomBucket, setShowCustomBucket] = useState(false);
@@ -160,6 +179,7 @@ function PracticePage() {
     setSession([...warmUpItems, ...drills]);
     setDone(new Set());
     setCompletedRecord(null);
+    setSessionMode("pick");
   };
 
   const reset = () => {
@@ -168,6 +188,7 @@ function PracticePage() {
     setDone(new Set());
     setSessionInput(null);
     setCompletedRecord(null);
+    setSessionMode(null);
   };
 
   const handleComplete = () => {
@@ -178,18 +199,78 @@ function PracticePage() {
   };
 
   // ── Completion screen
-  if (completedRecord && session) {
+  if (completedRecord && session && sessionInput) {
     return (
       <CompletionView
         record={completedRecord}
         session={session}
+        sessionInput={sessionInput}
         onNewSession={reset}
+        onFavoriteSaved={() => setFavorites(loadFavorites())}
       />
     );
   }
 
-  // ── Active session checklist
-  if (session) {
+  // ── Mode picker
+  if (session && sessionMode === "pick") {
+    return (
+      <AppShell showBack>
+        <div className="flex flex-col items-center pt-10 text-center px-2">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Session Ready</p>
+          <h1 className="mt-2 font-display text-[42px] leading-[0.98] tracking-[-0.01em]">
+            Choose your<br />view.
+          </h1>
+          <p className="mt-3 text-[15px] text-muted-foreground max-w-[280px]">
+            {session.length} drill{session.length !== 1 ? "s" : ""} · How do you want to work through them?
+          </p>
+
+          <div className="mt-10 w-full space-y-3">
+            {/* Guided */}
+            <button
+              type="button"
+              onClick={() => setSessionMode("guided")}
+              className="w-full rounded-2xl border-2 border-primary bg-primary/5 px-5 py-5 text-left transition active:scale-[0.99]"
+            >
+              <p className="font-bold text-[16px] text-primary uppercase tracking-[0.06em]">Guided Mode</p>
+              <p className="mt-1 text-[14px] text-muted-foreground">One drill at a time. No distractions.</p>
+            </button>
+
+            {/* List */}
+            <button
+              type="button"
+              onClick={() => setSessionMode("list")}
+              className="w-full rounded-2xl border border-border bg-card px-5 py-5 text-left transition active:scale-[0.99]"
+            >
+              <p className="font-bold text-[16px] uppercase tracking-[0.06em]">List View</p>
+              <p className="mt-1 text-[14px] text-muted-foreground">See all drills, check them off as you go.</p>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={reset}
+            className="mt-6 text-sm font-semibold text-muted-foreground active:opacity-70"
+          >
+            Cancel
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // ── Guided mode
+  if (session && sessionMode === "guided") {
+    return (
+      <GuidedSessionView
+        session={session}
+        onComplete={handleComplete}
+        onReset={reset}
+      />
+    );
+  }
+
+  // ── Active session checklist (list view)
+  if (session && sessionMode === "list") {
     return (
       <SessionView
         session={session}
@@ -211,8 +292,61 @@ function PracticePage() {
   return (
     <AppShell showBack>
       <div className="pb-32 space-y-7">
+        {/* Build / Saved tab switcher */}
+        <div className="pt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setPracticeTab("build")}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors",
+              practiceTab === "build"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground active:bg-muted",
+            )}
+          >
+            Build
+          </button>
+          <button
+            type="button"
+            onClick={() => setPracticeTab("saved")}
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors",
+              practiceTab === "saved"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground active:bg-muted",
+            )}
+          >
+            <Star className="h-4 w-4" />
+            Saved
+            <span className={cn(
+              "rounded-full px-1.5 py-0.5 text-[11px] font-bold",
+              practiceTab === "saved" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
+            )}>
+              {favorites.length}/{FREE_LIMIT}
+            </span>
+          </button>
+        </div>
+
+        {/* Saved tab content */}
+        {practiceTab === "saved" && (
+          <SavedTab
+            favorites={favorites}
+            onDelete={(id) => { deleteFavorite(id); setFavorites(loadFavorites()); }}
+            onRun={(fav) => {
+              setSessionInput(fav.sessionInput);
+              setSession(fav.session);
+              setDone(new Set());
+              setCompletedRecord(null);
+              setSessionMode("pick");
+            }}
+          />
+        )}
+
+        {/* Builder — hidden when on Saved tab */}
+        {practiceTab === "build" && (
+        <div className="space-y-7">
         {/* Heading block */}
-        <div className="pt-2 pb-2">
+        <div className="pb-2">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Build · Step 1 of 1</p>
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
@@ -444,21 +578,26 @@ function PracticePage() {
         </div>
         <SegmentedControl label="Goal" options={GOALS} value={goal} onChange={setGoal} />
 
+        </div>
+        )}
+
       </div>
 
-      <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
-           style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
-        <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
-          <Button
-            size="lg"
-            disabled={!canGenerate}
-            onClick={generate}
-            className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em]"
-          >
-            Generate Session
-          </Button>
+      {practiceTab === "build" && (
+        <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
+             style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
+          <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
+            <Button
+              size="lg"
+              disabled={!canGenerate}
+              onClick={generate}
+              className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em]"
+            >
+              Generate Session
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </AppShell>
   );
 }
@@ -607,11 +746,15 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
 function CompletionView({
   record,
   session,
+  sessionInput,
   onNewSession,
+  onFavoriteSaved,
 }: {
   record: SavedSession;
   session: SessionDrill[];
+  sessionInput: GenerateInput;
   onNewSession: () => void;
+  onFavoriteSaved: () => void;
 }) {
   const navigate = useNavigate();
   const name = loadProfileName();
@@ -620,6 +763,23 @@ function CompletionView({
     .reduce((sum, d) => sum + d.balls, 0);
   const goalLabel = GOALS.find((g) => g.value === record.filters.goal)?.label ?? "";
   const bucketLabel = BUCKET_SIZES.find((b) => b.value === record.filters.bucket)?.label ?? "";
+
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [proOpen, setProOpen] = useState(false);
+  const [favName, setFavName] = useState(() => defaultFavoriteName(sessionInput));
+  const [saved, setSaved] = useState(false);
+
+  const handleSaveClick = () => {
+    if (isAtFreeLimit()) { setProOpen(true); return; }
+    setSaveOpen(true);
+  };
+
+  const confirmSave = () => {
+    saveFavorite(favName, sessionInput, session);
+    setSaveOpen(false);
+    setSaved(true);
+    onFavoriteSaved();
+  };
 
   return (
     <AppShell>
@@ -654,6 +814,24 @@ function CompletionView({
           >
             New Session
           </Button>
+
+          {/* Save favorite */}
+          {saved ? (
+            <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-primary">
+              <BookmarkCheck className="h-4 w-4" />
+              Saved to Favorites
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:scale-[0.99]"
+            >
+              <Bookmark className="h-4 w-4" />
+              Save Session
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => navigate({ to: "/" })}
@@ -663,9 +841,162 @@ function CompletionView({
           </button>
         </div>
       </div>
+
+      {/* Save dialog */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent className="mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Save this session?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">Give it a nickname so you can run it again anytime.</p>
+          <input
+            autoFocus
+            value={favName}
+            onChange={(e) => setFavName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && favName.trim()) confirmSave(); }}
+            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold outline-none focus:border-primary"
+          />
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => setSaveOpen(false)}
+              className="flex-1 rounded-xl border border-border py-3 text-sm font-bold text-muted-foreground active:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmSave}
+              disabled={!favName.trim()}
+              className="flex-1 rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-40 active:opacity-90"
+            >
+              Save
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pro upsell dialog */}
+      <Dialog open={proOpen} onOpenChange={setProOpen}>
+        <DialogContent className="mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl">Upgrade to Pro</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">
+            Free accounts can save up to {FREE_LIMIT} favorite session{FREE_LIMIT !== 1 ? "s" : ""}. Upgrade to Pro for unlimited favorites and more.
+          </p>
+          <div className="rounded-xl border border-border bg-muted p-4 space-y-2">
+            {["Unlimited saved sessions", "Advanced drill filters", "Priority new features"].map((perk) => (
+              <div key={perk} className="flex items-center gap-2 text-sm font-semibold">
+                <Star className="h-4 w-4 text-primary shrink-0" />
+                {perk}
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setProOpen(false)}
+            className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground active:opacity-90"
+          >
+            Coming Soon
+          </button>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
+
+// ─── Saved Tab ────────────────────────────────────────────────────────────────
+
+function SavedTab({
+  favorites,
+  onDelete,
+  onRun,
+}: {
+  favorites: Favorite[];
+  onDelete: (id: string) => void;
+  onRun: (fav: Favorite) => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  if (favorites.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-12 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+          <Star className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="mt-4 font-display text-xl">No saved sessions</h2>
+        <p className="mt-2 text-sm text-muted-foreground max-w-[240px]">
+          Complete a session and tap "Save Session" to bookmark it here.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {favorites.map((fav) => (
+        <div key={fav.id} className="rounded-2xl border border-border bg-card px-4 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold leading-none truncate">{fav.name}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(fav.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {fav.sessionInput.clubGroups.map((g) => (
+                  <span key={g} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {g === "full-bag" ? "Full Bag" : g.replace(/-/g, " ")}
+                  </span>
+                ))}
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {fav.sessionInput.goal}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {confirmDelete === fav.id ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { onDelete(fav.id); setConfirmDelete(null); }}
+                    className="rounded-full bg-destructive px-3 py-1 text-xs font-bold text-white active:opacity-80"
+                  >
+                    Remove
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(null)}
+                    className="rounded-full border border-border px-3 py-1 text-xs font-bold text-muted-foreground active:bg-muted"
+                  >
+                    Keep
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(fav.id)}
+                  className="rounded-full p-2 text-muted-foreground active:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onRun(fav)}
+            className="mt-3 w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground active:opacity-90"
+          >
+            Run Session
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Stat ─────────────────────────────────────────────────────────────────────
 
 function Stat({ label, value, serif = false }: { label: string; value: string; serif?: boolean }) {
   return (

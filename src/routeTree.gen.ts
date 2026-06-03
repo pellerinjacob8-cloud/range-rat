@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as CombineRouteImport } from './routes/combine'
 import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticeRouteImport } from './routes/practice'
@@ -24,6 +25,11 @@ import { Route as GamesGridGameRouteImport } from './routes/games.grid-game'
 import { Route as GamesFairwayGameRouteImport } from './routes/games.fairway-game'
 import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to-pin'
 
+const CombineRoute = CombineRouteImport.update({
+  id: '/combine',
+  path: '/combine',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RoundWarmupRoute = RoundWarmupRouteImport.update({
   id: '/round-warmup',
   path: '/round-warmup',
@@ -97,6 +103,7 @@ const GamesClosestToPinRoute = GamesClosestToPinRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
@@ -130,6 +138,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/combine': typeof CombineRoute
   '/games': typeof GamesRouteWithChildren
   '/play': typeof PlayRouteWithChildren
   '/practice': typeof PracticeRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/combine'
     | '/games'
     | '/play'
     | '/practice'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/combine'
     | '/games'
     | '/play'
     | '/practice'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/combine'
     | '/games'
     | '/play'
     | '/practice'
@@ -197,6 +209,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CombineRoute: typeof CombineRoute
   GamesRoute: typeof GamesRouteWithChildren
   PlayRoute: typeof PlayRouteWithChildren
   PracticeRoute: typeof PracticeRoute
@@ -209,6 +222,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/combine': {
+      id: '/combine'
+      path: '/combine'
+      fullPath: '/combine'
+      preLoaderRoute: typeof CombineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/round-warmup': {
       id: '/round-warmup'
       path: '/round-warmup'
@@ -338,6 +358,7 @@ const PlayRouteWithChildren = PlayRoute._addFileChildren(PlayRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CombineRoute: CombineRoute,
   GamesRoute: GamesRouteWithChildren,
   PlayRoute: PlayRouteWithChildren,
   PracticeRoute: PracticeRoute,

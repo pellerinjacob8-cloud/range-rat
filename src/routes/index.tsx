@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, X } from "lucide-react";
+import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -173,6 +173,7 @@ function Home() {
         <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
         <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
         <NavCard to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
+        <NavCard to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
 
       {/* Compete section */}
