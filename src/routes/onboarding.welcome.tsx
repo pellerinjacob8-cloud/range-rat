@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTheme } from "@/context/ThemeContext";
 
 export const Route = createFileRoute("/onboarding/welcome")({
   component: OnboardingWelcome,
@@ -6,6 +7,7 @@ export const Route = createFileRoute("/onboarding/welcome")({
 
 function OnboardingWelcome() {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   return (
     <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" /> {/* status bar spacer */}
@@ -13,8 +15,11 @@ function OnboardingWelcome() {
       {/* Content fills the middle */}
       <div className="flex-1 flex flex-col justify-center">
         {/* Logo */}
-        <img src="/brand/monogram-rr-navy.png" alt="Range Rat" className="h-16 w-16 object-contain dark:hidden" />
-        <img src="/brand/monogram-rr-white.png" alt="Range Rat" className="h-16 w-16 object-contain hidden dark:block" />
+        <img
+          src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+          alt="Range Rat"
+          className="h-16 w-16 object-contain"
+        />
 
         {/* Hero heading */}
         <h1 className="mt-8 font-display text-[56px] leading-[0.95] tracking-[-0.015em]">

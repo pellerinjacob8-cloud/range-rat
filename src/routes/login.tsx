@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { loadProfileName } from "@/lib/profile";
 
 export const Route = createFileRoute("/login")({
@@ -18,6 +19,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const submit = async () => {
@@ -51,8 +53,11 @@ function LoginPage() {
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {/* Logo */}
-        <img src="/brand/monogram-rr-navy.png" alt="Range Rat" className="h-16 w-16 object-contain mb-8 dark:hidden" />
-        <img src="/brand/monogram-rr-white.png" alt="Range Rat" className="h-16 w-16 object-contain mb-8 hidden dark:block" />
+        <img
+          src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+          alt="Range Rat"
+          className="h-16 w-16 object-contain mb-8"
+        />
 
         <h1 className="font-display text-[38px] leading-[0.95] tracking-[-0.015em] mb-1">
           {isSignUp ? "Create account" : "Welcome back"}
