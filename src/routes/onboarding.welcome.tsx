@@ -16,7 +16,7 @@ function OnboardingWelcome() {
       <div className="flex-1 flex flex-col justify-center">
         {/* Logo */}
         <img
-          src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+          src="/brand/crest-shield.png"
           alt="Range Rat"
           className="h-16 w-16 object-contain"
         />
