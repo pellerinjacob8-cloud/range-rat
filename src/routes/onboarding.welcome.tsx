@@ -12,15 +12,15 @@ function OnboardingWelcome() {
     <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" /> {/* status bar spacer */}
 
-      {/* Logo — top left, small */}
-      <img
-        src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
-        alt="Range Rat"
-        className="h-14 w-auto self-start"
-      />
-
       {/* Content fills the middle */}
       <div className="flex-1 flex flex-col justify-center">
+        {/* Logo */}
+        <img
+          src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+          alt="Range Rat"
+          className="h-16 w-auto self-start mb-6"
+        />
+
         {/* Hero heading */}
         <h1 className="font-display text-[56px] leading-[0.95] tracking-[-0.015em]">
           Grind.<br />Practice.<br /><em className="italic">Improve.</em>
