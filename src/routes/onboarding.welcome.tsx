@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/onboarding/welcome")({
   component: OnboardingWelcome,
@@ -7,7 +8,12 @@ export const Route = createFileRoute("/onboarding/welcome")({
 
 function OnboardingWelcome() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   useForceLightMode();
+
+  const handleSignIn = () => {
+    navigate({ to: session ? "/" : "/login" });
+  };
   return (
     <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" /> {/* status bar spacer */}
@@ -50,7 +56,7 @@ function OnboardingWelcome() {
 
         <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
           I have an account ·{" "}
-          <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>
+          <button onClick={handleSignIn} className="text-primary font-semibold">Sign in</button>
         </p>
       </div>
     </div>
