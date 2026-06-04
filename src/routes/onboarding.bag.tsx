@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, Zap, Briefcase } from "lucide-react";
+import { useForceLightMode } from "@/hooks/useForceLightMode";
 
 export const Route = createFileRoute("/onboarding/bag")({
   component: OnboardingBag,
@@ -7,13 +8,14 @@ export const Route = createFileRoute("/onboarding/bag")({
 
 function OnboardingBag() {
   const navigate = useNavigate();
+  useForceLightMode();
 
   const handleFinish = () => {
     navigate({ to: "/" });
   };
 
   return (
-    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
+    <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" />
 
       <div className="flex items-center justify-between pt-6">

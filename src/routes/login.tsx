@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { loadProfileName } from "@/lib/profile";
+import { useForceLightMode } from "@/hooks/useForceLightMode";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -18,6 +19,7 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  useForceLightMode();
   const navigate = useNavigate();
 
   const submit = async () => {
@@ -46,7 +48,7 @@ function LoginPage() {
   };
 
   return (
-    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
+    <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-14" />
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">

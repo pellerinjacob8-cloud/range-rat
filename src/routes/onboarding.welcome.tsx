@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useForceLightMode } from "@/hooks/useForceLightMode";
 
 export const Route = createFileRoute("/onboarding/welcome")({
   component: OnboardingWelcome,
@@ -6,8 +7,9 @@ export const Route = createFileRoute("/onboarding/welcome")({
 
 function OnboardingWelcome() {
   const navigate = useNavigate();
+  useForceLightMode();
   return (
-    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
+    <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" /> {/* status bar spacer */}
 
       {/* Content fills the middle */}
@@ -25,7 +27,7 @@ function OnboardingWelcome() {
         </h1>
 
         {/* Lede */}
-        <p className="mt-5 text-[15px] text-slate-500 leading-[1.45]">
+        <p className="mt-5 text-[15px] text-muted-foreground leading-[1.45]">
           Range Rat builds focused practice sessions, runs games with your buddies, and tracks every bucket you hit.
         </p>
       </div>
@@ -46,7 +48,7 @@ function OnboardingWelcome() {
           Get Started
         </button>
 
-        <p className="mt-3 text-center text-[12.5px] text-slate-500">
+        <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
           I have an account ·{" "}
           <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>
         </p>

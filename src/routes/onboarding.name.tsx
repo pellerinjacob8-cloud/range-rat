@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding/name")({
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/onboarding/name")({
 
 function OnboardingName() {
   const navigate = useNavigate();
+  useForceLightMode();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [hand, setHand] = useState<"right" | "left">("right");
@@ -25,7 +27,7 @@ function OnboardingName() {
   };
 
   return (
-    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
+    <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-11" />
 
       {/* Step header */}
