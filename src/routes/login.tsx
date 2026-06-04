@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
 import { loadProfileName } from "@/lib/profile";
 
 export const Route = createFileRoute("/login")({
@@ -19,7 +18,6 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
-  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const submit = async () => {
@@ -48,13 +46,13 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6">
+    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
       <div className="h-14" />
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         {/* Logo */}
         <img
-          src={theme === "dark" ? "/brand/logo-white.png" : "/brand/logo-navy.png"}
+          src="/brand/monogram-rr-navy.png"
           alt="Range Rat"
           className="h-24 w-auto -ml-3 mb-8"
         />
