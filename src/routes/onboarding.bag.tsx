@@ -13,7 +13,7 @@ function OnboardingBag() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6">
+    <div className="light min-h-screen bg-white text-slate-900 flex flex-col px-6">
       <div className="h-11" />
 
       <div className="flex items-center justify-between pt-6">
