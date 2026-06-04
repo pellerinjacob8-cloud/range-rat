@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/onboarding/welcome")({
   component: OnboardingWelcome,
@@ -11,8 +12,9 @@ function OnboardingWelcome() {
   const { session } = useAuth();
   useForceLightMode();
 
-  const handleSignIn = () => {
-    navigate({ to: session ? "/" : "/login" });
+  const handleSignIn = async () => {
+    if (session) await supabase.auth.signOut();
+    navigate({ to: "/login" });
   };
   return (
     <div className="min-h-screen bg-background flex flex-col px-6">
