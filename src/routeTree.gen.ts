@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PlaySoloRouteImport } from './routes/play.solo'
 import { Route as PlayGameRouteImport } from './routes/play.game'
 import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welcome'
+import { Route as OnboardingSignupRouteImport } from './routes/onboarding.signup'
 import { Route as OnboardingNameRouteImport } from './routes/onboarding.name'
 import { Route as OnboardingBagRouteImport } from './routes/onboarding.bag'
 import { Route as GamesGridGameRouteImport } from './routes/games.grid-game'
@@ -81,6 +82,11 @@ const OnboardingWelcomeRoute = OnboardingWelcomeRouteImport.update({
   path: '/onboarding/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingSignupRoute = OnboardingSignupRouteImport.update({
+  id: '/onboarding/signup',
+  path: '/onboarding/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingNameRoute = OnboardingNameRouteImport.update({
   id: '/onboarding/name',
   path: '/onboarding/name',
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
   '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
   '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
   '/onboarding/name': typeof OnboardingNameRoute
+  '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/games/grid-game'
     | '/onboarding/bag'
     | '/onboarding/name'
+    | '/onboarding/signup'
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/games/grid-game'
     | '/onboarding/bag'
     | '/onboarding/name'
+    | '/onboarding/signup'
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/games/grid-game'
     | '/onboarding/bag'
     | '/onboarding/name'
+    | '/onboarding/signup'
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   RoundWarmupRoute: typeof RoundWarmupRoute
   OnboardingBagRoute: typeof OnboardingBagRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
+  OnboardingSignupRoute: typeof OnboardingSignupRoute
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
 }
 
@@ -312,6 +325,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingWelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding/signup': {
+      id: '/onboarding/signup'
+      path: '/onboarding/signup'
+      fullPath: '/onboarding/signup'
+      preLoaderRoute: typeof OnboardingSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding/name': {
       id: '/onboarding/name'
       path: '/onboarding/name'
@@ -387,6 +407,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoundWarmupRoute: RoundWarmupRoute,
   OnboardingBagRoute: OnboardingBagRoute,
   OnboardingNameRoute: OnboardingNameRoute,
+  OnboardingSignupRoute: OnboardingSignupRoute,
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
 }
 export const routeTree = rootRouteImport

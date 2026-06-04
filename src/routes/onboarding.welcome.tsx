@@ -42,7 +42,7 @@ function OnboardingWelcome() {
         </div>
 
         <button
-          onClick={() => navigate({ to: "/onboarding/name" })}
+          onClick={() => navigate({ to: "/onboarding/signup" })}
           className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em]"
         >
           Get Started

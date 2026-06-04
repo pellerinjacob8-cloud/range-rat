@@ -52,7 +52,7 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding");
+    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding") || pathname === "/onboarding/signup";
 
     if (!session) {
       if (!isAuthRoute) navigate({ to: "/login" });
