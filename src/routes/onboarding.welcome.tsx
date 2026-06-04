@@ -54,10 +54,10 @@ function OnboardingWelcome() {
           Get Started
         </button>
 
-        <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
-          I have an account ·{" "}
+        <div className="mt-3 flex items-center justify-center gap-1 text-[12.5px] text-muted-foreground">
+          <span>I have an account ·</span>
           <button onClick={handleSignIn} className="text-primary font-semibold">Sign in</button>
-        </p>
+        </div>
       </div>
     </div>
   );
