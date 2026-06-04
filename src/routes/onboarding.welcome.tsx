@@ -14,7 +14,7 @@ function OnboardingWelcome() {
 
       {/* Logo — top left, small */}
       <img
-        src={theme === "dark" ? "/brand/monogram-rr-white.png" : "/brand/monogram-rr-navy.png"}
+        src="/brand/icon-navy.png"
         alt="Range Rat"
         className="h-14 w-auto"
       />
