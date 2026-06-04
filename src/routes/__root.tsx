@@ -55,7 +55,7 @@ function AuthGate() {
     const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding") || pathname === "/onboarding/signup";
 
     if (!session) {
-      if (!isAuthRoute) navigate({ to: "/login" });
+      if (!isAuthRoute) navigate({ to: "/onboarding/welcome" });
       return;
     }
 
