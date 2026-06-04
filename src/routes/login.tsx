@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { loadProfileName } from "@/lib/profile";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 
@@ -18,6 +19,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const { signIn, signUp } = useAuth();
   useForceLightMode();
   const navigate = useNavigate();
@@ -39,10 +41,14 @@ function LoginPage() {
     }
 
     if (isSignUp) {
-      // New user — go through onboarding to set name/bag
+      // Check if email confirmation is required (session will be null)
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setEmailSent(true);
+        return;
+      }
       navigate({ to: "/onboarding/welcome" });
     } else {
-      // Returning user — skip onboarding if they already have a name
       navigate({ to: loadProfileName() ? "/" : "/onboarding/welcome" });
     }
   };
@@ -52,6 +58,13 @@ function LoginPage() {
       <div className="h-14" />
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+        {emailSent ? (
+          <div className="text-center">
+            <p className="text-4xl mb-4">📬</p>
+            <h1 className="font-display text-[32px] leading-tight mb-2">Check your email</h1>
+            <p className="text-sm text-muted-foreground">We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.</p>
+          </div>
+        ) : (<>
         {/* Logo */}
         <img
           src="/brand/monogram-rr-navy.png"
@@ -109,6 +122,7 @@ function LoginPage() {
             {isSignUp ? "Sign in" : "Sign up"}
           </span>
         </button>
+        </>)}
       </div>
     </div>
   );
