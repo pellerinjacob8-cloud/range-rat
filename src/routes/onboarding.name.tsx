@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { ChevronLeft } from "lucide-react";
+import { useForceLightMode } from "@/hooks/useForceLightMode";
 
 export const Route = createFileRoute("/onboarding/name")({
   component: OnboardingName,

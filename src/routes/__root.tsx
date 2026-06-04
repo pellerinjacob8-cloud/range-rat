@@ -67,7 +67,7 @@ function AuthGate() {
     }
 
     if (pathname === "/login") {
-      navigate({ to: hasProfile ? "/" : "/onboarding/name" });
+      navigate({ to: hasProfile ? "/" : "/onboarding/welcome" });
     }
   }, [session, loading, pathname, navigate, hasProfile]);
 

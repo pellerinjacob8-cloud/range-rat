@@ -22,7 +22,7 @@ function OnboardingWelcome() {
         />
 
         {/* Hero heading */}
-        <h1 className="font-display text-[56px] leading-[0.95] tracking-[-0.015em]">
+        <h1 className="mt-8 font-display text-[56px] leading-[0.95] tracking-[-0.015em]">
           Grind.<br />Practice.<br /><em className="italic">Improve.</em>
         </h1>
 
@@ -48,10 +48,10 @@ function OnboardingWelcome() {
           Get Started
         </button>
 
-        <div className="mt-3 flex items-center justify-center gap-1 text-[12.5px] text-muted-foreground">
-          <span>I have an account ·</span>
+        <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
+          I have an account ·{" "}
           <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>
-        </div>
+        </p>
       </div>
     </div>
   );
