@@ -34,40 +34,46 @@ function AuthGate() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  // null = unknown, true = has name, false = needs onboarding
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!session) { setHasProfile(null); return; }
+    // Fast path: check localStorage cache first (kept in sync by saveProfile)
+    try {
+      const cached = localStorage.getItem("rangeRat_profile");
+      if (cached) {
+        const p = JSON.parse(cached);
+        if (p?.firstName?.trim()) { setHasProfile(true); return; }
+      }
+    } catch {}
     fetchProfile().then((p) => {
       const has = !!(p?.firstName?.trim());
-      // Cache in localStorage so subsequent loads are instant
       if (has) {
         try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
       }
       setHasProfile(has);
     });
-  }, [session]);
+  }, [session, pathname]);
 
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding") || pathname === "/onboarding/signup";
+    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding");
 
     if (!session) {
       if (!isAuthRoute) navigate({ to: "/onboarding/welcome" });
       return;
     }
 
-    // Still fetching profile — wait
     if (hasProfile === null) return;
 
     if (!isAuthRoute && !hasProfile) {
-      navigate({ to: "/onboarding/welcome" });
+      navigate({ to: "/onboarding/name" });
     }
 
-    if (pathname === "/login") {
-      navigate({ to: hasProfile ? "/" : "/onboarding/welcome" });
+    // Logged-in + fully set up → bounce off onboarding/login
+    if (hasProfile && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
+      navigate({ to: "/" });
     }
   }, [session, loading, pathname, navigate, hasProfile]);
 

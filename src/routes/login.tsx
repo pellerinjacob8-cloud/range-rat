@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { loadProfileName } from "@/lib/profile";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -18,9 +18,9 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const { signIn, signUp } = useAuth();
   useForceLightMode();
-  const navigate = useNavigate();
 
   const submit = async () => {
     setError(null);
@@ -39,20 +39,39 @@ function LoginPage() {
     }
 
     if (isSignUp) {
-      // New user — go through onboarding to set name/bag
-      navigate({ to: "/onboarding/welcome" });
-    } else {
-      // Returning user — skip onboarding if they already have a name
-      navigate({ to: loadProfileName() ? "/" : "/onboarding/welcome" });
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        setEmailSent(true);
+        return;
+      }
+      // Session exists — AuthGate will redirect to /onboarding/name
     }
+    // For signin, AuthGate handles redirect based on profile state
   };
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
+        <p className="text-5xl mb-5">📬</p>
+        <h1 className="font-display text-[36px] leading-tight mb-3">Check your email</h1>
+        <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs">
+          We sent a confirmation link to <strong>{email}</strong>. Click it, then come back and sign in.
+        </p>
+        <button
+          onClick={() => { setEmailSent(false); setIsSignUp(false); }}
+          className="mt-8 h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em]"
+        >
+          Back to Sign In
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-6">
       <div className="h-14" />
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
-        {/* Logo */}
         <img
           src="/brand/monogram-rr-navy.png"
           alt="Range Rat"
