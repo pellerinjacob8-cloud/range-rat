@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { GuidedSessionView } from "@/components/GuidedSessionView";
-import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -42,6 +42,9 @@ import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/practice")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    upgraded: search.upgraded === "true" ? true : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Practice — Range Rat" },
@@ -130,6 +133,9 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function PracticePage() {
+  const { upgraded } = Route.useSearch();
+  const navigate = useNavigate();
+  const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
   const [warmUp, setWarmUp] = useState<WarmUpPreset | null>(null);
   const [clubGroups, setClubGroups] = useState<ClubGroup[]>([]);
   const [bucket, setBucket] = useState<BucketSize | null>(null);
@@ -300,6 +306,31 @@ function PracticePage() {
   // ── Filter / builder screen
   return (
     <AppShell showBack>
+      {/* ── Upgraded success modal ── */}
+      {showUpgradedModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-8">
+          <div className="w-full max-w-[430px] rounded-[28px] bg-background p-6 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/15">
+              <Zap className="h-8 w-8 text-yellow-500" />
+            </div>
+            <h2 className="font-display text-[32px] leading-tight">Welcome to Pro.</h2>
+            <p className="mt-2 text-[15px] text-muted-foreground">
+              Combine, Grid Game, yardages, and unlimited saves are now unlocked.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowUpgradedModal(false);
+                navigate({ to: "/practice", replace: true });
+              }}
+              className="mt-6 h-14 w-full rounded-[14px] bg-yellow-400 font-bold text-[14px] uppercase tracking-[0.06em] text-black active:opacity-90 transition-opacity"
+            >
+              Let's go
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="pb-32 space-y-7">
         {/* Build / Saved tab switcher */}
         <div className="pt-2 grid grid-cols-2 gap-2">

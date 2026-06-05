@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X } from "lucide-react";
+import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -92,6 +93,7 @@ function Home() {
   const name = loadProfileName();
   const stats = loadStats();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
+  const { isPro } = useAuth();
 
   const dismissResume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -175,6 +177,24 @@ function Home() {
         <NavCard to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
         <NavCard to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
+
+      {/* Upgrade nudge — free users only */}
+      {!isPro && (
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/upgrade" })}
+          className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-yellow-400/40 bg-yellow-400/8 px-4 py-3.5 text-left active:bg-yellow-400/15 transition-colors"
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/20">
+            <Zap className="h-4 w-4 text-yellow-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold">Unlock Pro features</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Combine, Grid Game, yardages & more — from $4.99/mo.</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        </button>
+      )}
 
       {/* Compete section */}
       <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">

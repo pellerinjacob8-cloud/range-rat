@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, LogOut, Moon, Pencil, Plus, Ruler, Sun, Trash2 } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, ChevronRight, LogOut, Moon, Pencil, Plus, Ruler, Sun, Trash2, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
@@ -225,6 +225,9 @@ function ProfilePage() {
           </div>
         )}
 
+        {/* ── Pro status banner ── */}
+        <ProBanner />
+
         {/* ── Appearance toggle ── */}
         <div className="mt-3 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5">
           <div className="flex items-center gap-3">
@@ -279,6 +282,42 @@ function ProfilePage() {
 
       </div>
     </AppShell>
+  );
+}
+
+// ─── Pro Banner ───────────────────────────────────────────────────────────────
+
+function ProBanner() {
+  const { isPro } = useAuth();
+  const navigate = useNavigate();
+
+  if (isPro) {
+    return (
+      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3.5">
+        <Zap className="h-5 w-5 text-yellow-500 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">Range Rat Pro</p>
+          <p className="text-xs text-muted-foreground mt-0.5">All features unlocked.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate({ to: "/upgrade" })}
+      className="mt-3 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left active:bg-muted transition-colors"
+    >
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15">
+        <Zap className="h-4 w-4 text-yellow-500" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold">Upgrade to Pro</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Unlock Combine, Grid Game, yardages & more.</p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    </button>
   );
 }
 

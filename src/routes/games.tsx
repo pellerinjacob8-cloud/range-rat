@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { ChevronRight, Flag, Grid3x3, Target } from "lucide-react";
+import { ChevronRight, Flag, Grid3x3, Lock, Target } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/games")({
   head: () => ({
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/games")({
 
 function GamesPage() {
   const { pathname } = useLocation();
+  const { isPro } = useAuth();
 
   // When a child game route is active, just render it.
   if (pathname !== "/games") {
@@ -55,10 +57,16 @@ function GamesPage() {
 
         <Link
           to="/games/grid-game"
-          className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
+          className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99] relative overflow-hidden"
         >
+          {!isPro && (
+            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5">
+              <Lock className="h-3 w-3 text-yellow-600" />
+              <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
+            </div>
+          )}
           <div className="flex items-center gap-4">
-            <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <div className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl ${isPro ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
               <Grid3x3 className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
