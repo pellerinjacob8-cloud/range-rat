@@ -58,7 +58,7 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname.startsWith("/onboarding");
+    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname.startsWith("/onboarding");
 
     if (!session) {
       if (!isAuthRoute) navigate({ to: "/onboarding/welcome" });
@@ -76,7 +76,7 @@ function AuthGate() {
       navigate({ to: "/onboarding/name" });
     }
 
-    // Logged-in + fully set up → bounce off onboarding/login
+    // Logged-in + fully set up → bounce off onboarding/login (not reset-password)
     if (hasProfile && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
       navigate({ to: "/" });
     }
