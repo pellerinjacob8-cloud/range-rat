@@ -28,6 +28,7 @@ import { Route as GamesFairwayGameRouteImport } from './routes/games.fairway-gam
 import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to-pin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as ProWelcomeRouteImport } from './routes/pro-welcome'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -123,6 +124,11 @@ const GamesClosestToPinRoute = GamesClosestToPinRouteImport.update({
   id: '/closest-to-pin',
   path: '/closest-to-pin',
   getParentRoute: () => GamesRoute,
+} as any)
+const ProWelcomeRoute = ProWelcomeRouteImport.update({
+  id: '/pro-welcome',
+  path: '/pro-welcome',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -400,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pro-welcome': {
+      id: '/pro-welcome'
+      path: '/pro-welcome'
+      fullPath: '/pro-welcome'
+      preLoaderRoute: typeof ProWelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/closest-to-pin': {
       id: '/games/closest-to-pin'
       path: '/closest-to-pin'
@@ -446,6 +459,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   UpgradeRoute: UpgradeRoute,
+  ProWelcomeRoute: ProWelcomeRoute,
   RoundWarmupRoute: RoundWarmupRoute,
   OnboardingBagRoute: OnboardingBagRoute,
   OnboardingNameRoute: OnboardingNameRoute,
