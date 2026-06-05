@@ -14,8 +14,11 @@ function OnboardingName() {
   const [lastName, setLastName] = useState("");
   const [hand, setHand] = useState<"right" | "left">("right");
 
+  const [saving, setSaving] = useState(false);
+
   const handleContinue = async () => {
-    if (!firstName.trim()) return;
+    if (!firstName.trim() || saving) return;
+    setSaving(true);
     const { saveProfile } = await import("@/lib/db");
     await saveProfile({
       firstName: firstName.trim(),
@@ -23,6 +26,7 @@ function OnboardingName() {
       handedness: hand === "right" ? "righty" : "lefty",
       createdDate: Date.now(),
     });
+    setSaving(false);
     navigate({ to: "/onboarding/bag" });
   };
 
@@ -98,10 +102,15 @@ function OnboardingName() {
       <div className="pb-10">
         <button
           onClick={handleContinue}
-          disabled={!firstName.trim()}
-          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40"
+          disabled={!firstName.trim() || saving}
+          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
         >
-          Continue
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              Saving…
+            </span>
+          ) : "Continue"}
         </button>
       </div>
     </div>
