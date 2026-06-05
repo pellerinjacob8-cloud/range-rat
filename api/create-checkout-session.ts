@@ -26,8 +26,8 @@ export default async function handler(req: any, res: any) {
       },
       metadata: { userId },
       customer_email: userEmail,
-      success_url: `${process.env.VITE_APP_URL || "https://range-rat-zjt9.vercel.app"}/practice?upgraded=true`,
-      cancel_url: `${process.env.VITE_APP_URL || "https://range-rat-zjt9.vercel.app"}/upgrade`,
+      success_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/practice?upgraded=true`,
+      cancel_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/upgrade`,
     });
 
     res.status(200).json({ url: session.url });
