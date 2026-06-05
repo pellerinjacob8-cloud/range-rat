@@ -27,6 +27,7 @@ import { Route as GamesGridGameRouteImport } from './routes/games.grid-game'
 import { Route as GamesFairwayGameRouteImport } from './routes/games.fairway-game'
 import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to-pin'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -108,6 +109,11 @@ const GamesFairwayGameRoute = GamesFairwayGameRouteImport.update({
   path: '/fairway-game',
   getParentRoute: () => GamesRoute,
 } as any)
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/upgrade': typeof UpgradeRoute
   '/round-warmup': typeof RoundWarmupRoute
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/upgrade': typeof UpgradeRoute
   '/round-warmup': typeof RoundWarmupRoute
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/practice': typeof PracticeRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/upgrade': typeof UpgradeRoute
   '/round-warmup': typeof RoundWarmupRoute
   '/games/closest-to-pin': typeof GamesClosestToPinRoute
   '/games/fairway-game': typeof GamesFairwayGameRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/practice'
     | '/profile'
     | '/reset-password'
+    | '/upgrade'
     | '/round-warmup'
     | '/games/closest-to-pin'
     | '/games/fairway-game'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/practice'
     | '/profile'
     | '/reset-password'
+    | '/upgrade'
     | '/round-warmup'
     | '/games/closest-to-pin'
     | '/games/fairway-game'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/practice'
     | '/profile'
     | '/reset-password'
+    | '/upgrade'
     | '/round-warmup'
     | '/games/closest-to-pin'
     | '/games/fairway-game'
@@ -252,6 +264,7 @@ export interface RootRouteChildren {
   PracticeRoute: typeof PracticeRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  UpgradeRoute: typeof UpgradeRoute
   RoundWarmupRoute: typeof RoundWarmupRoute
   OnboardingBagRoute: typeof OnboardingBagRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
@@ -380,6 +393,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/closest-to-pin': {
       id: '/games/closest-to-pin'
       path: '/closest-to-pin'
@@ -425,6 +445,7 @@ const rootRouteChildren: RootRouteChildren = {
   PracticeRoute: PracticeRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  UpgradeRoute: UpgradeRoute,
   RoundWarmupRoute: RoundWarmupRoute,
   OnboardingBagRoute: OnboardingBagRoute,
   OnboardingNameRoute: OnboardingNameRoute,

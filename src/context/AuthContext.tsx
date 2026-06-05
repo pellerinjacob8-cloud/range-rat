@@ -6,11 +6,13 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  isPro: boolean;
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resendVerification: (email: string) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  refreshProStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -18,17 +20,36 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPro, setIsPro] = useState(false);
+
+  const fetchProStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("is_pro")
+      .eq("id", userId)
+      .single();
+    setIsPro(data?.is_pro ?? false);
+  };
+
+  const refreshProStatus = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await fetchProStatus(user.id);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      if (data.session?.user) fetchProStatus(data.session.user.id);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
+      if (session?.user) {
+        fetchProStatus(session.user.id);
         import("@/lib/db").then(({ migrateFromLocalStorage }) => migrateFromLocalStorage());
+      } else {
+        setIsPro(false);
       }
     });
 
@@ -66,11 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       loading,
+      isPro,
       signUp,
       signIn,
       signOut,
       resendVerification,
       resetPassword,
+      refreshProStatus,
     }}>
       {children}
     </AuthContext.Provider>
