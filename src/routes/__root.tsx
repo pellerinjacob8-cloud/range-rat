@@ -71,6 +71,11 @@ function AuthGate() {
       navigate({ to: "/onboarding/name" });
     }
 
+    // Verified session but no profile — welcome page is only for guests, push them forward
+    if (session && !hasProfile && pathname === "/onboarding/welcome") {
+      navigate({ to: "/onboarding/name" });
+    }
+
     // Logged-in + fully set up → bounce off onboarding/login
     if (hasProfile && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
       navigate({ to: "/" });
