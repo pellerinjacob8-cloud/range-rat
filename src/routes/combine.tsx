@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ProGate } from "@/components/ProGate";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,14 @@ export const Route = createFileRoute("/combine")({
 type Screen = "lobby" | "shot" | "results";
 
 function CombinePage() {
+  return (
+    <ProGate feature="Combine">
+      <CombinePageInner />
+    </ProGate>
+  );
+}
+
+function CombinePageInner() {
   const [screen, setScreen] = useState<Screen>("lobby");
   const [scored, setScored] = useState<ScoredShot[]>([]);
   const [attempt, setAttempt] = useState<CombineAttempt | null>(null);
