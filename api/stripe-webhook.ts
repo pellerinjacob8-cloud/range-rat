@@ -1,31 +1,45 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import type { IncomingMessage, ServerResponse } from "http";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia" as any,
 });
 
-// Use service role key for admin writes — set this in Vercel env vars
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req: any, res: any) {
+function getRawBody(req: IncomingMessage): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
   }
 
-  const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const sig = req.headers["stripe-signature"] as string;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+  const rawBody = await getRawBody(req);
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret!);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: any) {
     console.error("Webhook signature verification failed:", err.message);
-    return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    res.writeHead(400);
+    res.end(JSON.stringify({ error: `Webhook Error: ${err.message}` }));
+    return;
   }
 
   const setProStatus = async (userId: string, isPro: boolean) => {
@@ -58,18 +72,10 @@ export default async function handler(req: any, res: any) {
       if (userId) await setProStatus(userId, true);
       break;
     }
-    case "invoice.payment_failed": {
-      // Don't immediately revoke — give them grace period
-      console.log("Payment failed — grace period active");
-      break;
-    }
     default:
       console.log(`Unhandled event type: ${event.type}`);
   }
 
-  res.status(200).json({ received: true });
+  res.writeHead(200);
+  res.end(JSON.stringify({ received: true }));
 }
-
-export const config = {
-  api: { bodyParser: false },
-};
