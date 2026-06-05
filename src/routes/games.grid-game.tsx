@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ProGate } from "@/components/ProGate";
 import { useState, useEffect } from "react";
 import { saveActiveMarker } from "@/lib/active-session";
 import { Check, Sparkles, Star, Trophy, X } from "lucide-react";
@@ -44,6 +45,14 @@ type Phase =
 const SQUARES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 function GridGame() {
+  return (
+    <ProGate feature="Grid Game">
+      <GridGameInner />
+    </ProGate>
+  );
+}
+
+function GridGameInner() {
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [caller, setCaller] = useState<0 | 1>(0);
   const [letters, setLetters] = useState<[number, number]>([0, 0]);
