@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/context/AuthContext";
+import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
 import { GuidedSessionView } from "@/components/GuidedSessionView";
 import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X, Zap } from "lucide-react";
@@ -945,32 +946,11 @@ function CompletionView({
         </DialogContent>
       </Dialog>
 
-      {/* Pro upsell dialog */}
-      <Dialog open={proOpen} onOpenChange={setProOpen}>
-        <DialogContent className="mx-4 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-display text-2xl">Upgrade to Pro</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground -mt-1">
-            Free accounts can save up to {FREE_LIMIT} favorite session{FREE_LIMIT !== 1 ? "s" : ""}. Upgrade to Pro for unlimited favorites and more.
-          </p>
-          <div className="rounded-xl border border-border bg-muted p-4 space-y-2">
-            {["Unlimited saved sessions", "Advanced drill filters", "Priority new features"].map((perk) => (
-              <div key={perk} className="flex items-center gap-2 text-sm font-semibold">
-                <Star className="h-4 w-4 text-primary shrink-0" />
-                {perk}
-              </div>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setProOpen(false)}
-            className="w-full rounded-xl bg-primary py-3.5 text-sm font-bold text-primary-foreground active:opacity-90"
-          >
-            Coming Soon
-          </button>
-        </DialogContent>
-      </Dialog>
+      <ProModal
+        open={proOpen}
+        onClose={() => setProOpen(false)}
+        reason={`Free accounts can save up to ${FREE_LIMIT} session${FREE_LIMIT !== 1 ? "s" : ""}. Go Pro for unlimited saves and every feature.`}
+      />
     </AppShell>
   );
 }
@@ -989,25 +969,33 @@ function CustomSessionsTab({
   const navigate = useNavigate();
   const { isPro } = useAuth();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [proOpen, setProOpen] = useState(false);
 
   if (!isPro) {
     return (
-      <div className="flex flex-col items-center py-12 text-center px-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/10 mb-4">
-          <Zap className="h-8 w-8 text-yellow-500" />
+      <>
+        <div className="flex flex-col items-center py-12 text-center px-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/10 mb-4">
+            <Zap className="h-8 w-8 text-yellow-500" />
+          </div>
+          <h2 className="font-display text-[26px] leading-tight">My Sessions</h2>
+          <p className="mt-2 text-[14px] text-muted-foreground max-w-[260px]">
+            Build and save your own custom practice sessions. Pro feature.
+          </p>
+          <button
+            type="button"
+            onClick={() => setProOpen(true)}
+            className="mt-6 h-12 px-6 rounded-full bg-yellow-400 font-bold text-[13px] uppercase tracking-[0.06em] text-black active:opacity-90"
+          >
+            Upgrade to Pro
+          </button>
         </div>
-        <h2 className="font-display text-[26px] leading-tight">My Sessions</h2>
-        <p className="mt-2 text-[14px] text-muted-foreground max-w-[260px]">
-          Build and save your own custom practice sessions. Pro feature.
-        </p>
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/upgrade" })}
-          className="mt-6 h-12 px-6 rounded-full bg-yellow-400 font-bold text-[13px] uppercase tracking-[0.06em] text-black active:opacity-90"
-        >
-          Upgrade to Pro
-        </button>
-      </div>
+        <ProModal
+          open={proOpen}
+          onClose={() => setProOpen(false)}
+          reason="Build and save your own custom practice sessions with any drills you want."
+        />
+      </>
     );
   }
 
