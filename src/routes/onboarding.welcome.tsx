@@ -16,7 +16,7 @@ function OnboardingWelcome() {
       <div className="flex-1 flex flex-col justify-center">
         {/* Logo */}
         <img
-          src="/brand/monogram-rr-navy.png"
+          src="/brand/logo-navy-trim.png"
           alt="Range Rat"
           className="h-16 w-auto self-start mb-6"
         />

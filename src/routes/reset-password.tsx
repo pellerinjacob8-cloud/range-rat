@@ -124,7 +124,7 @@ function ResetPasswordPage() {
       <div className="h-14" />
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         <img
-          src="/brand/monogram-rr-navy.png"
+          src="/brand/logo-navy-trim.png"
           alt="Range Rat"
           className="h-16 w-auto self-start mb-8"
         />
