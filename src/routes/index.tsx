@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
+import { fetchSessions } from "@/lib/db";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,48 +27,20 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-interface Session {
-  totalBalls?: number;
-  completedAt?: string;
-}
-
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function calcStreak(sessions: Session[]): number {
-  const dates = new Set(
-    sessions
-      .filter(s => s.completedAt)
-      .map(s => dayKey(new Date(s.completedAt!)))
-  );
+function calcStreak(sessions: { completedAt: string }[]): number {
+  const dates = new Set(sessions.map(s => dayKey(new Date(s.completedAt))));
   if (dates.size === 0) return 0;
-
-  // Start from today; if no session today, start from yesterday
   const start = new Date();
   start.setHours(0, 0, 0, 0);
   if (!dates.has(dayKey(start))) start.setDate(start.getDate() - 1);
-
   let streak = 0;
   const cur = new Date(start);
-  while (dates.has(dayKey(cur))) {
-    streak++;
-    cur.setDate(cur.getDate() - 1);
-  }
+  while (dates.has(dayKey(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
   return streak;
-}
-
-function loadStats() {
-  try {
-    const raw = localStorage.getItem("range-rat:sessions");
-    if (!raw) return { sessions: 0, balls: 0, streak: 0 };
-    const sessions: Session[] = JSON.parse(raw);
-    const balls = sessions.reduce((sum, s) => sum + (s.totalBalls ?? 0), 0);
-    const streak = calcStreak(sessions);
-    return { sessions: sessions.length, balls, streak };
-  } catch {
-    return { sessions: 0, balls: 0, streak: 0 };
-  }
 }
 
 function StatNum({ value, size }: { value: number; size: number }) {
@@ -92,10 +65,18 @@ function Eyebrow({ children, className }: { children: React.ReactNode; className
 function Home() {
   const navigate = useNavigate();
   const name = loadProfileName();
-  const stats = loadStats();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
   const { isPro } = useAuth();
   const [proOpen, setProOpen] = useState(false);
+  const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
+
+  useEffect(() => {
+    fetchSessions().then((sessions) => {
+      const balls = sessions.reduce((sum, s) => sum + s.totalBalls, 0);
+      const streak = calcStreak(sessions);
+      setStats({ sessions: sessions.length, balls, streak });
+    });
+  }, []);
 
   const dismissResume = (e: React.MouseEvent) => {
     e.stopPropagation();
