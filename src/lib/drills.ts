@@ -63,7 +63,7 @@ const CLUBS_BY_GROUP: Record<ClubGroup, string[]> = {
   "full-bag": ["Driver", "3 Wood", "5 Iron", "7 Iron", "9 Iron", "Sand Wedge"],
 };
 
-const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
+export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
   accuracy: [
     {
       name: "Gate Drill",

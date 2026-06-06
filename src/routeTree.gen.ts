@@ -29,6 +29,7 @@ import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as ProWelcomeRouteImport } from './routes/pro-welcome'
+import { Route as CustomSessionRouteImport } from './routes/custom-session'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -130,10 +131,16 @@ const ProWelcomeRoute = ProWelcomeRouteImport.update({
   path: '/pro-welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomSessionRoute = CustomSessionRouteImport.update({
+  id: '/custom-session',
+  path: '/custom-session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
@@ -155,6 +162,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
   '/play': typeof PlayRouteWithChildren
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/combine'
+    | '/custom-session'
     | '/games'
     | '/login'
     | '/play'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/combine'
+    | '/custom-session'
     | '/games'
     | '/login'
     | '/play'
@@ -242,6 +253,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/combine'
+    | '/custom-session'
     | '/games'
     | '/login'
     | '/play'
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   OnboardingNameRoute: typeof OnboardingNameRoute
   OnboardingSignupRoute: typeof OnboardingSignupRoute
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
+  CustomSessionRoute: typeof CustomSessionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -413,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProWelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/custom-session': {
+      id: '/custom-session'
+      path: '/custom-session'
+      fullPath: '/custom-session'
+      preLoaderRoute: typeof CustomSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/games/closest-to-pin': {
       id: '/games/closest-to-pin'
       path: '/closest-to-pin'
@@ -465,6 +485,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingNameRoute: OnboardingNameRoute,
   OnboardingSignupRoute: OnboardingSignupRoute,
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
+  CustomSessionRoute: CustomSessionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

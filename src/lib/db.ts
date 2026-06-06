@@ -45,7 +45,7 @@ export type YardageMap = Record<string, SwingYardages>;
 export interface Favorite {
   id: string;
   name: string;
-  sessionInput: GenerateInput;
+  sessionInput: GenerateInput | null;
   session: SessionDrill[];
   createdAt: number;
 }
@@ -242,10 +242,23 @@ export async function fetchFavorites(): Promise<Favorite[]> {
   return (data ?? []).map((r) => ({
     id: r.id,
     name: r.name,
-    sessionInput: r.session_input as GenerateInput,
+    sessionInput: (r.session_input as GenerateInput) ?? null,
     session: r.session as SessionDrill[],
     createdAt: r.created_at,
   }));
+}
+
+export async function insertCustomSession(fav: Favorite): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("favorites").insert({
+    id: fav.id,
+    user_id: user.id,
+    name: fav.name,
+    session_input: null,
+    session: fav.session,
+    created_at: fav.createdAt,
+  });
 }
 
 export async function insertFavorite(fav: Favorite): Promise<void> {

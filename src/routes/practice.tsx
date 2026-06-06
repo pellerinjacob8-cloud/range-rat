@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useAuth } from "@/context/AuthContext";
 import { useMemo, useState, useEffect } from "react";
 import { GuidedSessionView } from "@/components/GuidedSessionView";
 import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X, Zap } from "lucide-react";
@@ -147,10 +148,19 @@ function PracticePage() {
   const [done, setDone] = useState<Set<string>>(() => new Set(loadActiveSession()?.done ?? []));
   const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
   const [sessionMode, setSessionMode] = useState<"pick" | "list" | "guided" | null>(null);
-  const [practiceTab, setPracticeTab] = useState<"build" | "saved">("build");
+  const [practiceTab, setPracticeTab] = useState<"build" | "saved" | "mine">("build");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
 
-  useEffect(() => { loadFavoritesAsync().then(setFavorites); }, []);
+  const reloadFavorites = () => loadFavoritesAsync().then(setFavorites);
+
+  useEffect(() => {
+    reloadFavorites();
+    window.addEventListener("focus", reloadFavorites);
+    return () => window.removeEventListener("focus", reloadFavorites);
+  }, []);
+
+  const autoFavorites = favorites.filter((f) => f.sessionInput !== null);
+  const customSessions = favorites.filter((f) => f.sessionInput === null);
 
   // Custom input state — optional overrides for bucket and time
   const [showCustomBucket, setShowCustomBucket] = useState(false);
@@ -207,8 +217,13 @@ function PracticePage() {
   };
 
   const handleComplete = () => {
-    if (!session || !sessionInput) return;
+    if (!session) return;
     clearActiveSession();
+    if (!sessionInput) {
+      // Custom session — no stats to save, just reset
+      reset();
+      return;
+    }
     const record = saveSession(session, sessionInput);
     setCompletedRecord(record);
   };
@@ -332,48 +347,60 @@ function PracticePage() {
       )}
 
       <div className="pb-32 space-y-7">
-        {/* Build / Saved tab switcher */}
-        <div className="pt-2 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setPracticeTab("build")}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors",
-              practiceTab === "build"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card text-muted-foreground active:bg-muted",
-            )}
-          >
-            Build
-          </button>
-          <button
-            type="button"
-            onClick={() => setPracticeTab("saved")}
-            className={cn(
-              "flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors",
-              practiceTab === "saved"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card text-muted-foreground active:bg-muted",
-            )}
-          >
-            <Star className="h-4 w-4" />
-            Saved
-            <span className={cn(
-              "rounded-full px-1.5 py-0.5 text-[11px] font-bold",
-              practiceTab === "saved" ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
-            )}>
-              {favorites.length}/{FREE_LIMIT}
-            </span>
-          </button>
+        {/* Build / Saved / My Sessions tab switcher */}
+        <div className="pt-2 grid grid-cols-3 gap-2">
+          {(["build", "saved", "mine"] as const).map((tab) => {
+            const labels: Record<typeof tab, string> = { build: "Build", saved: "Saved", mine: "My Sessions" };
+            const active = practiceTab === tab;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setPracticeTab(tab)}
+                className={cn(
+                  "flex items-center justify-center gap-1.5 rounded-xl border py-3 text-[13px] font-semibold transition-colors",
+                  active
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-muted-foreground active:bg-muted",
+                )}
+              >
+                {tab === "saved" && <Star className="h-3.5 w-3.5" />}
+                {labels[tab]}
+                {tab === "saved" && (
+                  <span className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                    active ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
+                  )}>
+                    {autoFavorites.length}/{FREE_LIMIT}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Saved tab content */}
         {practiceTab === "saved" && (
           <SavedTab
-            favorites={favorites}
-            onDelete={(id) => { deleteFavorite(id); loadFavoritesAsync().then(setFavorites); }}
+            favorites={autoFavorites}
+            onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
             onRun={(fav) => {
               setSessionInput(fav.sessionInput);
+              setSession(fav.session);
+              setDone(new Set());
+              setCompletedRecord(null);
+              setSessionMode("pick");
+            }}
+          />
+        )}
+
+        {/* My Sessions tab content */}
+        {practiceTab === "mine" && (
+          <CustomSessionsTab
+            sessions={customSessions}
+            onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
+            onRun={(fav) => {
+              setSessionInput(null);
               setSession(fav.session);
               setDone(new Set());
               setCompletedRecord(null);
@@ -948,6 +975,125 @@ function CompletionView({
   );
 }
 
+// ─── Custom Sessions Tab ──────────────────────────────────────────────────────
+
+function CustomSessionsTab({
+  sessions,
+  onDelete,
+  onRun,
+}: {
+  sessions: Favorite[];
+  onDelete: (id: string) => void;
+  onRun: (fav: Favorite) => void;
+}) {
+  const navigate = useNavigate();
+  const { isPro } = useAuth();
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  if (!isPro) {
+    return (
+      <div className="flex flex-col items-center py-12 text-center px-4">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/10 mb-4">
+          <Zap className="h-8 w-8 text-yellow-500" />
+        </div>
+        <h2 className="font-display text-[26px] leading-tight">My Sessions</h2>
+        <p className="mt-2 text-[14px] text-muted-foreground max-w-[260px]">
+          Build and save your own custom practice sessions. Pro feature.
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/upgrade" })}
+          className="mt-6 h-12 px-6 rounded-full bg-yellow-400 font-bold text-[13px] uppercase tracking-[0.06em] text-black active:opacity-90"
+        >
+          Upgrade to Pro
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* New session button */}
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/custom-session" })}
+        className="w-full h-14 rounded-[14px] border-2 border-dashed border-border flex items-center justify-center gap-2 text-[14px] font-semibold text-muted-foreground active:bg-muted transition-colors"
+      >
+        <Plus className="h-4 w-4" />
+        New Session
+      </button>
+
+      {sessions.length === 0 ? (
+        <div className="flex flex-col items-center py-10 text-center">
+          <p className="text-[15px] font-semibold text-foreground">No sessions yet</p>
+          <p className="mt-1 text-[13px] text-muted-foreground max-w-[220px]">
+            Tap "New Session" to build your first custom practice.
+          </p>
+        </div>
+      ) : (
+        sessions.map((fav) => {
+          const totalBalls = fav.session.reduce((s, d) => s + d.balls, 0);
+          return (
+            <div key={fav.id} className="rounded-2xl border border-border bg-card px-4 py-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold leading-none truncate">{fav.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {new Date(fav.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      {fav.session.length} drill{fav.session.length !== 1 ? "s" : ""}
+                    </span>
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      {totalBalls} balls
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {confirmDelete === fav.id ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { onDelete(fav.id); setConfirmDelete(null); }}
+                        className="rounded-full bg-destructive px-3 py-1 text-xs font-bold text-white active:opacity-80"
+                      >
+                        Remove
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(null)}
+                        className="rounded-full border border-border px-3 py-1 text-xs font-bold text-muted-foreground active:bg-muted"
+                      >
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(fav.id)}
+                      className="rounded-full p-2 text-muted-foreground active:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRun(fav)}
+                className="mt-3 w-full rounded-xl bg-primary py-3 text-sm font-bold text-primary-foreground active:opacity-90"
+              >
+                Run Session
+              </button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ─── Saved Tab ────────────────────────────────────────────────────────────────
 
 function SavedTab({
@@ -986,14 +1132,16 @@ function SavedTab({
                 {new Date(fav.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {fav.sessionInput.clubGroups.map((g) => (
+                {fav.sessionInput?.clubGroups.map((g) => (
                   <span key={g} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                     {g === "full-bag" ? "Full Bag" : g.replace(/-/g, " ")}
                   </span>
                 ))}
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  {fav.sessionInput.goal}
-                </span>
+                {fav.sessionInput && (
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    {fav.sessionInput.goal}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">
