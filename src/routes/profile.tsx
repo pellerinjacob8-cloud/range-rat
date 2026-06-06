@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, ChevronRight, LogOut, Moon, Pencil, Plus, Ruler, Sun, Trash2, Zap } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, Crown, Flag, LogOut, Moon, Pencil, Plus, Ruler, Settings, Sun, Target, Trash2, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
@@ -35,6 +35,7 @@ interface Profile {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 type Tab = "stats" | "bag" | "yardage";
+type SubView = null | "bag" | "yardage";
 
 function loadLocalProfile(): Profile {
   try {
@@ -59,11 +60,11 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [firstInput, setFirstInput] = useState(() => loadLocalProfile().firstName);
   const [lastInput, setLastInput] = useState(() => loadLocalProfile().lastName);
-  const [tab, setTab] = useState<Tab>("stats");
+  const [subView, setSubView] = useState<SubView>(null);
   const [proOpen, setProOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
+  const [allTimeSessions, setAllTimeSessions] = useState<SavedSession[]>([]);
 
-  // Load from Supabase — updates state and re-syncs localStorage cache
   useEffect(() => {
     fetchProfile().then((p) => {
       if (!p) return;
@@ -72,223 +73,207 @@ function ProfilePage() {
       setLastInput(p.lastName);
       try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
+    fetchSessions().then(setAllTimeSessions);
   }, []);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate({ to: "/login" });
-  };
+  const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
 
   const startEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(true); };
-
   const saveName = () => {
     const updated: Profile = { ...profile, firstName: firstInput.trim(), lastName: lastInput.trim() };
     setProfile(updated);
     dbSaveProfile(updated);
     setEditing(false);
   };
-
   const cancelEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(false); };
 
-  const setHandedness = (h: "lefty" | "righty") => {
-    const updated: Profile = { ...profile, handedness: profile.handedness === h ? undefined : h };
-    setProfile(updated);
-    dbSaveProfile(updated);
-  };
+  const totalBalls = allTimeSessions.reduce((s, x) => s + x.totalBalls, 0);
+  const formatBalls = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
-  const memberYear = new Date(profile.createdDate || Date.now()).getFullYear();
+  // Best streak
+  const bestStreak = useMemo(() => {
+    if (!allTimeSessions.length) return 0;
+    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const dates = [...new Set(allTimeSessions.map(s => dayKey(new Date(s.completedAt))))].sort();
+    let best = 1, cur = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i - 1]);
+      const curr = new Date(dates[i]);
+      const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+      cur = diff === 1 ? cur + 1 : 1;
+      if (cur > best) best = cur;
+    }
+    return best;
+  }, [allTimeSessions]);
+
+  // Sub-view: Bag or Yardage
+  if (subView === "bag") {
+    return (
+      <AppShell>
+        <div className="pb-8">
+          <button type="button" onClick={() => setSubView(null)} className="flex items-center gap-1 text-primary text-[14px] font-semibold mb-4 -ml-1">
+            <ChevronLeft className="h-5 w-5" /> Profile
+          </button>
+          <h1 className="font-display text-[32px] mb-6">Your Bag</h1>
+          <BagSection />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (subView === "yardage") {
+    return (
+      <AppShell>
+        <div className="pb-8">
+          <button type="button" onClick={() => setSubView(null)} className="flex items-center gap-1 text-primary text-[14px] font-semibold mb-4 -ml-1">
+            <ChevronLeft className="h-5 w-5" /> Profile
+          </button>
+          <h1 className="font-display text-[32px] mb-6">Club Yardages</h1>
+          <YardageSection />
+        </div>
+      </AppShell>
+    );
+  }
+
+  const initial = profile.firstName ? profile.firstName[0].toUpperCase() : "?";
 
   return (
-    <AppShell showBack>
-      <div className="pb-24">
+    <AppShell>
+      <div className="pb-24 pt-2">
 
-        {/* ── Profile header ── */}
-        <div className="flex items-center gap-3.5 pb-5 pt-3 border-b border-border">
-          <div className="h-[72px] w-[72px] shrink-0 rounded-full bg-primary text-white flex items-center justify-center font-display text-[36px] leading-none tracking-[-0.01em]">
-            {profile.firstName ? profile.firstName.slice(0, 1).toUpperCase() : "?"}
+        {/* ── Hero ── */}
+        <div className="flex items-center gap-4">
+          <div className="h-16 w-16 shrink-0 rounded-[20px] bg-primary text-white flex items-center justify-center font-display text-[30px] leading-none">
+            {initial}
           </div>
-
           <div className="flex-1 min-w-0">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-              Golfer
-            </p>
-
             {editing ? (
-              <div className="mt-1 space-y-2">
-                <input
-                  autoFocus
-                  value={firstInput}
-                  onChange={(e) => setFirstInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
+              <div className="space-y-1.5">
+                <input autoFocus value={firstInput} onChange={e => setFirstInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
                   placeholder="First name"
-                  className="w-full bg-transparent font-display text-2xl text-foreground outline-none border-b-2 border-primary pb-0.5"
-                />
-                <input
-                  value={lastInput}
-                  onChange={(e) => setLastInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
+                  className="w-full bg-transparent font-display text-[28px] outline-none border-b-2 border-primary pb-0.5" />
+                <input value={lastInput} onChange={e => setLastInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelEdit(); }}
                   placeholder="Last name"
-                  className="w-full bg-transparent font-display text-2xl text-foreground outline-none border-b border-border pb-0.5"
-                />
+                  className="w-full bg-transparent font-display text-[22px] outline-none border-b border-border pb-0.5 text-muted-foreground" />
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onMouseDown={e => { e.preventDefault(); saveName(); }} disabled={!firstInput.trim()}
+                    className="flex-1 h-10 rounded-[12px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">Save</button>
+                  <button type="button" onMouseDown={e => { e.preventDefault(); cancelEdit(); }}
+                    className="h-10 px-4 rounded-[12px] border border-border text-[13px] font-bold text-muted-foreground">Cancel</button>
+                </div>
               </div>
             ) : (
-              <p className="mt-0.5 font-display text-[30px] leading-none tracking-[-0.01em] truncate">
-                {profile.firstName
-                  ? [profile.firstName, profile.lastName].filter(Boolean).join(" ")
-                  : <span className="text-muted-foreground text-xl">Add name</span>}
-              </p>
-            )}
-
-            {/* Chips row */}
-            <div className="mt-2 flex gap-1.5 flex-wrap">
-              {profile.handedness && (
-                <span className="rounded-full bg-primary/8 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-primary">
-                  {profile.handedness === "righty" ? "Righty" : "Lefty"}
-                </span>
-              )}
-              <span className="rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Member · {memberYear}
-              </span>
-            </div>
-
-            {/* Handedness — only shown while editing */}
-            {editing && (
-              <div className="mt-3 flex gap-2">
-                {(["righty", "lefty"] as const).map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => setHandedness(h)}
-                    className={cn(
-                      "h-14 flex-1 rounded-[14px] border text-sm font-bold uppercase tracking-[0.06em] transition-colors",
-                      profile.handedness === h
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card text-foreground active:bg-muted",
-                    )}
-                  >
-                    {h === "righty" ? "Righty" : "Lefty"}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Save / Cancel — only shown while editing */}
-            {editing && (
-              <div className="flex gap-2 mt-3">
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); saveName(); }}
-                  disabled={!firstInput.trim()}
-                  className="flex-1 h-11 rounded-[14px] bg-primary text-white text-[15px] font-bold uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onMouseDown={(e) => { e.preventDefault(); cancelEdit(); }}
-                  className="h-11 px-5 rounded-[14px] border border-border bg-card text-[15px] font-bold uppercase tracking-[0.06em] text-muted-foreground active:bg-muted"
-                >
-                  Cancel
-                </button>
-              </div>
+              <>
+                <p className="font-display text-[28px] leading-none tracking-[-0.01em] truncate">
+                  {[profile.firstName, profile.lastName].filter(Boolean).join(" ") || <span className="text-muted-foreground">Add name</span>}
+                </p>
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                  {isPro && (
+                    <span className="inline-flex items-center gap-1 bg-gold-bg border border-gold-border text-gold rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]">
+                      <Crown className="h-2.5 w-2.5" /> Pro
+                    </span>
+                  )}
+                  {user?.email && (
+                    <p className="text-[13px] text-muted-foreground truncate">{user.email}</p>
+                  )}
+                </div>
+              </>
             )}
           </div>
-
-          {/* Separate edit button */}
           {!editing && (
-            <button
-              type="button"
-              onClick={startEdit}
-              aria-label="Edit profile"
-              className="h-9 w-9 shrink-0 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground active:bg-muted transition-colors"
-            >
+            <button type="button" onClick={startEdit} aria-label="Edit"
+              className="h-9 w-9 shrink-0 rounded-full border border-border flex items-center justify-center text-muted-foreground active:bg-muted">
               <Pencil className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        {/* ── Account row ── */}
-        {user && (
-          <div className="mt-5 flex items-center justify-between py-4 border-b border-border">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Account</p>
-              <p className="mt-0.5 text-sm font-semibold truncate max-w-[220px]">{user.email}</p>
+        {/* ── All-time stats ── */}
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">All-time</p>
+        <div className="mt-3 grid grid-cols-3 gap-2.5">
+          {[
+            { eyebrow: "Sessions", value: String(allTimeSessions.length), sub: "logged" },
+            { eyebrow: "Balls", value: formatBalls(totalBalls), sub: "hit" },
+            { eyebrow: "Best", value: String(bestStreak), sub: "day run" },
+          ].map(({ eyebrow, value, sub }) => (
+            <div key={eyebrow} className="rounded-[18px] border border-border bg-card p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{eyebrow}</p>
+              <p className="mt-1 font-stats text-[32px] leading-none text-primary">{value}</p>
+              <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{sub}</p>
             </div>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-bold text-muted-foreground active:bg-muted transition-colors"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
+          ))}
+        </div>
+
+        {/* ── Pro card / upgrade nudge ── */}
+        {isPro ? (
+          <div className="mt-4 flex items-center gap-3.5 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5">
+            <div className="h-11 w-11 shrink-0 rounded-[13px] bg-gold-bg border border-gold-border flex items-center justify-center">
+              <Crown className="h-5 w-5 text-gold" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-bold text-foreground">Range Rat Pro</p>
+              <p className="text-[12.5px] text-muted-foreground mt-0.5">All features unlocked.</p>
+            </div>
           </div>
+        ) : (
+          <button type="button" onClick={() => setProOpen(true)}
+            className="mt-4 w-full flex items-center gap-3.5 rounded-[22px] border border-border bg-card px-4 py-3.5 text-left active:bg-muted transition-colors">
+            <div className="h-11 w-11 shrink-0 rounded-[13px] bg-gold-bg border border-gold-border flex items-center justify-center">
+              <Zap className="h-5 w-5 text-gold" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-bold">Upgrade to Pro</p>
+              <p className="text-[12.5px] text-muted-foreground mt-0.5">Unlock Combine, Grid Game, yardages & more.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
         )}
 
-        {/* ── Pro status banner ── */}
-        <ProBanner />
-
-        {/* ── Appearance toggle ── */}
-        <div className="mt-3 flex items-center justify-between rounded-2xl border border-border bg-card px-4 py-3.5">
-          <div className="flex items-center gap-3">
-            {theme === "dark" ? (
-              <Moon className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Sun className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span className="text-sm font-semibold">{theme === "dark" ? "Dark Mode" : "Light Mode"}</span>
-          </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className={cn(
-              "relative h-8 w-14 rounded-full transition-colors duration-200 shrink-0",
-              theme === "dark" ? "bg-primary" : "bg-border",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-1 left-1 h-6 w-6 rounded-full bg-white shadow-md transition-transform duration-200",
-                theme === "dark" ? "translate-x-6" : "translate-x-0",
-              )}
-            />
-          </button>
+        {/* ── Your setup ── */}
+        <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your setup</p>
+        <div className="mt-3 rounded-[22px] border border-border bg-card overflow-hidden">
+          <SetupRow icon={Flag} label="Your bag" detail={undefined} onPress={() => setSubView("bag")} />
+          <div className="h-px bg-border mx-4" />
+          <SetupRow
+            icon={Target}
+            label="Club yardages"
+            onPress={() => isPro ? setSubView("yardage") : setProOpen(true)}
+            proLocked={!isPro}
+          />
+          <div className="h-px bg-border mx-4" />
+          <SetupRow icon={theme === "dark" ? Moon : Sun} label="Appearance" detail={theme === "dark" ? "Dark" : "Light"} onPress={toggleTheme} />
         </div>
 
-        {/* ── Tab switcher — Stats, Bag, Yardages ── */}
-        <div className="mt-5 grid grid-cols-3 rounded-xl bg-muted p-1">
-          <SegTab active={tab === "stats"} onClick={() => setTab("stats")}>
-            <BarChart2 className="h-3.5 w-3.5" />
-            Stats
-          </SegTab>
-          <SegTab active={tab === "bag"} onClick={() => setTab("bag")}>
-            <Briefcase className="h-3.5 w-3.5" />
-            Bag
-          </SegTab>
-          <SegTab active={tab === "yardage"} onClick={() => isPro ? setTab("yardage") : setProOpen(true)}>
-            <Ruler className="h-3.5 w-3.5" />
-            Yardages
-            {!isPro && <Zap className="h-3 w-3 text-gold ml-0.5" />}
-          </SegTab>
-        </div>
-
-        {/* ── Section content ── */}
-        <div className="mt-6">
-          {tab === "stats"   && <StatsSection />}
-          {tab === "bag"     && <BagSection />}
-          {tab === "yardage" && <YardageSection />}
-        </div>
-
+        {/* ── Sign out ── */}
+        <button type="button" onClick={handleSignOut}
+          className="mt-4 h-14 w-full rounded-[22px] border border-border bg-card text-[14px] font-bold uppercase tracking-[0.06em] text-foreground active:bg-muted transition-colors">
+          Sign Out
+        </button>
 
       </div>
 
-      <ProModal
-        open={proOpen}
-        onClose={() => setProOpen(false)}
-        reason="Yardage tracking is a Pro feature. Log your carry distances for every club."
-      />
+      <ProModal open={proOpen} onClose={() => setProOpen(false)} reason="Yardage tracking is a Pro feature. Log your carry distances for every club." />
     </AppShell>
+  );
+}
+
+function SetupRow({ icon: Icon, label, detail, onPress, proLocked }: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  detail?: string;
+  onPress: () => void;
+  proLocked?: boolean;
+}) {
+  return (
+    <button type="button" onClick={onPress} className="w-full flex items-center gap-3.5 px-4 py-4 text-left active:bg-muted transition-colors">
+      <Icon className="h-[19px] w-[19px] text-primary shrink-0" />
+      <span className="flex-1 text-[15.5px] font-medium text-foreground">{label}</span>
+      {proLocked && <Zap className="h-3.5 w-3.5 text-gold shrink-0" />}
+      {detail && <span className="text-[14px] text-muted-foreground">{detail}</span>}
+      <ChevronRight className="h-[17px] w-[17px] text-muted-foreground shrink-0" />
+    </button>
   );
 }
 

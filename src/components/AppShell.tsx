@@ -2,6 +2,16 @@ import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function RRLogo({ className }: { className?: string }) {
+  return (
+    <img
+      src="/brand/logo-navy-trim.png"
+      alt="Range Rat"
+      className={className ?? "h-8 w-auto"}
+    />
+  );
+}
+
 interface AppShellProps {
   children: React.ReactNode;
   showBack?: boolean;
@@ -28,8 +38,8 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
     <div className="min-h-screen bg-background text-foreground flex flex-col pt-[env(safe-area-inset-top)]">
       <header className="sticky top-0 z-30 border-b border-border bg-background/86 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-[52px]">
-          {/* Left — back chevron or "R" monogram tile */}
-          <div className="flex items-center w-9">
+          {/* Left — back chevron or logo */}
+          <div className="flex items-center">
             {showBack ? (
               <button
                 onClick={() => router.history.back()}
@@ -39,19 +49,12 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
                 <ChevronLeft className="h-5 w-5" />
               </button>
             ) : (
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground font-display text-[15px] leading-none italic">
-                R
-              </div>
+              <RRLogo className="h-8 w-auto" />
             )}
           </div>
 
-          {/* Center — wordmark */}
-          <span className="font-sans text-[13px] font-bold uppercase tracking-[0.16em] text-primary">
-            Range Rat
-          </span>
-
           {/* Right — settings */}
-          <div className="flex items-center justify-end w-9">
+          <div className="flex items-center justify-end">
             <Link
               to="/profile"
               aria-label="Settings"
