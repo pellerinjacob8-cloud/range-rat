@@ -902,13 +902,6 @@ function CompletionView({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/" })}
-            className="flex w-full items-center justify-center rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:scale-[0.99]"
-          >
-            Back to Home
-          </button>
         </div>
       </div>
 
@@ -982,6 +975,10 @@ function CustomSessionsTab({
           <p className="mt-2 text-[14px] text-muted-foreground max-w-[260px]">
             Build and save your own custom practice sessions. Pro feature.
           </p>
+          <div className="mt-4 inline-flex items-center gap-1.5 bg-gold-bg border border-gold-border text-gold rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em]">
+            <Zap className="h-3 w-3" />
+            Range Rat Pro
+          </div>
           <button
             type="button"
             onClick={() => setProOpen(true)}
