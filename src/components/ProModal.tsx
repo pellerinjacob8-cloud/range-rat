@@ -15,33 +15,28 @@ const PERKS = [
 interface ProModalProps {
   open: boolean;
   onClose: () => void;
-  /** One-line description of what triggered the gate */
   reason?: string;
 }
 
 export function ProModal({ open, onClose, reason }: ProModalProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loadingTrial, setLoadingTrial] = useState(false);
-  const [loadingUpgrade, setLoadingUpgrade] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
-  const checkout = async (priceId: string, setLoading: (v: boolean) => void) => {
+  const handleUpgrade = async () => {
     if (!user) { navigate({ to: "/login" }); return; }
     setError(null);
     setLoading(true);
     try {
-      await startCheckout(priceId, user.id, user.email ?? "");
+      await startCheckout(PRICES.yearly, user.id, user.email ?? "");
     } catch (err: any) {
       setError(err.message);
       setLoading(false);
     }
   };
-
-  const handleTrial = () => checkout(PRICES.yearly, setLoadingTrial);
-  const handleUpgrade = () => checkout(PRICES.yearly, setLoadingUpgrade);
 
   return (
     <div
@@ -54,11 +49,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           <div className="w-14 h-14 rounded-[18px] bg-yellow-400/15 flex items-center justify-center">
             <Zap className="h-7 w-7 text-yellow-500" />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground p-1 -mr-1"
-          >
+          <button type="button" onClick={onClose} className="text-muted-foreground p-1 -mr-1">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -91,44 +82,26 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           ))}
         </div>
 
-        {/* Error */}
         {error && (
           <p className="mb-3 text-[12px] font-semibold text-destructive text-center">{error}</p>
         )}
 
-        {/* CTAs */}
-        <div className="space-y-2.5">
-          <button
-            type="button"
-            onClick={handleTrial}
-            disabled={loadingTrial}
-            className="h-14 w-full rounded-[14px] bg-yellow-400 text-black font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-50 active:opacity-90 transition-opacity"
-          >
-            {loadingTrial ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                Loading…
-              </span>
-            ) : "Start Free Trial"}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleUpgrade}
-            disabled={loadingUpgrade}
-            className="h-12 w-full rounded-[14px] border border-border bg-card font-bold text-[13px] uppercase tracking-[0.06em] text-foreground disabled:opacity-50 active:bg-muted transition-colors"
-          >
-            {loadingUpgrade ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
-                Loading…
-              </span>
-            ) : "Upgrade to Pro"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={handleUpgrade}
+          disabled={loading}
+          className="h-14 w-full rounded-[14px] bg-yellow-400 text-black font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-50 active:opacity-90 transition-opacity"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
+              Loading…
+            </span>
+          ) : "Upgrade to Pro"}
+        </button>
 
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          7 days free, then $49.99/yr. Cancel anytime.
+          $49.99/yr or $4.99/mo. Cancel anytime.
         </p>
       </div>
     </div>

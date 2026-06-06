@@ -38,7 +38,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: 7,
         metadata: { userId },
       },
       metadata: { userId },
