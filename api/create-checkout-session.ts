@@ -1,21 +1,38 @@
 import Stripe from "stripe";
+import type { IncomingMessage, ServerResponse } from "http";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia" as any,
 });
 
-export default async function handler(req: any, res: any) {
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => { body += chunk.toString(); });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader("Content-Type", "application/json");
+
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { priceId, userId, userEmail } = req.body;
-
-  if (!priceId || !userId) {
-    return res.status(400).json({ error: "Missing priceId or userId" });
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
   }
 
   try {
+    const raw = await readBody(req);
+    const { priceId, userId, userEmail } = JSON.parse(raw);
+
+    if (!priceId || !userId) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Missing priceId or userId" }));
+      return;
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
@@ -30,9 +47,11 @@ export default async function handler(req: any, res: any) {
       cancel_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/upgrade`,
     });
 
-    res.status(200).json({ url: session.url });
+    res.writeHead(200);
+    res.end(JSON.stringify({ url: session.url }));
   } catch (err: any) {
-    console.error("Stripe checkout error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Checkout error:", err);
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));
   }
 }
