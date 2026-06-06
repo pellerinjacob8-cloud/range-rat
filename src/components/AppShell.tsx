@@ -3,12 +3,12 @@ import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function RRLogo({ className }: { className?: string }) {
+  const cls = className ?? "h-8 w-auto";
   return (
-    <img
-      src="/brand/logo-navy-trim.png"
-      alt="Range Rat"
-      className={className ?? "h-8 w-auto"}
-    />
+    <>
+      <img src="/brand/logo-navy-trim.png" alt="Range Rat" className={`${cls} dark:hidden`} />
+      <img src="/brand/logo-white-solid.png" alt="Range Rat" className={`${cls} hidden dark:block`} />
+    </>
   );
 }
 

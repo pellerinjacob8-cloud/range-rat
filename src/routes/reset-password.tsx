@@ -126,8 +126,9 @@ function ResetPasswordPage() {
         <img
           src="/brand/logo-navy-trim.png"
           alt="Range Rat"
-          className="h-16 w-auto self-start mb-8"
+          className="h-16 w-auto self-start mb-8 dark:hidden"
         />
+        <img src="/brand/logo-white-solid.png" alt="Range Rat" className="h-16 w-auto self-start mb-8 hidden dark:block" />
 
         <h1 className="font-display text-[38px] leading-[0.95] tracking-[-0.015em] mb-2">
           New password
