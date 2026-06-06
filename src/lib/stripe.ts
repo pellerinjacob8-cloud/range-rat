@@ -14,13 +14,24 @@ export async function startCheckout(
   userId: string,
   userEmail: string
 ) {
+  if (!priceId) throw new Error("Price not configured. Contact support.");
+
   const res = await fetch("/api/create-checkout-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ priceId, userId, userEmail }),
   });
 
-  const data = await res.json();
+  const text = await res.text();
+  if (!text) throw new Error("No response from server. Please try again.");
+
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Unexpected server error. Please try again.");
+  }
+
   if (data.url) {
     window.location.href = data.url;
   } else {

@@ -41,7 +41,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
   };
 
   const handleTrial = () => checkout(PRICES.yearly, setLoadingTrial);
-  const handleUpgrade = () => checkout(PRICES.monthly, setLoadingUpgrade);
+  const handleUpgrade = () => checkout(PRICES.yearly, setLoadingUpgrade);
 
   return (
     <div
@@ -128,7 +128,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
         </div>
 
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          Trial: $49.99/yr · Pro: $4.99/mo. Cancel anytime.
+          7 days free, then $49.99/yr. Cancel anytime.
         </p>
       </div>
     </div>
