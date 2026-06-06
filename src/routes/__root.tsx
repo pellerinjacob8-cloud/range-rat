@@ -38,7 +38,6 @@ function AuthGate() {
 
   useEffect(() => {
     if (!session) { setHasProfile(null); return; }
-    // Fast path: check localStorage cache first (kept in sync by saveProfile)
     try {
       const cached = localStorage.getItem("rangeRat_profile");
       if (cached) {
@@ -53,7 +52,7 @@ function AuthGate() {
       }
       setHasProfile(has);
     });
-  }, [session, pathname]);
+  }, [session]);
 
   useEffect(() => {
     if (loading) return;
