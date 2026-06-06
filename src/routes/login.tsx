@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 
@@ -68,7 +68,7 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
-          <span className="text-3xl">🔑</span>
+          <KeyRound className="h-8 w-8 text-primary" />
         </div>
         <h1 className="font-display text-[34px] leading-tight mb-3">Check your email</h1>
         <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mb-8">

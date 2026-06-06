@@ -1,7 +1,6 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
 import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTheme } from "@/context/ThemeContext";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -19,7 +18,6 @@ const tabs = [
 export function AppShell({ children, showBack = false, hideTabBar = false }: AppShellProps) {
   const router = useRouter();
   const location = useLocation();
-  const { theme } = useTheme();
 
   function isActive(href: string) {
     if (href === "/") return location.pathname === "/";
@@ -28,36 +26,38 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col pt-[env(safe-area-inset-top)]">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-14">
-          {/* Left */}
-          <div className="flex items-center gap-2 min-w-12">
-            {showBack && (
+      <header className="sticky top-0 z-30 border-b border-border bg-background/86 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-[52px]">
+          {/* Left — back chevron or "R" monogram tile */}
+          <div className="flex items-center w-9">
+            {showBack ? (
               <button
                 onClick={() => router.history.back()}
                 aria-label="Back"
-                className="-ml-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground active:bg-muted"
+                className="-ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-muted"
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-5 w-5" />
               </button>
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground font-display text-[15px] leading-none italic">
+                R
+              </div>
             )}
           </div>
 
-          {/* Center — logo */}
-          <img
-            src={theme === "dark" ? "/brand/logo-white.png" : "/brand/logo-navy.png"}
-            alt="Range Rat"
-            className="h-8 w-auto max-w-[120px]"
-          />
+          {/* Center — wordmark */}
+          <span className="font-sans text-[13px] font-bold uppercase tracking-[0.16em] text-primary">
+            Range Rat
+          </span>
 
-          {/* Right */}
-          <div className="flex items-center justify-end min-w-12">
+          {/* Right — settings */}
+          <div className="flex items-center justify-end w-9">
             <Link
               to="/profile"
               aria-label="Settings"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-foreground active:bg-muted"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-muted"
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-[18px] w-[18px]" />
             </Link>
           </div>
         </div>

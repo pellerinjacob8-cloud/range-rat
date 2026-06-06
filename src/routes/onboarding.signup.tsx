@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { Eye, EyeOff, ChevronLeft, MailCheck, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { supabase } from "@/lib/supabase";
@@ -15,15 +15,15 @@ function validateEmail(email: string) {
 
 function passwordStrength(pw: string): { label: string; color: string; bars: number } {
   if (pw.length === 0) return { label: "", color: "", bars: 0 };
-  if (pw.length < 8) return { label: "Too short", color: "bg-destructive", bars: 1 };
+  if (pw.length < 8) return { label: "Too short", color: "bg-primary/40", bars: 1 };
   const hasUpper = /[A-Z]/.test(pw);
   const hasNum = /[0-9]/.test(pw);
   const hasSpecial = /[^A-Za-z0-9]/.test(pw);
   const score = [hasUpper, hasNum, hasSpecial].filter(Boolean).length;
-  if (score === 0) return { label: "Weak", color: "bg-orange-400", bars: 1 };
-  if (score === 1) return { label: "Fair", color: "bg-yellow-400", bars: 2 };
-  if (score === 2) return { label: "Good", color: "bg-emerald-400", bars: 3 };
-  return { label: "Strong", color: "bg-emerald-500", bars: 4 };
+  if (score === 0) return { label: "Weak", color: "bg-primary/50", bars: 1 };
+  if (score === 1) return { label: "Fair", color: "bg-primary/65", bars: 2 };
+  if (score === 2) return { label: "Good", color: "bg-primary/80", bars: 3 };
+  return { label: "Strong", color: "bg-primary", bars: 4 };
 }
 
 function PasswordInput({
@@ -88,7 +88,7 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
       <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
-        <span className="text-3xl">📬</span>
+        <MailCheck className="h-8 w-8 text-primary" />
       </div>
 
       <h1 className="font-display text-[34px] leading-tight mb-3">Verify your email</h1>
@@ -106,7 +106,7 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
         <p className="text-sm font-semibold text-destructive mb-4">{resendError}</p>
       )}
       {resent && (
-        <p className="text-sm font-semibold text-emerald-600 mb-4">Email resent ✓</p>
+        <p className="text-sm font-semibold text-[var(--ok)] mb-4 flex items-center justify-center gap-1.5"><Check className="h-4 w-4" /> Email resent</p>
       )}
 
       <button
@@ -274,7 +274,7 @@ function OnboardingSignup() {
             <p className="mt-1.5 text-[12px] text-destructive font-medium">Passwords do not match.</p>
           )}
           {touched.confirm && passwordsMatch && (
-            <p className="mt-1.5 text-[12px] text-emerald-600 font-medium">Passwords match ✓</p>
+            <p className="mt-1.5 text-[12px] text-[var(--ok)] font-medium flex items-center gap-1"><Check className="h-3.5 w-3.5" /> Passwords match</p>
           )}
         </div>
 

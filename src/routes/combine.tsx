@@ -396,7 +396,7 @@ function ResultsView({ attempt, onDone }: { attempt: CombineAttempt; onDone: () 
               {attempt.overallScore}
             </span>
             {isNewPb && (
-              <span className="ml-2 text-[13px] font-bold uppercase tracking-[0.1em] text-primary">New PB 🏆</span>
+              <span className="ml-2 text-[13px] font-bold uppercase tracking-[0.1em] text-primary inline-flex items-center gap-1">New PB <Trophy className="h-4 w-4" /></span>
             )}
           </div>
         </div>

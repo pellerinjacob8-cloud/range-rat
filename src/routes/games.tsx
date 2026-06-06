@@ -64,9 +64,9 @@ function GamesPage() {
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99] relative overflow-hidden"
         >
           {!isPro && (
-            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5">
-              <Lock className="h-3 w-3 text-yellow-600" />
-              <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
+            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5">
+              <Lock className="h-3 w-3 text-gold" />
+              <span className="text-[10px] font-bold text-gold uppercase tracking-wide">Pro</span>
             </div>
           )}
           <div className="flex items-center gap-4">
@@ -110,9 +110,9 @@ function GamesPage() {
             onClick={() => setProOpen(true)}
             className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm text-left active:scale-[0.99] transition relative overflow-hidden"
           >
-            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5">
-              <Zap className="h-3 w-3 text-yellow-600" />
-              <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
+            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5">
+              <Zap className="h-3 w-3 text-gold" />
+              <span className="text-[10px] font-bold text-gold uppercase tracking-wide">Pro</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">

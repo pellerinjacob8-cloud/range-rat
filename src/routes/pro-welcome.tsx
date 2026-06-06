@@ -10,8 +10,8 @@ export const Route = createFileRoute("/pro-welcome")({
 const SLIDES = [
   {
     icon: Zap,
-    color: "bg-yellow-400/15",
-    iconColor: "text-yellow-500",
+    color: "bg-gold-bg border border-gold-border",
+    iconColor: "text-gold",
     title: "Welcome to\nRange Rat Pro.",
     body: "You've unlocked every feature. Here's what's waiting for you.",
     cta: null,
@@ -135,7 +135,7 @@ function ProWelcomePage() {
       <button
         type="button"
         onClick={next}
-        className="h-14 w-full max-w-sm mx-auto rounded-[14px] bg-yellow-400 font-bold text-[14px] uppercase tracking-[0.06em] text-black active:opacity-90 transition-opacity"
+        className="h-14 w-full max-w-sm mx-auto rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
       >
         {isLast ? "Start training" : "Next"}
       </button>

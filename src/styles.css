@@ -48,6 +48,11 @@
   --font-display: "Instrument Serif", "Canela", Georgia, serif;
   --font-sans:    "Inter Tight", "Söhne", -apple-system, "BlinkMacSystemFont", system-ui, sans-serif;
   --font-stats:   "Barlow Condensed", "DIN Condensed", "Oswald", Impact, sans-serif;
+  --color-gold: var(--gold);
+  --color-gold-bg: var(--gold-bg);
+  --color-gold-border: var(--gold-border);
+  --color-gold-line: var(--gold-line);
+  --color-ok: var(--ok);
 }
 
 /* Range Rat palette
@@ -102,6 +107,13 @@
   --sidebar-accent-foreground: oklch(0.31 0.10 258);
   --sidebar-border: oklch(0.9 0.005 258);
   --sidebar-ring: oklch(0.31 0.10 258);
+
+  /* champagne gold premium accent */
+  --gold: #9c7a39;
+  --gold-line: #b8924e;
+  --gold-bg: rgba(176,138,70,.10);
+  --gold-border: rgba(176,138,70,.34);
+  --ok: #2f7a57;
 }
 
 .dark {
@@ -147,6 +159,13 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.55 0.13 258);
+
+  /* champagne gold — lighter for dark surfaces */
+  --gold: #d8b36a;
+  --gold-line: #d8b36a;
+  --gold-bg: rgba(216,179,106,.12);
+  --gold-border: rgba(216,179,106,.30);
+  --ok: #56b487;
 }
 
 @layer base {

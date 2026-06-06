@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 
@@ -92,8 +92,8 @@ function ResetPasswordPage() {
   if (done) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-5">
-          <span className="text-3xl">✅</span>
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
+          <Check className="h-8 w-8 text-primary" />
         </div>
         <h1 className="font-display text-[34px] leading-tight mb-3">Password updated</h1>
         <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mb-8">
@@ -153,8 +153,8 @@ function ResetPasswordPage() {
 
         {/* Match indicator */}
         {confirm.length > 0 && (
-          <p className={`mt-2 text-[12px] font-medium ${password === confirm ? "text-emerald-600" : "text-destructive"}`}>
-            {password === confirm ? "Passwords match ✓" : "Passwords do not match"}
+          <p className={`mt-2 text-[12px] font-medium flex items-center gap-1 ${password === confirm ? "text-[var(--ok)]" : "text-destructive"}`}>
+            {password === confirm ? <><Check className="h-3.5 w-3.5" /> Passwords match</> : "Passwords do not match"}
           </p>
         )}
 

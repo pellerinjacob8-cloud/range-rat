@@ -166,10 +166,10 @@ function Home() {
         <button
           type="button"
           onClick={() => setProOpen(true)}
-          className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-yellow-400/40 bg-yellow-400/8 px-4 py-3.5 text-left active:bg-yellow-400/15 transition-colors"
+          className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left transition-colors"
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/20">
-            <Zap className="h-4 w-4 text-yellow-600" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">
+            <Zap className="h-4 w-4 text-gold" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold">Unlock Pro features</p>
@@ -236,9 +236,9 @@ function ProNavCard({ to, title, subtitle, Icon, isPro, onLock }: NavCardProps &
         <h2 className="font-display text-[22px] leading-none">{title}</h2>
         <p className="mt-1 text-[15px] text-muted-foreground line-clamp-2">{subtitle}</p>
       </div>
-      <div className="flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5 shrink-0">
-        <Zap className="h-3 w-3 text-yellow-600" />
-        <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
+      <div className="flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5 shrink-0">
+        <Zap className="h-3 w-3 text-gold" />
+        <span className="text-[10px] font-bold text-gold uppercase tracking-wide">Pro</span>
       </div>
     </button>
   );

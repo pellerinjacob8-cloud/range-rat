@@ -45,8 +45,8 @@ function UpgradePage() {
   if (isPro) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-5">
-          <Zap className="h-8 w-8 text-emerald-500" />
+        <div className="w-16 h-16 rounded-full bg-gold-bg border border-gold-border flex items-center justify-center mb-5">
+          <Zap className="h-8 w-8 text-gold" />
         </div>
         <h1 className="font-display text-[34px] leading-tight mb-3">You're Pro!</h1>
         <p className="text-[15px] text-muted-foreground max-w-xs mb-8">

@@ -326,8 +326,8 @@ function PracticePage() {
       {showUpgradedModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-8">
           <div className="w-full max-w-[430px] rounded-[28px] bg-background p-6 text-center shadow-2xl">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/15">
-              <Zap className="h-8 w-8 text-yellow-500" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gold-bg border border-gold-border">
+              <Zap className="h-8 w-8 text-gold" />
             </div>
             <h2 className="font-display text-[32px] leading-tight">Welcome to Pro.</h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
@@ -339,7 +339,7 @@ function PracticePage() {
                 setShowUpgradedModal(false);
                 navigate({ to: "/practice", replace: true });
               }}
-              className="mt-6 h-14 w-full rounded-[14px] bg-yellow-400 font-bold text-[14px] uppercase tracking-[0.06em] text-black active:opacity-90 transition-opacity"
+              className="mt-6 h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
             >
               Let's go
             </button>
@@ -975,8 +975,8 @@ function CustomSessionsTab({
     return (
       <>
         <div className="flex flex-col items-center py-12 text-center px-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-yellow-400/10 mb-4">
-            <Zap className="h-8 w-8 text-yellow-500" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-bg border border-gold-border mb-4">
+            <Zap className="h-8 w-8 text-gold" />
           </div>
           <h2 className="font-display text-[26px] leading-tight">My Sessions</h2>
           <p className="mt-2 text-[14px] text-muted-foreground max-w-[260px]">
@@ -985,7 +985,7 @@ function CustomSessionsTab({
           <button
             type="button"
             onClick={() => setProOpen(true)}
-            className="mt-6 h-12 px-6 rounded-full bg-yellow-400 font-bold text-[13px] uppercase tracking-[0.06em] text-black active:opacity-90"
+            className="mt-6 h-12 px-6 rounded-[14px] bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-[0.06em] active:opacity-90"
           >
             Upgrade to Pro
           </button>

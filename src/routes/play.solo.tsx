@@ -170,7 +170,7 @@ function SoloPage() {
       <main className="flex-1 px-4 pb-24 pt-4 max-w-[430px] w-full mx-auto">
         {/* Header area */}
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/50">Shot {total + 1}</p>
-        <h1 className="mt-1.5 font-display text-[32px] leading-[1.0] tracking-[-0.01em] text-white">Commit to it.</h1>
+        <h1 className="mt-1.5 font-display text-[32px] leading-[1.0] tracking-[-0.01em] text-white italic">Commit to it.</h1>
 
         {/* Shot card */}
         <div className="mt-6 rounded-[26px] bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/10 p-6 text-center">
@@ -179,7 +179,7 @@ function SoloPage() {
             {clubNumber ? (
               <span className="font-stats text-[104px] leading-none tabular-nums text-white">{clubNumber}</span>
             ) : null}
-            <p className={cn("font-stats text-[84px] leading-none tracking-[-0.01em] text-white", clubNumber && "-mt-3")}>{clubType}</p>
+            <p className={cn("font-display text-[32px] leading-tight tracking-[-0.01em] text-white", clubNumber && "mt-1")}>{clubType}</p>
           </div>
           <div className="grid grid-cols-2 gap-2 mt-5">
             <ShotBox label="Shape" value={shot.shape} />

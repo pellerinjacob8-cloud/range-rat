@@ -46,8 +46,8 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
       <div className="w-full max-w-[430px] rounded-[28px] bg-background p-6 shadow-2xl">
         {/* Top row */}
         <div className="flex items-start justify-between mb-5">
-          <div className="w-14 h-14 rounded-[18px] bg-yellow-400/15 flex items-center justify-center">
-            <Zap className="h-7 w-7 text-yellow-500" />
+          <div className="w-14 h-14 rounded-[18px] bg-gold-bg border border-gold-border flex items-center justify-center">
+            <Zap className="h-7 w-7 text-gold" />
           </div>
           <button type="button" onClick={onClose} className="text-muted-foreground p-1 -mr-1">
             <X className="h-5 w-5" />
@@ -55,7 +55,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
         </div>
 
         {/* Label */}
-        <div className="inline-flex items-center gap-1.5 bg-yellow-400/10 text-yellow-600 dark:text-yellow-400 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] mb-3">
+        <div className="inline-flex items-center gap-1.5 bg-gold-bg border border-gold-border text-gold rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] mb-3">
           <Zap className="h-3 w-3" />
           Range Rat Pro
         </div>
@@ -90,7 +90,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           type="button"
           onClick={handleUpgrade}
           disabled={loading}
-          className="h-14 w-full rounded-[14px] bg-yellow-400 text-black font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-50 active:opacity-90 transition-opacity"
+          className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-50 active:opacity-90 transition-opacity"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

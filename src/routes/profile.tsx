@@ -103,13 +103,13 @@ function ProfilePage() {
       <div className="pb-24">
 
         {/* ── Profile header ── */}
-        <div className="flex items-start gap-4 pb-6 pt-2 border-b border-border">
+        <div className="flex items-center gap-3.5 pb-5 pt-3 border-b border-border">
           <div className="h-[72px] w-[72px] shrink-0 rounded-full bg-primary text-white flex items-center justify-center font-display text-[36px] leading-none tracking-[-0.01em]">
             {profile.firstName ? profile.firstName.slice(0, 1).toUpperCase() : "?"}
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
               Golfer
             </p>
 
@@ -132,63 +132,49 @@ function ProfilePage() {
                 />
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={startEdit}
-                className="mt-1 flex items-center gap-2 active:opacity-70"
-              >
-                <span className="font-display text-[30px] leading-none tracking-[-0.01em] truncate">
-                  {profile.firstName
-                    ? [profile.firstName, profile.lastName].filter(Boolean).join(" ")
-                    : "Tap to add name"}
-                </span>
-                <Pencil
-                  className={cn(
-                    "h-4 w-4 shrink-0",
-                    profile.firstName ? "text-muted-foreground" : "text-primary",
-                  )}
-                />
-              </button>
+              <p className="mt-0.5 font-display text-[30px] leading-none tracking-[-0.01em] truncate">
+                {profile.firstName
+                  ? [profile.firstName, profile.lastName].filter(Boolean).join(" ")
+                  : <span className="text-muted-foreground text-xl">Add name</span>}
+              </p>
             )}
 
             {/* Chips row */}
-            <div className="mt-2 flex gap-2 flex-wrap">
+            <div className="mt-2 flex gap-1.5 flex-wrap">
               {profile.handedness && (
-                <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                <span className="rounded-full bg-primary/8 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-primary">
                   {profile.handedness === "righty" ? "Righty" : "Lefty"}
                 </span>
               )}
-              <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+              <span className="rounded-full bg-muted px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                 Member · {memberYear}
               </span>
             </div>
 
-            {/* Handedness — selected only when viewing, both when editing */}
-            <div className="mt-3 flex gap-2">
-              {(["righty", "lefty"] as const)
-                .filter(h => editing || profile.handedness === h)
-                .map((h) => (
+            {/* Handedness — only shown while editing */}
+            {editing && (
+              <div className="mt-3 flex gap-2">
+                {(["righty", "lefty"] as const).map((h) => (
                   <button
                     key={h}
                     type="button"
-                    disabled={!editing}
-                    onClick={() => editing && setHandedness(h)}
+                    onClick={() => setHandedness(h)}
                     className={cn(
-                      "rounded-full border px-3.5 py-1.5 text-xs font-bold transition-colors",
+                      "h-14 flex-1 rounded-[14px] border text-sm font-bold uppercase tracking-[0.06em] transition-colors",
                       profile.handedness === h
                         ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-muted text-muted-foreground",
-                      !editing && "cursor-default",
+                        : "border-border bg-card text-foreground active:bg-muted",
                     )}
                   >
                     {h === "righty" ? "Righty" : "Lefty"}
                   </button>
                 ))}
-            </div>
+              </div>
+            )}
 
             {/* Save / Cancel — only shown while editing */}
             {editing && (
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-3">
                 <button
                   type="button"
                   onMouseDown={(e) => { e.preventDefault(); saveName(); }}
@@ -207,6 +193,18 @@ function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Separate edit button */}
+          {!editing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              aria-label="Edit profile"
+              className="h-9 w-9 shrink-0 rounded-full border border-border bg-card flex items-center justify-center text-muted-foreground active:bg-muted transition-colors"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* ── Account row ── */}
@@ -259,20 +257,20 @@ function ProfilePage() {
         </div>
 
         {/* ── Tab switcher — Stats, Bag, Yardages ── */}
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          <TabBtn active={tab === "stats"} onClick={() => setTab("stats")}>
-            <BarChart2 className="h-4 w-4" />
+        <div className="mt-5 grid grid-cols-3 rounded-xl bg-muted p-1">
+          <SegTab active={tab === "stats"} onClick={() => setTab("stats")}>
+            <BarChart2 className="h-3.5 w-3.5" />
             Stats
-          </TabBtn>
-          <TabBtn active={tab === "bag"} onClick={() => setTab("bag")}>
-            <Briefcase className="h-4 w-4" />
+          </SegTab>
+          <SegTab active={tab === "bag"} onClick={() => setTab("bag")}>
+            <Briefcase className="h-3.5 w-3.5" />
             Bag
-          </TabBtn>
-          <TabBtn active={tab === "yardage"} onClick={() => isPro ? setTab("yardage") : setProOpen(true)}>
-            <Ruler className="h-4 w-4" />
+          </SegTab>
+          <SegTab active={tab === "yardage"} onClick={() => isPro ? setTab("yardage") : setProOpen(true)}>
+            <Ruler className="h-3.5 w-3.5" />
             Yardages
-            {!isPro && <Zap className="h-3 w-3 text-yellow-500 ml-0.5" />}
-          </TabBtn>
+            {!isPro && <Zap className="h-3 w-3 text-gold ml-0.5" />}
+          </SegTab>
         </div>
 
         {/* ── Section content ── */}
@@ -302,10 +300,10 @@ function ProBanner() {
 
   if (isPro) {
     return (
-      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-yellow-400/30 bg-yellow-400/10 px-4 py-3.5">
-        <Zap className="h-5 w-5 text-yellow-500 shrink-0" />
+      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold-border bg-gold-bg px-4 py-3.5">
+        <Zap className="h-5 w-5 text-gold shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-yellow-600 dark:text-yellow-400">Range Rat Pro</p>
+          <p className="text-sm font-bold text-gold">Range Rat Pro</p>
           <p className="text-xs text-muted-foreground mt-0.5">All features unlocked.</p>
         </div>
       </div>
@@ -319,8 +317,8 @@ function ProBanner() {
         onClick={() => setProOpen(true)}
         className="mt-3 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left active:bg-muted transition-colors"
       >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15">
-          <Zap className="h-4 w-4 text-yellow-500" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">
+          <Zap className="h-4 w-4 text-gold" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold">Upgrade to Pro</p>
@@ -369,7 +367,7 @@ function GolfBagIcon({ className }: { className?: string }) {
 
 // ─── Tab button ───────────────────────────────────────────────────────────────
 
-function TabBtn({
+function SegTab({
   active,
   onClick,
   children,
@@ -383,10 +381,10 @@ function TabBtn({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center justify-center gap-1.5 rounded-xl border py-3.5 text-sm font-semibold transition-colors",
+        "flex items-center justify-center gap-1.5 rounded-[9px] py-2.5 text-[12.5px] font-semibold transition-all",
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-muted-foreground active:bg-muted",
+          ? "bg-card text-primary shadow-sm"
+          : "text-muted-foreground active:opacity-70",
       )}
     >
       {children}
@@ -1218,8 +1216,16 @@ function StatsSection() {
 
   return (
     <div className="space-y-3">
+      {/* Stat tiles — first */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard label="Sessions"   value={String(sessions.length)} />
+        <StatCard label="Balls Hit"  value={totalBalls.toLocaleString()} />
+        <StatCard label="Drills Done" value={String(totalDrills)} />
+        <StatCard label="Top Goal"   value={GOAL_LABELS[topGoalKey] ?? topGoalKey} />
+      </div>
+
       {/* Weekly bar chart */}
-      <div className="rounded-[22px] border border-border bg-card p-4 mb-4">
+      <div className="rounded-[22px] border border-border bg-card p-4">
         <div className="flex justify-between items-baseline">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Last 7 days</p>
           <span className="text-[13px] font-semibold text-primary tracking-[0.08em]">+18% vs last week</span>
@@ -1237,14 +1243,6 @@ function StatsSection() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="Sessions"   value={String(sessions.length)} />
-        <StatCard label="Balls Hit"  value={totalBalls.toLocaleString()} />
-        <StatCard label="Drills Done" value={String(totalDrills)} />
-        <StatCard label="Top Goal"   value={GOAL_LABELS[topGoalKey] ?? topGoalKey} />
       </div>
 
       {/* Recent sessions */}
