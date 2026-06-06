@@ -23,26 +23,25 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loadingTrial, setLoadingTrial] = useState(false);
+  const [loadingUpgrade, setLoadingUpgrade] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
-  const handleTrial = async () => {
+  const checkout = async (priceId: string, setLoading: (v: boolean) => void) => {
     if (!user) { navigate({ to: "/login" }); return; }
     setError(null);
-    setLoadingTrial(true);
+    setLoading(true);
     try {
-      await startCheckout(PRICES.yearly, user.id, user.email ?? "");
+      await startCheckout(priceId, user.id, user.email ?? "");
     } catch (err: any) {
       setError(err.message);
-      setLoadingTrial(false);
+      setLoading(false);
     }
   };
 
-  const handleUpgrade = () => {
-    onClose();
-    navigate({ to: "/upgrade" });
-  };
+  const handleTrial = () => checkout(PRICES.yearly, setLoadingTrial);
+  const handleUpgrade = () => checkout(PRICES.monthly, setLoadingUpgrade);
 
   return (
     <div
@@ -116,14 +115,20 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           <button
             type="button"
             onClick={handleUpgrade}
-            className="h-12 w-full rounded-[14px] border border-border bg-card font-bold text-[13px] uppercase tracking-[0.06em] text-foreground active:bg-muted transition-colors"
+            disabled={loadingUpgrade}
+            className="h-12 w-full rounded-[14px] border border-border bg-card font-bold text-[13px] uppercase tracking-[0.06em] text-foreground disabled:opacity-50 active:bg-muted transition-colors"
           >
-            Upgrade to Pro
+            {loadingUpgrade ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="h-4 w-4 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
+                Loading…
+              </span>
+            ) : "Upgrade to Pro"}
           </button>
         </div>
 
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          7 days free, then $49.99/yr. Cancel anytime.
+          Trial: $49.99/yr · Pro: $4.99/mo. Cancel anytime.
         </p>
       </div>
     </div>
