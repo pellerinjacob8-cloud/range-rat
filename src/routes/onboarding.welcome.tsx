@@ -9,32 +9,26 @@ function OnboardingWelcome() {
   const navigate = useNavigate();
   useForceLightMode();
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6">
-      <div className="h-11" /> {/* status bar spacer */}
+    <div className="min-h-screen bg-background flex flex-col px-6 pt-[env(safe-area-inset-top)]">
+      <div className="h-14" />
 
-      {/* Content fills the middle */}
       <div className="flex-1 flex flex-col justify-center">
-        {/* Logo */}
         <img
           src="/brand/logo-navy-trim.png"
           alt="Range Rat"
-          className="h-16 w-auto self-start mb-6"
+          className="h-14 w-auto self-start mb-8"
         />
 
-        {/* Hero heading */}
-        <h1 className="mt-8 font-display text-[56px] leading-[0.95] tracking-[-0.015em]">
+        <h1 className="font-display text-[56px] leading-[0.95] tracking-[-0.015em]">
           Grind.<br />Practice.<br /><em className="italic">Improve.</em>
         </h1>
 
-        {/* Lede */}
-        <p className="mt-5 text-[15px] text-muted-foreground leading-[1.45]">
+        <p className="mt-5 text-[15px] text-muted-foreground leading-[1.45] max-w-[300px]">
           Range Rat builds focused practice sessions, runs games with your buddies, and tracks every bucket you hit.
         </p>
       </div>
 
-      {/* Bottom actions */}
       <div className="pb-10">
-        {/* Pagination dots */}
         <div className="flex gap-1.5 justify-center mb-5">
           <span className="h-1.5 w-4 rounded-full bg-primary" />
           <span className="h-1.5 w-1.5 rounded-full bg-border" />

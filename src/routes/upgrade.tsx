@@ -78,14 +78,15 @@ function UpgradePage() {
 
       {/* Hero */}
       <div className="mt-6 text-center">
-        <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-full px-3 py-1 text-[12px] font-bold uppercase tracking-[0.12em] mb-4">
+        <div className="inline-flex items-center gap-1.5 bg-gold-bg border border-gold-border text-gold rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] mb-4">
           <Zap className="h-3 w-3" />
           Range Rat Pro
         </div>
         <h1 className="font-display text-[42px] leading-[0.95] tracking-[-0.015em]">
           Take your game<br />to the next level.
         </h1>
-        <p className="mt-3 text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
+        <div className="mx-auto mt-4 h-[2px] w-11 rounded-full bg-gold-line opacity-80" />
+        <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
           Unlock every feature, track your progress, and train like a serious golfer.
         </p>
       </div>
@@ -113,7 +114,7 @@ function UpgradePage() {
               : "border-border bg-card"
           }`}
         >
-          <div className="absolute -top-2.5 right-3 bg-primary text-white text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full">
+          <div className="absolute -top-2.5 right-3 bg-gold text-white text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full">
             Save 17%
           </div>
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">Yearly</p>
