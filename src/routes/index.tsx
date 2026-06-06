@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
+import { ProModal } from "@/components/ProModal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,6 +95,7 @@ function Home() {
   const stats = loadStats();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
   const { isPro } = useAuth();
+  const [proOpen, setProOpen] = useState(false);
 
   const dismissResume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -174,7 +176,7 @@ function Home() {
       <div className="mt-3 space-y-2.5">
         <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
         <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
-        <NavCard to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
+        <ProNavCard isPro={isPro} onLock={() => setProOpen(true)} to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
         <NavCard to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
 
@@ -203,6 +205,12 @@ function Home() {
       <div className="mt-3 space-y-2.5">
         <NavCard to="/games" title="Games" subtitle="Friendly bets and bragging rights." Icon={Flag} />
       </div>
+
+      <ProModal
+        open={proOpen}
+        onClose={() => setProOpen(false)}
+        reason="Practice Like You Play is a Pro feature. Upgrade to unlock it and the full Range Rat experience."
+      />
     </AppShell>
   );
 }
@@ -229,5 +237,28 @@ function NavCard({ to, title, subtitle, Icon }: NavCardProps) {
       </div>
       <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
     </Link>
+  );
+}
+
+function ProNavCard({ to, title, subtitle, Icon, isPro, onLock }: NavCardProps & { isPro: boolean; onLock: () => void }) {
+  if (isPro) return <NavCard to={to} title={title} subtitle={subtitle} Icon={Icon} />;
+  return (
+    <button
+      type="button"
+      onClick={onLock}
+      className="w-full rounded-[22px] border border-border bg-card p-3.5 flex items-center gap-3.5 text-left active:scale-[0.99] transition relative"
+    >
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-muted text-muted-foreground">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="font-display text-[22px] leading-none">{title}</h2>
+        <p className="mt-1 text-[15px] text-muted-foreground line-clamp-2">{subtitle}</p>
+      </div>
+      <div className="flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5 shrink-0">
+        <Zap className="h-3 w-3 text-yellow-600" />
+        <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
+      </div>
+    </button>
   );
 }

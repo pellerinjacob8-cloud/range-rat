@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { ChevronRight, User, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ProGate } from "@/components/ProGate";
 
 export const Route = createFileRoute("/play")({
   head: () => ({
@@ -26,6 +27,7 @@ function PlayPage() {
   if (pathname !== "/play") return <Outlet />;
 
   return (
+    <ProGate feature="Practice Like You Play">
     <AppShell showBack>
       <div className="pt-2">
         <h1 className="font-display text-3xl">Practice Like You Play</h1>
@@ -49,6 +51,7 @@ function PlayPage() {
         />
       </div>
     </AppShell>
+    </ProGate>
   );
 }
 

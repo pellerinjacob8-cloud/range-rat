@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ProGate } from "@/components/ProGate";
 import { useState, useEffect } from "react";
 import { saveActiveMarker } from "@/lib/active-session";
 import { ArrowRight, Check, Sparkles, Target, Trophy, X } from "lucide-react";
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/games/fairway-game")({
       },
     ],
   }),
-  component: FairwayGame,
+  component: () => <ProGate feature="Fairway Game"><FairwayGame /></ProGate>,
 });
 
 type Mode = "solo" | "vs";

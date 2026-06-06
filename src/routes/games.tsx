@@ -1,7 +1,9 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { ChevronRight, Flag, Grid3x3, Lock, Target } from "lucide-react";
+import { useState } from "react";
+import { ChevronRight, Flag, Grid3x3, Lock, Target, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/context/AuthContext";
+import { ProModal } from "@/components/ProModal";
 
 export const Route = createFileRoute("/games")({
   head: () => ({
@@ -21,8 +23,8 @@ export const Route = createFileRoute("/games")({
 function GamesPage() {
   const { pathname } = useLocation();
   const { isPro } = useAuth();
+  const [proOpen, setProOpen] = useState(false);
 
-  // When a child game route is active, just render it.
   if (pathname !== "/games") {
     return <Outlet />;
   }
@@ -36,6 +38,7 @@ function GamesPage() {
       </div>
 
       <div className="mt-6 space-y-4">
+        {/* Closest to Pin — free */}
         <Link
           to="/games/closest-to-pin"
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
@@ -55,6 +58,7 @@ function GamesPage() {
           </div>
         </Link>
 
+        {/* Grid Game — Pro */}
         <Link
           to="/games/grid-game"
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99] relative overflow-hidden"
@@ -80,27 +84,60 @@ function GamesPage() {
           </div>
         </Link>
 
-        <Link
-          to="/games/fairway-game"
-          className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
-        >
-          <div className="flex items-center gap-4">
-            <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Target className="h-6 w-6" />
+        {/* Fairway Game — Pro */}
+        {isPro ? (
+          <Link
+            to="/games/fairway-game"
+            className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <Target className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">SOLO · TRACKING</p>
+                <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Fairway Game</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Pick two markers. Hit your fairway. Track your %.
+                </p>
+              </div>
+              <ChevronRight className="h-6 w-6 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">SOLO · TRACKING</p>
-              <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Fairway Game</h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                Pick two markers. Hit your fairway. Track your %.
-              </p>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setProOpen(true)}
+            className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm text-left active:scale-[0.99] transition relative overflow-hidden"
+          >
+            <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-yellow-400/15 border border-yellow-400/30 px-2 py-0.5">
+              <Zap className="h-3 w-3 text-yellow-600" />
+              <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-wide">Pro</span>
             </div>
-            <ChevronRight className="h-6 w-6 text-muted-foreground" />
-          </div>
-        </Link>
+            <div className="flex items-center gap-4">
+              <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <Target className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-muted-foreground">SOLO · TRACKING</p>
+                <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Fairway Game</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Pick two markers. Hit your fairway. Track your %.
+                </p>
+              </div>
+              <ChevronRight className="h-6 w-6 text-muted-foreground" />
+            </div>
+          </button>
+        )}
       </div>
 
       <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">More coming soon</p>
+
+      <ProModal
+        open={proOpen}
+        onClose={() => setProOpen(false)}
+        reason="Fairway Game is a Pro feature. Upgrade to unlock it and the full Range Rat experience."
+      />
     </AppShell>
   );
 }
