@@ -53,13 +53,14 @@ function loadLocalProfile(): Profile {
 }
 
 function ProfilePage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isPro } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile>(loadLocalProfile);
   const [editing, setEditing] = useState(false);
   const [firstInput, setFirstInput] = useState(() => loadLocalProfile().firstName);
   const [lastInput, setLastInput] = useState(() => loadLocalProfile().lastName);
   const [tab, setTab] = useState<Tab>("stats");
+  const [proOpen, setProOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
 
   // Load from Supabase — updates state and re-syncs localStorage cache
@@ -267,9 +268,10 @@ function ProfilePage() {
             <Briefcase className="h-4 w-4" />
             Bag
           </TabBtn>
-          <TabBtn active={tab === "yardage"} onClick={() => setTab("yardage")}>
+          <TabBtn active={tab === "yardage"} onClick={() => isPro ? setTab("yardage") : setProOpen(true)}>
             <Ruler className="h-4 w-4" />
             Yardages
+            {!isPro && <Zap className="h-3 w-3 text-yellow-500 ml-0.5" />}
           </TabBtn>
         </div>
 
@@ -282,6 +284,12 @@ function ProfilePage() {
 
 
       </div>
+
+      <ProModal
+        open={proOpen}
+        onClose={() => setProOpen(false)}
+        reason="Yardage tracking is a Pro feature. Log your carry distances for every club."
+      />
     </AppShell>
   );
 }
