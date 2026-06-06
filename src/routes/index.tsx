@@ -158,7 +158,7 @@ function Home() {
         <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
         <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
         <ProNavCard isPro={isPro} onLock={() => setProOpen(true)} to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
-        <NavCard to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
+        <ProNavCard isPro={isPro} onLock={() => setProOpen(true)} to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
 
       {/* Upgrade nudge — free users only */}
