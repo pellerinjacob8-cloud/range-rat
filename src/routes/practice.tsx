@@ -419,8 +419,9 @@ function PracticePage() {
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
             {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
+              bucket === "unlimited" ? "Unlimited" :
               showCustomBucket && customBalls ? `${customBalls} balls` :
-              bucket === "small" ? "25 balls" : bucket === "medium" ? "50 balls" : bucket === "large" ? "100 balls" : "— balls"
+              bucket === "small" ? "30 balls" : bucket === "medium" ? "60 balls" : bucket === "large" ? "100 balls" : "— balls"
             } · {
               showCustomTime && customMins ? `${customMins} min` : time ? `${time} min` : "— min"
             }
@@ -531,9 +532,10 @@ function PracticePage() {
         {/* Bucket size */}
         <div className="space-y-2">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Bucket Size</p>
-          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(3, 1fr) auto" }}>
+          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(4, 1fr) auto" }}>
             {BUCKET_SIZES.map((b) => {
               const active = !showCustomBucket && bucket === b.value;
+              const isUnlimited = b.value === "unlimited";
               return (
                 <button
                   key={b.value}
@@ -547,8 +549,12 @@ function PracticePage() {
                       : "bg-card text-foreground border-border"
                   )}
                 >
-                  <span className="font-display text-[28px] leading-none tracking-[-0.01em]">{b.label.charAt(0)}</span>
-                  <span className={cn("text-[13px] font-bold uppercase tracking-[0.12em]", active ? "opacity-80" : "opacity-60")}>{b.balls} BALLS</span>
+                  <span className="font-display text-[28px] leading-none tracking-[-0.01em]">
+                    {isUnlimited ? "∞" : b.label.charAt(0)}
+                  </span>
+                  <span className={cn("text-[11px] font-bold uppercase tracking-[0.1em]", active ? "opacity-80" : "opacity-60")}>
+                    {isUnlimited ? "NO LIMIT" : `${b.balls} BALLS`}
+                  </span>
                 </button>
               );
             })}
@@ -773,7 +779,11 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
                                 </p>
                                 <span className={cn("font-stats text-[22px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-foreground")}>
                                   {d.balls > 0 ? d.balls : d.unit ?? "—"}
-                                  {d.balls > 0 && <span className="text-[13px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>}
+                                  {d.balls > 0 && (
+                                    <span className="text-[13px] font-bold tracking-[0.14em] ml-0.5">
+                                      {d.isTarget ? "TARGET" : "BALLS"}
+                                    </span>
+                                  )}
                                 </span>
                               </div>
                               <p className={cn("mt-1 text-sm text-muted-foreground", isDone && "line-through")}>
