@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart2, Grid3x3, Ruler, Trophy, Zap } from "lucide-react";
+import { BarChart2, Flag, Ruler, Trophy, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pro-welcome")({
@@ -25,12 +25,12 @@ const SLIDES = [
     cta: "Combine",
   },
   {
-    icon: Grid3x3,
+    icon: Flag,
     color: "bg-emerald-500/10",
     iconColor: "text-emerald-500",
-    title: "Grid Game.",
-    body: "Call your square on a 3x3 grid. RAT or RANGE. Don't get spelled out. Best played with a friend.",
-    cta: "Grid Game",
+    title: "More\nGames.",
+    body: "Grid Game, Fairway Game, Closest to Pin. Range games that make every bucket more competitive.",
+    cta: "Games",
   },
   {
     icon: Ruler,
@@ -52,7 +52,7 @@ const SLIDES = [
 
 const CTA_ROUTES: Record<string, string> = {
   "Combine": "/combine",
-  "Grid Game": "/games/grid-game",
+  "Games": "/games",
   "Yardages": "/profile",
 };
 
