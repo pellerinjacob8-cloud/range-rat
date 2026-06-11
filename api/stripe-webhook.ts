@@ -47,33 +47,95 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       .from("profiles")
       .update({ is_pro: isPro })
       .eq("id", userId);
-    if (error) console.error("Supabase update error:", error);
+
+    if (error) {
+      console.error(`[Webhook] Supabase update failed for user ${userId}: ${error.message}`);
+      return false;
+    }
+
+    console.log(`[Webhook] User ${userId} Pro status set to ${isPro}`);
+    return true;
+  };
+
+  const isSubscriptionActive = (status: string) => {
+    return status === "active" || status === "trialing";
   };
 
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.CheckoutSession;
       const userId = session.metadata?.userId;
-      if (userId) await setProStatus(userId, true);
+
+      if (!userId) {
+        console.error("[Webhook] checkout.session.completed: no userId in metadata");
+        break;
+      }
+
+      // Verify subscription was created before marking Pro
+      if (session.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+        if (isSubscriptionActive(subscription.status)) {
+          await setProStatus(userId, true);
+        } else {
+          console.warn(`[Webhook] Subscription ${session.subscription} status is ${subscription.status}, not marking Pro`);
+        }
+      }
       break;
     }
-    case "customer.subscription.deleted":
+
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const userId = subscription.metadata?.userId;
+      if (userId) await setProStatus(userId, false);
+      break;
+    }
+
     case "customer.subscription.paused": {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.userId;
       if (userId) await setProStatus(userId, false);
       break;
     }
+
     case "customer.subscription.resumed":
-    case "invoice.payment_succeeded": {
-      const invoice = event.data.object as any;
-      const userId = invoice.subscription_details?.metadata?.userId
-        || invoice.metadata?.userId;
-      if (userId) await setProStatus(userId, true);
+    case "customer.subscription.updated": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const userId = subscription.metadata?.userId;
+
+      if (!userId) {
+        console.error(`[Webhook] subscription event: no userId in metadata`);
+        break;
+      }
+
+      // Mark Pro if active or trialing, otherwise not Pro
+      const shouldBePro = isSubscriptionActive(subscription.status);
+      await setProStatus(userId, shouldBePro);
       break;
     }
+
+    case "invoice.payment_succeeded": {
+      const invoice = event.data.object as any;
+      const userId = invoice.subscription_details?.metadata?.userId || invoice.metadata?.userId;
+
+      if (!userId) {
+        console.warn("[Webhook] invoice.payment_succeeded: no userId found");
+        break;
+      }
+
+      // Verify subscription is active before marking Pro
+      if (invoice.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+        if (isSubscriptionActive(subscription.status)) {
+          await setProStatus(userId, true);
+        } else {
+          console.warn(`[Webhook] Invoice subscription ${invoice.subscription} status is ${subscription.status}`);
+        }
+      }
+      break;
+    }
+
     default:
-      console.log(`Unhandled event type: ${event.type}`);
+      console.log(`[Webhook] Unhandled event type: ${event.type}`);
   }
 
   res.writeHead(200);
