@@ -189,6 +189,17 @@ function PracticePage() {
   const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
   const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && goal !== null;
 
+  // Tells the user why Generate is still disabled instead of a silent grey button
+  const missingSteps = [
+    clubGroups.length < 1 && "clubs",
+    !hasValidBucket && "bucket size",
+    !hasValidTime && "time",
+    goal === null && "a goal",
+  ].filter(Boolean) as string[];
+  const missingHint = missingSteps.length > 0
+    ? `Pick ${missingSteps.length === 1 ? missingSteps[0] : `${missingSteps.slice(0, -1).join(", ")} and ${missingSteps[missingSteps.length - 1]}`} to continue`
+    : null;
+
   const generate = () => {
     if (!canGenerate) return;
     const input: GenerateInput = {
@@ -415,7 +426,8 @@ function PracticePage() {
         <div className="space-y-7">
         {/* Heading block */}
         <div className="pb-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Build · Step 1 of 1</p>
+          {/* "Step 1 of 1" was noise — there's only one step */}
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Practice</p>
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
             {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
@@ -466,7 +478,7 @@ function PracticePage() {
 
         {/* Club group picker — custom layout so Full Bag can be wider */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
             {isFullBag ? "Club group" : "Club group · Pick 1–5"}
           </p>
 
@@ -546,7 +558,7 @@ function PracticePage() {
                     "h-[76px] rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-colors",
                     active
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground border-border"
+                      : "bg-card text-foreground border-border active:bg-muted"
                   )}
                 >
                   <span className="font-display text-[28px] leading-none tracking-[-0.01em]">
@@ -583,7 +595,7 @@ function PracticePage() {
               <button
                 type="button"
                 onClick={() => { setShowCustomBucket(true); setBucket(null); }}
-                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[14px] font-semibold tracking-[0.06em]"
+                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[14px] font-semibold tracking-[0.06em] transition-colors active:bg-muted"
               >
                 <Plus className="h-4 w-4" />
                 Custom
@@ -594,7 +606,7 @@ function PracticePage() {
 
         {/* Time available */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Time available
           </p>
           <div className="flex flex-wrap gap-2">
@@ -661,6 +673,9 @@ function PracticePage() {
         <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
              style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
           <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
+            {!canGenerate && missingHint && (
+              <p className="mb-2 text-center text-[12px] font-medium text-muted-foreground">{missingHint}</p>
+            )}
             <Button
               size="lg"
               disabled={!canGenerate}

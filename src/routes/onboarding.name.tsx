@@ -36,11 +36,11 @@ function OnboardingName() {
 
       {/* Step header */}
       <div className="flex items-center justify-between pt-6">
-        <button onClick={() => navigate({ to: "/onboarding/welcome" })} className="text-muted-foreground">
+        <button onClick={() => navigate({ to: "/onboarding/welcome" })} aria-label="Back" className="text-muted-foreground -ml-1 p-1">
           <ChevronLeft className="h-6 w-6" />
         </button>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Step 2 of 3</p>
-        <div className="w-6" />
+        <div className="w-8" />
       </div>
 
       {/* Content */}
@@ -85,10 +85,11 @@ function OnboardingName() {
             <button
               key={h}
               onClick={() => setHand(h)}
+              aria-pressed={hand === h}
               className={
                 hand === h
-                  ? "h-16 rounded-[14px] bg-primary text-white font-bold text-[14.5px] uppercase tracking-[0.06em]"
-                  : "h-16 rounded-[14px] bg-card border border-border text-foreground font-bold text-[14.5px] uppercase tracking-[0.06em]"
+                  ? "h-16 rounded-[14px] bg-primary text-white font-bold text-[14.5px] uppercase tracking-[0.06em] transition-colors"
+                  : "h-16 rounded-[14px] bg-card border border-border text-foreground font-bold text-[14.5px] uppercase tracking-[0.06em] transition-colors active:bg-muted"
               }
             >
               {h === "right" ? "Righty" : "Lefty"}

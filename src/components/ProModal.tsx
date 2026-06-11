@@ -49,7 +49,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           <div className="w-14 h-14 rounded-[18px] bg-gold-bg border border-gold-border flex items-center justify-center">
             <Zap className="h-7 w-7 text-gold" />
           </div>
-          <button type="button" onClick={onClose} className="text-muted-foreground p-1 -mr-1">
+          <button type="button" onClick={onClose} aria-label="Close" className="text-muted-foreground p-2 -mr-2 -mt-1">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -94,14 +94,15 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="h-4 w-4 rounded-full border-2 border-black border-t-transparent animate-spin" />
+              {/* white spinner — black was invisible on the navy button */}
+              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
               Loading…
             </span>
           ) : "Upgrade to Pro"}
         </button>
 
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          $49.99/yr or $4.99/mo. Cancel anytime.
+          $49.99/yr <span className="font-semibold text-gold">(save 17%)</span> or $4.99/mo. Cancel anytime.
         </p>
       </div>
     </div>

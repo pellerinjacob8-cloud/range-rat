@@ -202,7 +202,7 @@ function LoginPage() {
           <button
             type="button"
             onClick={() => { setView("forgot"); resetForm(); }}
-            className="text-[12.5px] text-primary font-semibold"
+            className="text-[12.5px] text-primary font-semibold p-2 -m-2"
           >
             Forgot password?
           </button>
@@ -230,7 +230,7 @@ function LoginPage() {
         <button
           type="button"
           onClick={() => navigate({ to: "/onboarding/welcome" })}
-          className="mt-4 text-center text-[13px] text-muted-foreground"
+          className="mt-4 text-center text-[13px] text-muted-foreground py-2"
         >
           Don't have an account?{" "}
           <span className="text-primary font-semibold">Sign up</span>

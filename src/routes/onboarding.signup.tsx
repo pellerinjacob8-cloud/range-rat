@@ -111,15 +111,15 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
 
       <button
         onClick={onBack}
-        className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] mb-4"
+        className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] mb-4 active:opacity-90 transition-opacity"
       >
-        Back
+        Back to Sign In
       </button>
 
       <button
         onClick={handleResend}
         disabled={resending}
-        className="text-[13px] text-muted-foreground disabled:opacity-50"
+        className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2"
       >
         {resending ? "Sending…" : "Didn't get it? Resend email"}
       </button>

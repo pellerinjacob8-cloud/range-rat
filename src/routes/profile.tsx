@@ -243,7 +243,8 @@ function ProfilePage() {
             proLocked={!isPro}
           />
           <div className="h-px bg-border mx-4" />
-          <SetupRow icon={theme === "dark" ? Moon : Sun} label="Appearance" detail={theme === "dark" ? "Dark" : "Light"} onPress={toggleTheme} />
+          {/* chevron=false: this row toggles in place, it doesn't navigate */}
+          <SetupRow icon={theme === "dark" ? Moon : Sun} label="Appearance" detail={theme === "dark" ? "Dark" : "Light"} onPress={toggleTheme} chevron={false} />
         </div>
 
         {/* ── Sign out ── */}
@@ -259,12 +260,13 @@ function ProfilePage() {
   );
 }
 
-function SetupRow({ icon: Icon, label, detail, onPress, proLocked }: {
+function SetupRow({ icon: Icon, label, detail, onPress, proLocked, chevron = true }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   detail?: string;
   onPress: () => void;
   proLocked?: boolean;
+  chevron?: boolean;
 }) {
   return (
     <button type="button" onClick={onPress} className="w-full flex items-center gap-3.5 px-4 py-4 text-left active:bg-muted transition-colors">
@@ -272,7 +274,7 @@ function SetupRow({ icon: Icon, label, detail, onPress, proLocked }: {
       <span className="flex-1 text-[15.5px] font-medium text-foreground">{label}</span>
       {proLocked && <Zap className="h-3.5 w-3.5 text-gold shrink-0" />}
       {detail && <span className="text-[14px] text-muted-foreground">{detail}</span>}
-      <ChevronRight className="h-[17px] w-[17px] text-muted-foreground shrink-0" />
+      {chevron && <ChevronRight className="h-[17px] w-[17px] text-muted-foreground shrink-0" />}
     </button>
   );
 }
