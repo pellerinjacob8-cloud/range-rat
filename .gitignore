@@ -2,4 +2,6 @@ node_modules/
 dist/
 .claude/
 *.local
+*.local.*
 .DS_Store
+.vercel
