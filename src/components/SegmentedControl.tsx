@@ -45,7 +45,8 @@ export function SegmentedControl<T extends string | number>(props: SegmentedCont
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      {/* Matches the bold section-header style used across the practice builder */}
+      <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
         {label}
       </p>
       <div className="flex flex-wrap gap-2">

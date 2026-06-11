@@ -86,7 +86,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
                 <Link
                   key={href}
                   to={href}
-                  className="flex flex-col items-center gap-0.5"
+                  className="flex flex-col items-center gap-0.5 px-3 py-1 transition-opacity active:opacity-60"
                 >
                   <Icon
                     size={22}

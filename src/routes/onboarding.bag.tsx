@@ -65,13 +65,13 @@ function OnboardingBag() {
       <div className="h-11" />
 
       <div className="flex items-center justify-between pt-6">
-        <button onClick={() => navigate({ to: "/onboarding/name" })} className="text-muted-foreground">
+        <button onClick={() => navigate({ to: "/onboarding/name" })} aria-label="Back" className="text-muted-foreground -ml-1 p-1">
           <ChevronLeft className="h-6 w-6" />
         </button>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Step 3 of 3</p>
         <button
           onClick={() => finish(true)}
-          className="text-[13px] text-muted-foreground font-medium"
+          className="text-[13px] text-muted-foreground font-medium p-2 -m-2"
         >
           Skip
         </button>
@@ -97,10 +97,11 @@ function OnboardingBag() {
                   <button
                     key={id}
                     onClick={() => toggle(id)}
+                    aria-pressed={on}
                     className={`h-12 rounded-[12px] flex items-center justify-between px-4 border text-[14px] font-semibold transition-colors ${
                       on
                         ? "bg-primary text-white border-primary"
-                        : "bg-card border-border text-foreground"
+                        : "bg-card border-border text-foreground active:bg-muted"
                     }`}
                   >
                     <span>{club.name}</span>
@@ -119,9 +120,17 @@ function OnboardingBag() {
         <button
           onClick={() => finish(false)}
           disabled={saving}
-          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40"
+          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
         >
-          {saving ? "…" : "Finish"}
+          {saving ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              Saving…
+            </span>
+          ) : (
+            // Selected-club count confirms the taps registered before committing
+            selected.size > 0 ? `Finish · ${selected.size} club${selected.size === 1 ? "" : "s"}` : "Finish"
+          )}
         </button>
       </div>
     </div>

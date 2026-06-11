@@ -67,7 +67,8 @@ function Home() {
   const name = loadProfileName();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
   const { isPro } = useAuth();
-  const [proOpen, setProOpen] = useState(false);
+  // Holds the context line for the Pro modal so each lock explains its own feature
+  const [proReason, setProReason] = useState<string | null>(null);
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
 
   useEffect(() => {
@@ -157,16 +158,16 @@ function Home() {
       <div className="mt-3 space-y-2.5">
         <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
         <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
-        <ProNavCard isPro={isPro} onLock={() => setProOpen(true)} to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
-        <ProNavCard isPro={isPro} onLock={() => setProOpen(true)} to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
+        <ProNavCard isPro={isPro} onLock={() => setProReason("Practice Like You Play is a Pro feature. Upgrade to unlock it and the full Range Rat experience.")} to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
+        <ProNavCard isPro={isPro} onLock={() => setProReason("Range Rat Combine is a Pro feature. Upgrade to benchmark your game and track progress over time.")} to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
 
       {/* Upgrade nudge — free users only */}
       {!isPro && (
         <button
           type="button"
-          onClick={() => setProOpen(true)}
-          className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left transition-colors"
+          onClick={() => setProReason("Upgrade to unlock Combine, Grid Game, yardage tracking, custom sessions, and unlimited saves.")}
+          className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left transition-opacity active:opacity-80"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">
             <Zap className="h-4 w-4 text-gold" />
@@ -188,9 +189,9 @@ function Home() {
       </div>
 
       <ProModal
-        open={proOpen}
-        onClose={() => setProOpen(false)}
-        reason="Practice Like You Play is a Pro feature. Upgrade to unlock it and the full Range Rat experience."
+        open={proReason !== null}
+        onClose={() => setProReason(null)}
+        reason={proReason ?? undefined}
       />
     </AppShell>
   );

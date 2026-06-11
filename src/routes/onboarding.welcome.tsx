@@ -38,14 +38,15 @@ function OnboardingWelcome() {
 
         <button
           onClick={() => navigate({ to: "/onboarding/signup" })}
-          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em]"
+          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
         >
           Get Started
         </button>
 
         <p className="mt-3 text-center text-[12.5px] text-muted-foreground">
           I have an account ·{" "}
-          <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>
+          {/* padding enlarges the tap target without shifting the layout */}
+          <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold p-2 -m-2">Sign in</button>
         </p>
       </div>
     </div>

@@ -88,8 +88,11 @@ function ProWelcomePage() {
         )}
       </div>
 
-      {/* Slide content */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 max-w-sm mx-auto w-full">
+      {/* Slide content — keyed on index so each slide re-animates in */}
+      <div
+        key={index}
+        className="flex-1 flex flex-col items-center justify-center text-center gap-6 max-w-sm mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300"
+      >
         <div className={cn("w-24 h-24 rounded-[28px] flex items-center justify-center", slide.color)}>
           <Icon className={cn("w-12 h-12", slide.iconColor)} />
         </div>
@@ -121,6 +124,7 @@ function ProWelcomePage() {
             key={i}
             type="button"
             onClick={() => setIndex(i)}
+            aria-label={`Go to slide ${i + 1}`}
             className={cn(
               "rounded-full transition-all duration-200",
               i === index
