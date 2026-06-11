@@ -912,6 +912,13 @@ function CompletionView({
             </button>
           )}
 
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/" })}
+            className="h-12 w-full rounded-xl border border-border bg-muted px-4 text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:bg-muted/80"
+          >
+            Back to Home
+          </button>
         </div>
       </div>
 
