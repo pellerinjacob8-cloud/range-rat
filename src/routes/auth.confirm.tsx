@@ -15,30 +15,31 @@ function AuthConfirm() {
   useEffect(() => {
     const confirmEmail = async () => {
       try {
-        if (search.type === "recovery" && search.code) {
-          // Password reset recovery
-          await supabase.auth.verifyOtp({ token: search.code, type: "recovery" });
-          setStatus("success");
-          setTimeout(() => navigate({ to: "/reset-password" }), 1500);
-        } else if (search.code) {
-          // Email confirmation (signup)
-          const { error: verifyError } = await supabase.auth.verifyOtp({
-            token: search.code,
-            type: "email",
-          });
+        // Get the current session to extract email
+        const { data: { session } } = await supabase.auth.getSession();
+        const userEmail = session?.user?.email;
 
-          if (verifyError) {
-            setStatus("error");
-            setError(verifyError.message);
-            return;
-          }
-
-          setStatus("success");
-          setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
-        } else {
+        if (!userEmail || !search.code) {
           setStatus("error");
-          setError("No confirmation code found");
+          setError("Invalid confirmation link");
+          return;
         }
+
+        // Verify the OTP with email
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          email: userEmail,
+          token: search.code,
+          type: "email",
+        });
+
+        if (verifyError) {
+          setStatus("error");
+          setError(verifyError.message);
+          return;
+        }
+
+        setStatus("success");
+        setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
       } catch (err: any) {
         setStatus("error");
         setError(err.message || "Confirmation failed");

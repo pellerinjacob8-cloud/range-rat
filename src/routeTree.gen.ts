@@ -30,6 +30,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as ProWelcomeRouteImport } from './routes/pro-welcome'
 import { Route as CustomSessionRouteImport } from './routes/custom-session'
+import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -136,6 +137,11 @@ const CustomSessionRoute = CustomSessionRouteImport.update({
   path: '/custom-session',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
+  '/auth/confirm': typeof AuthConfirmRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByTo {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
+  '/auth/confirm': typeof AuthConfirmRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
+  '/auth/confirm': typeof AuthConfirmRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -227,6 +236,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
+    | '/auth/confirm'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
+    | '/auth/confirm'
   id:
     | '__root__'
     | '/'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/onboarding/welcome'
     | '/play/game'
     | '/play/solo'
+    | '/auth/confirm'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -289,6 +301,7 @@ export interface RootRouteChildren {
   OnboardingSignupRoute: typeof OnboardingSignupRoute
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
   CustomSessionRoute: typeof CustomSessionRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -440,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesClosestToPinRouteImport
       parentRoute: typeof GamesRoute
     }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -486,6 +506,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingSignupRoute: OnboardingSignupRoute,
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
   CustomSessionRoute: CustomSessionRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
