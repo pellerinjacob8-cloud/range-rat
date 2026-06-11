@@ -37,11 +37,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    const initAuth = async () => {
+      const { data } = await supabase.auth.getSession();
       setSession(data.session);
       if (data.session?.user) fetchProStatus(data.session.user.id);
+
+      // Refresh session to ensure token is valid (handles expired tokens)
+      if (data.session) {
+        const { data: refreshData } = await supabase.auth.refreshSession(data.session);
+        if (refreshData.session) {
+          setSession(refreshData.session);
+        }
+      }
+
       setLoading(false);
-    });
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
