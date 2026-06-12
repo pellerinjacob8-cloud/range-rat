@@ -1353,46 +1353,50 @@ function EmptyState({
 // ─── Handicap history chart (Pro) ─────────────────────────────────────────────
 
 function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
-  const W = 280, H = 80, PAD = 8;
+  const W = 300, H = 90, PAD_X = 4, PAD_Y = 10;
   const values = history.map(h => h.handicap);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
+  const first = values[0];
+  const last = values[values.length - 1];
+  const delta = +(first - last).toFixed(1);
+  const improved = delta > 0;
 
-  const pts = history.map((h, i) => {
-    const x = PAD + (i / (history.length - 1)) * (W - PAD * 2);
-    // Invert Y: lower handicap = higher on chart (improvement goes up)
-    const y = PAD + ((max - h.handicap) / range) * (H - PAD * 2);
-    return { x, y, h };
-  });
+  const toX = (i: number) => PAD_X + (i / (history.length - 1)) * (W - PAD_X * 2);
+  const toY = (v: number) => PAD_Y + ((max - v) / range) * (H - PAD_Y * 2);
 
-  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const areaD = `${pathD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
+  const pts = history.map((h, i) => ({ x: toX(i), y: toY(h.handicap), val: h.handicap }));
+  const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${lineD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
 
-  const lastPt = pts[pts.length - 1];
-  const improved = values[values.length - 1] < values[0];
+  const gridYs = [0.2, 0.5, 0.8].map(t => PAD_Y + t * (H - PAD_Y * 2));
+
+  const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Progress</p>
-        <p className={`text-[11px] font-semibold ${improved ? "text-[var(--ok)]" : "text-muted-foreground"}`}>
-          {improved ? `▼ ${(values[0] - values[values.length - 1]).toFixed(1)} strokes` : `▲ ${(values[values.length - 1] - values[0]).toFixed(1)} strokes`}
+    <div className="mt-4 pt-4 border-t border-border">
+      <div className="flex items-baseline justify-between mb-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
+        <p className={`text-[13px] font-semibold ${improved ? "text-[var(--ok)]" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+          {delta === 0 ? "No change" : improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
         </p>
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
-        <path d={areaD} fill="currentColor" className="text-primary/10" />
-        <path d={pathD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
-        {pts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-primary" />
+        {gridYs.map((y, i) => (
+          <line key={i} x1={PAD_X} y1={y.toFixed(1)} x2={W - PAD_X} y2={y.toFixed(1)}
+            stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-border" />
         ))}
-        <text x={lastPt.x} y={lastPt.y - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="currentColor" className="text-primary">
-          {lastPt.h.handicap}
-        </text>
+        <path d={areaD} fill="currentColor" className="text-primary/8" />
+        <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
+        {pts.map((p, i) => (
+          <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
+            fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
+        ))}
       </svg>
-      <div className="flex justify-between mt-1">
-        <p className="text-[10px] text-muted-foreground">{new Date(history[0].recordedAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</p>
-        <p className="text-[10px] text-muted-foreground">{new Date(history[history.length - 1].recordedAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</p>
+      <div className="flex justify-between mt-1.5">
+        <p className="text-[10px] text-muted-foreground">{fmt(history[0].recordedAt)}</p>
+        <p className="text-[10px] text-muted-foreground">{fmt(history[history.length - 1].recordedAt)}</p>
       </div>
     </div>
   );
