@@ -50,7 +50,8 @@ function OnboardingBag() {
         .map((c, i) => ({ id: c.id, name: c.name, type: c.type, sortOrder: i }));
       await saveBag(clubs);
     }
-    navigate({ to: "/practice" });
+    try { localStorage.setItem("rangeRat_onboarding_complete", "true"); } catch {}
+    navigate({ to: "/" });
   };
 
   const groups = [

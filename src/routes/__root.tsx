@@ -42,13 +42,21 @@ function AuthGate() {
       const cached = localStorage.getItem("rangeRat_profile");
       if (cached) {
         const p = JSON.parse(cached);
-        if (p?.firstName?.trim()) { setHasProfile(true); return; }
+        if (p?.firstName?.trim()) {
+          // Migrate existing users who completed onboarding before this flag existed
+          try { localStorage.setItem("rangeRat_onboarding_complete", "true"); } catch {}
+          setHasProfile(true);
+          return;
+        }
       }
     } catch {}
     fetchProfile().then((p) => {
       const has = !!(p?.firstName?.trim());
       if (has) {
-        try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
+        try {
+          localStorage.setItem("rangeRat_profile", JSON.stringify(p));
+          localStorage.setItem("rangeRat_onboarding_complete", "true");
+        } catch {}
       }
       setHasProfile(has);
     });
@@ -76,7 +84,10 @@ function AuthGate() {
     }
 
     // Logged-in + fully set up → bounce off onboarding/login (not reset-password)
-    if (hasProfile && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
+    // Only bounce once onboarding is explicitly complete — prevents kicking users
+    // mid-flow when a Supabase token refresh re-runs this effect after name is saved
+    const onboardingComplete = (() => { try { return localStorage.getItem("rangeRat_onboarding_complete") === "true"; } catch { return false; } })();
+    if (hasProfile && onboardingComplete && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
       navigate({ to: "/" });
     }
   }, [session, loading, pathname, navigate, hasProfile]);
