@@ -301,9 +301,9 @@ function ProfilePage() {
                   { label: "Putts", value: latest.putts !== undefined ? String(latest.putts) : null },
                   { label: "Up & Dn", value: latest.upAndDowns !== undefined ? String(latest.upAndDowns) : null },
                 ].filter(s => s.value !== null).map(({ label, value }) => (
-                  <div key={label} className="rounded-[14px] border border-border bg-background px-3 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-                    <p className="mt-0.5 font-stats text-[22px] leading-none text-foreground">{value}</p>
+                  <div key={label} className="rounded-[13px] border border-border bg-muted px-3 py-2.5">
+                    <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+                    <p className="mt-1 font-stats text-[28px] leading-none text-primary">{value}</p>
                   </div>
                 ))}
               </div>
@@ -336,65 +336,71 @@ function ProfilePage() {
         {/* ── Log Round Sheet ── */}
         {loggingRound && (
           <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLoggingRound(false)}>
-            <div className="absolute inset-0 bg-black/40" />
-            <div className="relative w-full rounded-t-[28px] bg-card border-t border-border p-6 pb-10" onClick={e => e.stopPropagation()}>
-              <div className="flex items-start justify-between mb-1">
+            <div className="absolute inset-0 bg-black/[0.44]" />
+            <div className="relative w-full rounded-t-[24px] bg-background p-5 pb-8" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
+              {/* handle pill */}
+              <div className="flex justify-center mb-3.5">
+                <div className="h-1 w-8 rounded-full bg-border" />
+              </div>
+
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h2 className="font-display text-[22px]">Log Round Stats</h2>
-                  <p className="text-[12px] text-muted-foreground mt-0.5">
+                  <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
+                  <p className="text-[12px] text-muted-foreground mt-1">
                     {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · from GHIN
                   </p>
                 </div>
-                <button type="button" onClick={() => setLoggingRound(false)}
-                  className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-muted-foreground">
-                  <span className="text-[16px] leading-none">×</span>
+                <button type="button" onClick={() => setLoggingRound(false)} className="text-muted-foreground mt-0.5">
+                  <span className="text-[20px] leading-none">×</span>
                 </button>
               </div>
 
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">Handicap Index</p>
-                  <div className="flex items-center rounded-[14px] border-2 border-primary bg-background px-4 py-3 gap-2">
-                    <input
-                      type="number" inputMode="decimal" autoFocus
-                      value={roundInputs.handicap}
-                      onChange={e => setRoundInputs(p => ({ ...p, handicap: e.target.value }))}
-                      placeholder="22.8"
-                      className="flex-1 bg-transparent outline-none font-stats text-[32px] leading-none placeholder:text-muted-foreground/30"
-                    />
-                    <span className="text-[13px] font-bold text-muted-foreground">HDX</span>
-                  </div>
+              {/* Handicap — large focal input */}
+              <div className="mb-3">
+                <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2">Handicap Index</p>
+                <div className="flex items-center h-[62px] rounded-[16px] border-2 border-primary px-[18px] gap-2.5" style={{ background: "rgba(13,45,90,.04)" }}>
+                  <input
+                    type="number" inputMode="decimal" autoFocus
+                    value={roundInputs.handicap}
+                    onChange={e => setRoundInputs(p => ({ ...p, handicap: e.target.value }))}
+                    placeholder="22.8"
+                    className="flex-1 bg-transparent outline-none font-stats text-[40px] leading-none text-primary placeholder:text-muted-foreground/30"
+                  />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-1">HDX</span>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { key: "gir" as const, label: "GIR %", placeholder: "48" },
-                    { key: "fairways" as const, label: "Fairways %", placeholder: "40" },
-                    { key: "putts" as const, label: "Putts / Round", placeholder: "31" },
-                    { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "3" },
-                  ].map(({ key, label, placeholder }) => (
-                    <div key={key}>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">{label}</p>
+              {/* 2×2 stat inputs */}
+              <div className="grid grid-cols-2 gap-2.5 mb-5">
+                {[
+                  { key: "gir" as const, label: "GIR %", placeholder: "48" },
+                  { key: "fairways" as const, label: "Fairways %", placeholder: "40" },
+                  { key: "putts" as const, label: "Putts / Round", placeholder: "31" },
+                  { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "3" },
+                ].map(({ key, label, placeholder }) => (
+                  <div key={key}>
+                    <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">{label}</p>
+                    <div className="h-[50px] rounded-[13px] border border-border bg-card flex items-center px-3">
                       <input
                         type="number" inputMode="decimal"
                         value={roundInputs[key]}
                         onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
                         placeholder={placeholder}
-                        className="w-full rounded-[14px] border border-border bg-background px-4 py-3 font-stats text-[20px] leading-none outline-none placeholder:text-muted-foreground/30 focus:border-primary"
+                        className="w-full bg-transparent outline-none font-stats text-[22px] leading-none placeholder:text-muted-foreground/30 focus:text-foreground"
                       />
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="mt-5 flex gap-3">
+              <div className="flex gap-2.5">
                 <button type="button" onClick={() => setLoggingRound(false)}
-                  className="flex-1 h-12 rounded-[14px] border border-border text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                  className="flex-1 h-[50px] rounded-[13px] border border-border text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground bg-transparent">
                   Cancel
                 </button>
                 <button type="button" onMouseDown={e => { e.preventDefault(); saveRound(); }}
                   disabled={!roundInputs.handicap || isNaN(parseFloat(roundInputs.handicap))}
-                  className="flex-[2] h-12 rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
+                  className="flex-[2] h-[50px] rounded-[13px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
                   Save Round
                 </button>
               </div>
@@ -1480,116 +1486,109 @@ function EmptyState({
 
 // ─── Handicap history chart (Pro) ─────────────────────────────────────────────
 
-function MiniLineChart({ values, invert = false }: { values: number[]; invert?: boolean }) {
-  const W = 300, H = 56, PAD_X = 4, PAD_Y = 6;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const toX = (i: number) => PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
-  const toY = (v: number) => invert
-    ? PAD_Y + ((v - min) / range) * (H - PAD_Y * 2)
-    : PAD_Y + ((max - v) / range) * (H - PAD_Y * 2);
-  const pts = values.map((v, i) => ({ x: toX(i), y: toY(v) }));
-  const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const areaD = `${lineD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
+function MiniSparkline({ values, improvIsDown = false, gid = "ms" }: { values: number[]; improvIsDown?: boolean; gid?: string }) {
+  const W = 80, H = 28, P = 3;
+  if (values.length < 2) return null;
+  const lo = Math.min(...values), hi = Math.max(...values), rng = hi - lo || 1;
+  const pts = values.map((v, i) => {
+    const x = P + (i / (values.length - 1)) * (W - P * 2);
+    const pct = improvIsDown ? 1 - (v - lo) / rng : (v - lo) / rng;
+    const y = (H - P) - pct * (H - P * 2);
+    return [x, y] as [number, number];
+  });
+  const line = pts.map(([x, y]) => `${x},${y}`).join(" ");
+  const [lx, ly] = pts[pts.length - 1];
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
-      <path d={areaD} fill="currentColor" className="text-primary/8" />
-      <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
-      {pts.map((p, i) => (
-        <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
-          fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
-      ))}
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+      <polyline points={line} fill="none" stroke="var(--primary)" strokeWidth="1.6"
+        strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+      <circle cx={lx} cy={ly} r="2.5" fill="var(--primary)" />
     </svg>
   );
 }
 
 function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
   const [tab, setTab] = useState<"handicap" | "stats">("handicap");
-  const W = 300, H = 90, PAD_X = 4, PAD_Y = 10;
+  const W = 300, H = 68, P = 8;
   const values = history.map(h => h.handicap);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const first = values[0];
-  const last = values[values.length - 1];
+  const first = values[0], last = values[values.length - 1];
   const delta = +(first - last).toFixed(1);
   const improved = delta > 0;
+  const labels = history.map(h => new Date(h.recordedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
 
-  const toX = (i: number) => PAD_X + (i / (history.length - 1)) * (W - PAD_X * 2);
-  const toY = (v: number) => PAD_Y + ((max - v) / range) * (H - PAD_Y * 2);
-  const pts = history.map((h, i) => ({ x: toX(i), y: toY(h.handicap) }));
-  const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  const areaD = `${lineD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
-  const gridYs = [0.2, 0.5, 0.8].map(t => PAD_Y + t * (H - PAD_Y * 2));
-  const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  const lo = Math.min(...values), hi = Math.max(...values), rng = hi - lo || 1;
+  const pts = values.map((v, i) => {
+    const x = P + (i / (values.length - 1)) * (W - P * 2);
+    const pct = 1 - (v - lo) / rng;
+    const y = (H - P) - pct * (H - P * 2);
+    return [x, y] as [number, number];
+  });
+  const line = pts.map(([x, y]) => `${x},${y}`).join(" ");
+  const areaPath = `M${pts[0][0]},${H} ` + pts.map(([x, y]) => `L${x},${y}`).join(" ") + ` L${pts[pts.length - 1][0]},${H}Z`;
 
-  const statSeries = [
-    { label: "GIR %", values: history.map(h => h.gir).filter((v): v is number => v !== undefined), invert: false },
-    { label: "Fairways %", values: history.map(h => h.fairways).filter((v): v is number => v !== undefined), invert: false },
-    { label: "Putts", values: history.map(h => h.putts).filter((v): v is number => v !== undefined), invert: true },
-    { label: "Up & Downs", values: history.map(h => h.upAndDowns).filter((v): v is number => v !== undefined), invert: false },
-  ].filter(s => s.values.length > 1);
+  const TILES = [
+    { key: "gir",        label: "GIR",      vals: history.map(h => h.gir).filter((v): v is number => v !== undefined),        down: false },
+    { key: "fairways",   label: "Fairways", vals: history.map(h => h.fairways).filter((v): v is number => v !== undefined),    down: false },
+    { key: "putts",      label: "Putts",    vals: history.map(h => h.putts).filter((v): v is number => v !== undefined),      down: true  },
+    { key: "upAndDowns", label: "Up & Dn",  vals: history.map(h => h.upAndDowns).filter((v): v is number => v !== undefined), down: false },
+  ].filter(t => t.vals.length > 1);
 
   return (
     <div className="mt-4 pt-4 border-t border-border">
-      {/* Tab toggle */}
-      <div className="flex rounded-[10px] bg-muted p-0.5 mb-3">
-        {(["handicap", "stats"] as const).map(t => (
-          <button key={t} type="button" onClick={() => setTab(t)}
-            className={`flex-1 h-7 rounded-[8px] text-[12px] font-semibold capitalize transition ${tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
-            {t === "handicap" ? "Handicap" : "Stats"}
-          </button>
-        ))}
+      {/* header row: Pro pill + pill toggle */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="inline-flex items-center gap-1 bg-gold-bg border border-gold-border text-gold rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em]">
+          <Zap className="h-2.5 w-2.5" fill="currentColor" /> Pro
+        </span>
+        <div className="inline-flex rounded-full border border-border overflow-hidden bg-muted">
+          {(["handicap", "stats"] as const).map(t => (
+            <button key={t} type="button" onClick={() => setTab(t)}
+              className={`px-3 py-1 text-[11px] font-bold tracking-[0.04em] transition-colors ${tab === t ? "bg-primary text-white" : "bg-transparent text-muted-foreground"}`}>
+              {t === "handicap" ? "Handicap" : "Stats"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === "handicap" ? (
         <>
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
-            <p className={`text-[13px] font-semibold ${improved ? "text-[var(--ok)]" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-              {delta === 0 ? "No change" : improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
-            </p>
-          </div>
-          <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
-            {gridYs.map((y, i) => (
-              <line key={i} x1={PAD_X} y1={y.toFixed(1)} x2={W - PAD_X} y2={y.toFixed(1)}
-                stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-border" />
-            ))}
-            <path d={areaD} fill="currentColor" className="text-primary/8" />
-            <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
-            {pts.map((p, i) => (
-              <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
-                fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
+            <defs>
+              <linearGradient id="hdx-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.01" />
+              </linearGradient>
+            </defs>
+            <path d={areaPath} fill="url(#hdx-grad)" />
+            <polyline points={line} fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {pts.map(([x, y], i) => (
+              <circle key={i} cx={x} cy={y}
+                r={i === pts.length - 1 ? 4 : 2.5}
+                fill={i === pts.length - 1 ? "var(--primary)" : "var(--background)"}
+                stroke="var(--primary)" strokeWidth="1.5" />
             ))}
           </svg>
           <div className="flex justify-between mt-1.5">
-            <p className="text-[10px] text-muted-foreground">{fmt(history[0].recordedAt)}</p>
-            <p className="text-[10px] text-muted-foreground">{fmt(history[history.length - 1].recordedAt)}</p>
+            {labels.map((l, i) => (
+              <span key={i} className="text-[9.5px] font-semibold text-muted-foreground" style={{ letterSpacing: ".04em" }}>{l}</span>
+            ))}
           </div>
+          {delta !== 0 && (
+            <p className={`mt-2 text-[12px] font-semibold ${improved ? "text-[var(--ok)]" : "text-destructive"}`}>
+              {improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
+            </p>
+          )}
         </>
-      ) : statSeries.length === 0 ? (
+      ) : TILES.length === 0 ? (
         <p className="text-[12px] text-muted-foreground text-center py-4">Log stats with your rounds to see trends here.</p>
       ) : (
-        <div className="space-y-4">
-          {statSeries.map(({ label, values: vals, invert }) => {
-            const first = vals[0], last = vals[vals.length - 1];
-            const d = +(last - first).toFixed(1);
-            const good = invert ? d < 0 : d > 0;
-            return (
-              <div key={label}>
-                <div className="flex items-baseline justify-between mb-1">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-                  {d !== 0 && (
-                    <p className={`text-[12px] font-semibold ${good ? "text-[var(--ok)]" : "text-destructive"}`}>
-                      {d > 0 ? `+${d}` : d}
-                    </p>
-                  )}
-                </div>
-                <MiniLineChart values={vals} invert={invert} />
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-2 gap-2">
+          {TILES.map(({ key, label, vals, down }) => (
+            <div key={key} className="rounded-[11px] border border-border bg-muted p-2.5">
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground mb-1">{label}</p>
+              <MiniSparkline values={vals} improvIsDown={down} gid={key} />
+            </div>
+          ))}
         </div>
       )}
     </div>
