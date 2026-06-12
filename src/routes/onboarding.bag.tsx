@@ -28,14 +28,37 @@ const CLUBS: { id: string; name: string; type: string }[] = [
   { id: "lw", name: "Lob Wedge", type: "wedge" },
 ];
 
+const IRON_IDS = ["4i", "5i", "6i", "7i", "8i", "9i"] as const;
+
+function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
+  const next = new Set(prev);
+  const tappedIdx = IRON_IDS.indexOf(tappedId as typeof IRON_IDS[number]);
+  if (tappedIdx === -1) return next;
+
+  const selectedIronIdxs = IRON_IDS
+    .map((id, i) => (next.has(id) ? i : -1))
+    .filter(i => i !== -1);
+
+  if (selectedIronIdxs.length === 0) {
+    next.add(tappedId);
+    return next;
+  }
+
+  const lo = Math.min(...selectedIronIdxs, tappedIdx);
+  const hi = Math.max(...selectedIronIdxs, tappedIdx);
+  for (let i = lo; i <= hi; i++) next.add(IRON_IDS[i]);
+  return next;
+}
+
 function OnboardingBag() {
   const navigate = useNavigate();
   useForceLightMode();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
-  const toggle = (id: string) => {
+  const toggle = (id: string, type: string) => {
     setSelected(prev => {
+      if (type === "iron") return fillIronRange(prev, id);
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -89,7 +112,12 @@ function OnboardingBag() {
       <div className="mt-6 space-y-5 overflow-y-auto pb-4">
         {groups.map(group => (
           <div key={group.label}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">{group.label}</p>
+            <div className="flex items-baseline justify-between mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{group.label}</p>
+              {group.label === "Irons" && (
+                <p className="text-[10px] text-muted-foreground">Tap two to fill the range</p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {group.ids.map(id => {
                 const club = CLUBS.find(c => c.id === id)!;
@@ -97,7 +125,7 @@ function OnboardingBag() {
                 return (
                   <button
                     key={id}
-                    onClick={() => toggle(id)}
+                    onClick={() => toggle(id, club.type)}
                     aria-pressed={on}
                     className={`h-12 rounded-[12px] flex items-center justify-between px-4 border text-[14px] font-semibold transition-colors ${
                       on

@@ -35,6 +35,12 @@ function AuthGate() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimeElapsed(true), 1800);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!session) { setHasProfile(null); return; }
@@ -74,7 +80,9 @@ function AuthGate() {
 
     if (hasProfile === null) return;
 
-    if (!isAuthRoute && !hasProfile) {
+    const onboardingComplete = (() => { try { return localStorage.getItem("rangeRat_onboarding_complete") === "true"; } catch { return false; } })();
+
+    if (!isAuthRoute && !hasProfile && !onboardingComplete) {
       navigate({ to: "/onboarding/name" });
     }
 
@@ -86,23 +94,26 @@ function AuthGate() {
     // Logged-in + fully set up → bounce off onboarding/login (not reset-password)
     // Only bounce once onboarding is explicitly complete — prevents kicking users
     // mid-flow when a Supabase token refresh re-runs this effect after name is saved
-    const onboardingComplete = (() => { try { return localStorage.getItem("rangeRat_onboarding_complete") === "true"; } catch { return false; } })();
     if (hasProfile && onboardingComplete && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
       navigate({ to: "/" });
     }
   }, [session, loading, pathname, navigate, hasProfile]);
 
-  if (loading || (session && hasProfile === null)) {
+  if (loading || (session && hasProfile === null) || !minTimeElapsed) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-8 relative">
-        <img src="/brand/logo-navy-trim.png" alt="Range Rat" className="h-24 w-auto mb-5 dark:hidden" />
-        <img src="/brand/logo-white-solid.png" alt="Range Rat" className="h-24 w-auto mb-5 hidden dark:block" />
-        <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-muted-foreground mb-3">Range Rat</p>
-        <p className="font-display text-[34px] leading-[1.0]">
-          Grind. Practice. <em className="italic">Improve.</em>
-        </p>
-        <div className="absolute bottom-12 left-0 right-0 flex justify-center">
-          <div className="h-6 w-6 rounded-full border-[2.5px] border-border border-t-primary animate-spin" />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-8 relative overflow-hidden">
+        <div className="animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
+          <img src="/brand/logo-navy-trim.png" alt="Range Rat" className="h-20 w-auto mb-8 dark:hidden" />
+          <img src="/brand/logo-white-solid.png" alt="Range Rat" className="h-20 w-auto mb-8 hidden dark:block" />
+        </div>
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-700 delay-300 fill-mode-both">
+          <p className="text-[11px] font-bold uppercase tracking-[0.34em] text-muted-foreground mb-3">Range Rat</p>
+          <p className="font-display text-[38px] leading-[1.0]">
+            Grind. Practice. <em className="italic">Improve.</em>
+          </p>
+        </div>
+        <div className="absolute bottom-12 left-0 right-0 flex justify-center animate-in fade-in duration-500 delay-700 fill-mode-both">
+          <div className="h-5 w-5 rounded-full border-[2px] border-border border-t-primary animate-spin" />
         </div>
       </div>
     );
