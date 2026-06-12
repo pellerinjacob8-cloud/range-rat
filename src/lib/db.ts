@@ -117,7 +117,9 @@ export async function saveHandicapSnapshot(
 ): Promise<HandicapSnapshot | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await supabase
+
+  // Try full insert with stats columns first
+  const { data, error } = await supabase
     .from("handicap_history")
     .insert({
       user_id: user.id,
@@ -129,16 +131,31 @@ export async function saveHandicapSnapshot(
     })
     .select("id, handicap, gir, fairways, putts, up_and_downs, recorded_at")
     .single();
-  if (!data) return null;
-  return {
-    id: data.id,
-    handicap: data.handicap,
-    gir: data.gir ?? undefined,
-    fairways: data.fairways ?? undefined,
-    putts: data.putts ?? undefined,
-    upAndDowns: data.up_and_downs ?? undefined,
-    recordedAt: data.recorded_at,
-  };
+
+  if (data) {
+    return {
+      id: data.id,
+      handicap: data.handicap,
+      gir: data.gir ?? undefined,
+      fairways: data.fairways ?? undefined,
+      putts: data.putts ?? undefined,
+      upAndDowns: data.up_and_downs ?? undefined,
+      recordedAt: data.recorded_at,
+    };
+  }
+
+  // Fallback: stats columns may not exist yet — insert handicap only
+  if (error) {
+    const { data: fallback } = await supabase
+      .from("handicap_history")
+      .insert({ user_id: user.id, handicap })
+      .select("id, handicap, recorded_at")
+      .single();
+    if (!fallback) return null;
+    return { id: fallback.id, handicap: fallback.handicap, recordedAt: fallback.recorded_at };
+  }
+
+  return null;
 }
 
 export async function deleteHandicapSnapshot(id: string): Promise<void> {

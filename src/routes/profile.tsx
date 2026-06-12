@@ -116,12 +116,15 @@ function ProfilePage() {
       putts: roundInputs.putts ? parseFloat(roundInputs.putts) : undefined,
       upAndDowns: roundInputs.upAndDowns ? parseFloat(roundInputs.upAndDowns) : undefined,
     };
-    const updated = { ...profile, handicap: hdx };
-    setProfile(updated);
+    // Optimistic update — UI reflects the save immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt: new Date().toISOString() };
+    setProfile(prev => ({ ...prev, handicap: hdx }));
+    setHandicapHistory(prev => [...prev, optimistic]);
     setLoggingRound(false);
-    await dbSaveProfile(updated);
+    dbSaveProfile({ ...profile, handicap: hdx });
     const snapshot = await saveHandicapSnapshot(hdx, stats);
-    if (snapshot) setHandicapHistory(prev => [...prev, snapshot]);
+    if (snapshot) setHandicapHistory(prev => prev.map(h => h.id === tempId ? snapshot : h));
   };
 
   const removeSnapshot = async (id: string) => {
