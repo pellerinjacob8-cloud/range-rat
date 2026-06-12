@@ -232,7 +232,7 @@ function ProfilePage() {
             {!editingHandicap && (
               <button type="button" onClick={() => { setHandicapInput(profile.handicap !== undefined ? String(profile.handicap) : ""); setEditingHandicap(true); }}
                 className="text-[12px] font-semibold text-primary">
-                {profile.handicap !== undefined ? "Edit" : "Add"}
+                {profile.handicap !== undefined ? "Update" : "Add"}
               </button>
             )}
           </div>
