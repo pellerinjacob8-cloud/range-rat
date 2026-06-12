@@ -17,7 +17,12 @@ export interface Profile {
 }
 
 export interface HandicapSnapshot {
+  id: string;
   handicap: number;
+  gir?: number;
+  fairways?: number;
+  putts?: number;
+  upAndDowns?: number;
   recordedAt: string;
 }
 
@@ -106,10 +111,40 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
   } catch {}
 }
 
-export async function saveHandicapSnapshot(handicap: number): Promise<void> {
+export async function saveHandicapSnapshot(
+  handicap: number,
+  stats?: { gir?: number; fairways?: number; putts?: number; upAndDowns?: number }
+): Promise<HandicapSnapshot | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("handicap_history")
+    .insert({
+      user_id: user.id,
+      handicap,
+      gir: stats?.gir ?? null,
+      fairways: stats?.fairways ?? null,
+      putts: stats?.putts ?? null,
+      up_and_downs: stats?.upAndDowns ?? null,
+    })
+    .select("id, handicap, gir, fairways, putts, up_and_downs, recorded_at")
+    .single();
+  if (!data) return null;
+  return {
+    id: data.id,
+    handicap: data.handicap,
+    gir: data.gir ?? undefined,
+    fairways: data.fairways ?? undefined,
+    putts: data.putts ?? undefined,
+    upAndDowns: data.up_and_downs ?? undefined,
+    recordedAt: data.recorded_at,
+  };
+}
+
+export async function deleteHandicapSnapshot(id: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("handicap_history").insert({ user_id: user.id, handicap });
+  await supabase.from("handicap_history").delete().eq("id", id).eq("user_id", user.id);
 }
 
 export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
@@ -117,11 +152,19 @@ export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
   if (!user) return [];
   const { data } = await supabase
     .from("handicap_history")
-    .select("handicap, recorded_at")
+    .select("id, handicap, gir, fairways, putts, up_and_downs, recorded_at")
     .eq("user_id", user.id)
     .order("recorded_at", { ascending: true });
   if (!data) return [];
-  return data.map(r => ({ handicap: r.handicap, recordedAt: r.recorded_at }));
+  return data.map(r => ({
+    id: r.id,
+    handicap: r.handicap,
+    gir: r.gir ?? undefined,
+    fairways: r.fairways ?? undefined,
+    putts: r.putts ?? undefined,
+    upAndDowns: r.up_and_downs ?? undefined,
+    recordedAt: r.recorded_at,
+  }));
 }
 
 export async function saveTheme(theme: "light" | "dark"): Promise<void> {

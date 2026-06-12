@@ -10,7 +10,7 @@ import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
   fetchYardages, saveYardage as dbSaveYardage,
-  saveHandicapSnapshot, fetchHandicapHistory,
+  saveHandicapSnapshot, fetchHandicapHistory, deleteHandicapSnapshot,
   type SavedSession, type Club as DbClub, type YardageMap as DbYardageMap,
   type HandicapSnapshot,
 } from "@/lib/db";
@@ -68,8 +68,8 @@ function ProfilePage() {
   const { theme, toggle: toggleTheme } = useTheme();
   const [allTimeSessions, setAllTimeSessions] = useState<SavedSession[]>([]);
   const [handicapHistory, setHandicapHistory] = useState<HandicapSnapshot[]>([]);
-  const [editingHandicap, setEditingHandicap] = useState(false);
-  const [handicapInput, setHandicapInput] = useState("");
+  const [loggingRound, setLoggingRound] = useState(false);
+  const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "" });
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -77,7 +77,7 @@ function ProfilePage() {
       setProfile(p);
       setFirstInput(p.firstName);
       setLastInput(p.lastName);
-      if (p.handicap !== undefined) setHandicapInput(String(p.handicap));
+      if (p.handicap !== undefined) setRoundInputs(prev => ({ ...prev, handicap: String(p.handicap) }));
       try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
     fetchSessions().then(setAllTimeSessions);
@@ -95,15 +95,43 @@ function ProfilePage() {
   };
   const cancelEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(false); };
 
-  const saveHandicap = async () => {
-    const val = parseFloat(handicapInput);
-    if (isNaN(val) || val < -10 || val > 54) return;
-    const updated = { ...profile, handicap: val };
+  const openLogRound = () => {
+    const latest = handicapHistory[handicapHistory.length - 1];
+    setRoundInputs({
+      handicap: profile.handicap !== undefined ? String(profile.handicap) : "",
+      gir: latest?.gir !== undefined ? String(latest.gir) : "",
+      fairways: latest?.fairways !== undefined ? String(latest.fairways) : "",
+      putts: latest?.putts !== undefined ? String(latest.putts) : "",
+      upAndDowns: latest?.upAndDowns !== undefined ? String(latest.upAndDowns) : "",
+    });
+    setLoggingRound(true);
+  };
+
+  const saveRound = async () => {
+    const hdx = parseFloat(roundInputs.handicap);
+    if (isNaN(hdx) || hdx < -10 || hdx > 54) return;
+    const stats = {
+      gir: roundInputs.gir ? parseInt(roundInputs.gir) : undefined,
+      fairways: roundInputs.fairways ? parseInt(roundInputs.fairways) : undefined,
+      putts: roundInputs.putts ? parseFloat(roundInputs.putts) : undefined,
+      upAndDowns: roundInputs.upAndDowns ? parseFloat(roundInputs.upAndDowns) : undefined,
+    };
+    const updated = { ...profile, handicap: hdx };
     setProfile(updated);
-    setEditingHandicap(false);
+    setLoggingRound(false);
     await dbSaveProfile(updated);
-    await saveHandicapSnapshot(val);
-    setHandicapHistory(prev => [...prev, { handicap: val, recordedAt: new Date().toISOString() }]);
+    const snapshot = await saveHandicapSnapshot(hdx, stats);
+    if (snapshot) setHandicapHistory(prev => [...prev, snapshot]);
+  };
+
+  const removeSnapshot = async (id: string) => {
+    await deleteHandicapSnapshot(id);
+    const next = handicapHistory.filter(h => h.id !== id);
+    setHandicapHistory(next);
+    const latest = next[next.length - 1];
+    const updated = { ...profile, handicap: latest?.handicap };
+    setProfile(updated);
+    await dbSaveProfile(updated);
   };
 
   const totalBalls = allTimeSessions.reduce((s, x) => s + x.totalBalls, 0);
@@ -225,54 +253,154 @@ function ProfilePage() {
           ))}
         </div>
 
-        {/* ── Handicap ── */}
+        {/* ── On-Course Stats ── */}
         <div className="mt-4 rounded-[22px] border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Handicap Index</p>
-            {!editingHandicap && (
-              <button type="button" onClick={() => { setHandicapInput(profile.handicap !== undefined ? String(profile.handicap) : ""); setEditingHandicap(true); }}
-                className="text-[12px] font-semibold text-primary">
-                {profile.handicap !== undefined ? "Update" : "Add"}
-              </button>
-            )}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">On-Course Stats</p>
+            <button type="button" onClick={openLogRound}
+              className="flex items-center gap-1 text-[12px] font-semibold text-primary">
+              <Plus className="h-3.5 w-3.5" /> Log Round
+            </button>
           </div>
 
-          {editingHandicap ? (
-            <div className="flex items-center gap-2 mt-2">
-              <input
-                type="number"
-                inputMode="decimal"
-                value={handicapInput}
-                onChange={e => setHandicapInput(e.target.value)}
-                placeholder="e.g. 14.2"
-                autoFocus
-                className="flex-1 bg-transparent border-b-2 border-primary outline-none font-stats text-[32px] leading-none pb-1 placeholder:text-muted-foreground/30"
-              />
-              <button type="button" onMouseDown={e => { e.preventDefault(); saveHandicap(); }}
-                className="h-9 px-4 rounded-[12px] bg-primary text-white text-[13px] font-bold">Save</button>
-              <button type="button" onClick={() => setEditingHandicap(false)}
-                className="h-9 px-3 rounded-[12px] border border-border text-[13px] text-muted-foreground">Cancel</button>
-            </div>
-          ) : (
-            <p className="font-stats text-[42px] leading-none text-primary mt-1">
-              {profile.handicap !== undefined ? profile.handicap : <span className="text-[18px] text-muted-foreground font-sans font-medium">Not set</span>}
+          {/* Handicap big number */}
+          <div className="mb-3">
+            <p className="font-stats text-[42px] leading-none text-primary">
+              {profile.handicap !== undefined
+                ? profile.handicap
+                : <span className="text-[18px] text-muted-foreground font-sans font-medium">Not set</span>}
             </p>
-          )}
+            {handicapHistory.length > 0 && (() => {
+              const latest = handicapHistory[handicapHistory.length - 1];
+              const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              const prev = handicapHistory.length > 1 ? handicapHistory[handicapHistory.length - 2] : null;
+              const delta = prev ? +(prev.handicap - latest.handicap).toFixed(1) : null;
+              return (
+                <p className="text-[12px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                  {fmt(latest.recordedAt)}
+                  {delta !== null && delta !== 0 && (
+                    <span className={delta > 0 ? "text-[var(--ok)]" : "text-destructive"}>
+                      {delta > 0 ? `▼ ${delta}` : `▲ ${Math.abs(delta)}`}
+                    </span>
+                  )}
+                </p>
+              );
+            })()}
+          </div>
 
-          {/* Pro history chart */}
+          {/* 2×2 stat grid — latest entry */}
+          {handicapHistory.length > 0 && (() => {
+            const latest = handicapHistory[handicapHistory.length - 1];
+            const hasStats = latest.gir !== undefined || latest.fairways !== undefined || latest.putts !== undefined || latest.upAndDowns !== undefined;
+            if (!hasStats) return null;
+            return (
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {[
+                  { label: "GIR", value: latest.gir !== undefined ? `${latest.gir}%` : null },
+                  { label: "Fairways", value: latest.fairways !== undefined ? `${latest.fairways}%` : null },
+                  { label: "Putts", value: latest.putts !== undefined ? String(latest.putts) : null },
+                  { label: "Up & Dn", value: latest.upAndDowns !== undefined ? String(latest.upAndDowns) : null },
+                ].filter(s => s.value !== null).map(({ label, value }) => (
+                  <div key={label} className="rounded-[14px] border border-border bg-background px-3 py-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+                    <p className="mt-0.5 font-stats text-[22px] leading-none text-foreground">{value}</p>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Pro chart */}
           {isPro && handicapHistory.length > 1 && (
             <HandicapChart history={handicapHistory} />
           )}
-          {isPro && handicapHistory.length <= 1 && profile.handicap !== undefined && (
-            <p className="mt-3 text-[12px] text-muted-foreground">Update your handicap over time to see your progress here.</p>
+          {isPro && handicapHistory.length <= 1 && (
+            <p className="mt-1 text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
           )}
-          {!isPro && profile.handicap !== undefined && (
+          {!isPro && handicapHistory.length > 0 && (
             <button type="button" onClick={() => setProOpen(true)}
-              className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-gold">
-              <Zap className="h-3 w-3" /> Track progress with Pro
+              className="mt-1 flex items-center gap-1.5 text-[12px] font-semibold text-gold">
+              <Zap className="h-3 w-3" /> Track trends with Pro
+            </button>
+          )}
+
+          {/* History link */}
+          {handicapHistory.length > 0 && (
+            <button type="button" onClick={() => navigate({ to: "/profile/round-history" })}
+              className="mt-3 w-full text-center text-[12px] font-semibold text-muted-foreground border-t border-border pt-3">
+              View History ({handicapHistory.length})
             </button>
           )}
         </div>
+
+        {/* ── Log Round Sheet ── */}
+        {loggingRound && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLoggingRound(false)}>
+            <div className="absolute inset-0 bg-black/40" />
+            <div className="relative w-full rounded-t-[28px] bg-card border-t border-border p-6 pb-10" onClick={e => e.stopPropagation()}>
+              <div className="flex items-start justify-between mb-1">
+                <div>
+                  <h2 className="font-display text-[22px]">Log Round Stats</h2>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">
+                    {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · from GHIN
+                  </p>
+                </div>
+                <button type="button" onClick={() => setLoggingRound(false)}
+                  className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-muted-foreground">
+                  <span className="text-[16px] leading-none">×</span>
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">Handicap Index</p>
+                  <div className="flex items-center rounded-[14px] border-2 border-primary bg-background px-4 py-3 gap-2">
+                    <input
+                      type="number" inputMode="decimal" autoFocus
+                      value={roundInputs.handicap}
+                      onChange={e => setRoundInputs(p => ({ ...p, handicap: e.target.value }))}
+                      placeholder="22.8"
+                      className="flex-1 bg-transparent outline-none font-stats text-[32px] leading-none placeholder:text-muted-foreground/30"
+                    />
+                    <span className="text-[13px] font-bold text-muted-foreground">HDX</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: "gir" as const, label: "GIR %", placeholder: "48" },
+                    { key: "fairways" as const, label: "Fairways %", placeholder: "40" },
+                    { key: "putts" as const, label: "Putts / Round", placeholder: "31" },
+                    { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "3" },
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">{label}</p>
+                      <input
+                        type="number" inputMode="decimal"
+                        value={roundInputs[key]}
+                        onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
+                        placeholder={placeholder}
+                        className="w-full rounded-[14px] border border-border bg-background px-4 py-3 font-stats text-[20px] leading-none outline-none placeholder:text-muted-foreground/30 focus:border-primary"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 flex gap-3">
+                <button type="button" onClick={() => setLoggingRound(false)}
+                  className="flex-1 h-12 rounded-[14px] border border-border text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                  Cancel
+                </button>
+                <button type="button" onMouseDown={e => { e.preventDefault(); saveRound(); }}
+                  disabled={!roundInputs.handicap || isNaN(parseFloat(roundInputs.handicap))}
+                  className="flex-[2] h-12 rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
+                  Save Round
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Pro card / upgrade nudge ── */}
         {isPro ? (
@@ -1352,7 +1480,32 @@ function EmptyState({
 
 // ─── Handicap history chart (Pro) ─────────────────────────────────────────────
 
+function MiniLineChart({ values, invert = false }: { values: number[]; invert?: boolean }) {
+  const W = 300, H = 56, PAD_X = 4, PAD_Y = 6;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const toX = (i: number) => PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
+  const toY = (v: number) => invert
+    ? PAD_Y + ((v - min) / range) * (H - PAD_Y * 2)
+    : PAD_Y + ((max - v) / range) * (H - PAD_Y * 2);
+  const pts = values.map((v, i) => ({ x: toX(i), y: toY(v) }));
+  const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${lineD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
+      <path d={areaD} fill="currentColor" className="text-primary/8" />
+      <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
+      {pts.map((p, i) => (
+        <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
+          fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
+      ))}
+    </svg>
+  );
+}
+
 function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
+  const [tab, setTab] = useState<"handicap" | "stats">("handicap");
   const W = 300, H = 90, PAD_X = 4, PAD_Y = 10;
   const values = history.map(h => h.handicap);
   const min = Math.min(...values);
@@ -1365,39 +1518,80 @@ function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
 
   const toX = (i: number) => PAD_X + (i / (history.length - 1)) * (W - PAD_X * 2);
   const toY = (v: number) => PAD_Y + ((max - v) / range) * (H - PAD_Y * 2);
-
-  const pts = history.map((h, i) => ({ x: toX(i), y: toY(h.handicap), val: h.handicap }));
+  const pts = history.map((h, i) => ({ x: toX(i), y: toY(h.handicap) }));
   const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const areaD = `${lineD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
-
   const gridYs = [0.2, 0.5, 0.8].map(t => PAD_Y + t * (H - PAD_Y * 2));
-
   const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+
+  const statSeries = [
+    { label: "GIR %", values: history.map(h => h.gir).filter((v): v is number => v !== undefined), invert: false },
+    { label: "Fairways %", values: history.map(h => h.fairways).filter((v): v is number => v !== undefined), invert: false },
+    { label: "Putts", values: history.map(h => h.putts).filter((v): v is number => v !== undefined), invert: true },
+    { label: "Up & Downs", values: history.map(h => h.upAndDowns).filter((v): v is number => v !== undefined), invert: false },
+  ].filter(s => s.values.length > 1);
 
   return (
     <div className="mt-4 pt-4 border-t border-border">
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
-        <p className={`text-[13px] font-semibold ${improved ? "text-[var(--ok)]" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-          {delta === 0 ? "No change" : improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
-        </p>
-      </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
-        {gridYs.map((y, i) => (
-          <line key={i} x1={PAD_X} y1={y.toFixed(1)} x2={W - PAD_X} y2={y.toFixed(1)}
-            stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-border" />
+      {/* Tab toggle */}
+      <div className="flex rounded-[10px] bg-muted p-0.5 mb-3">
+        {(["handicap", "stats"] as const).map(t => (
+          <button key={t} type="button" onClick={() => setTab(t)}
+            className={`flex-1 h-7 rounded-[8px] text-[12px] font-semibold capitalize transition ${tab === t ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
+            {t === "handicap" ? "Handicap" : "Stats"}
+          </button>
         ))}
-        <path d={areaD} fill="currentColor" className="text-primary/8" />
-        <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
-        {pts.map((p, i) => (
-          <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
-            fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
-        ))}
-      </svg>
-      <div className="flex justify-between mt-1.5">
-        <p className="text-[10px] text-muted-foreground">{fmt(history[0].recordedAt)}</p>
-        <p className="text-[10px] text-muted-foreground">{fmt(history[history.length - 1].recordedAt)}</p>
       </div>
+
+      {tab === "handicap" ? (
+        <>
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Progress</p>
+            <p className={`text-[13px] font-semibold ${improved ? "text-[var(--ok)]" : delta < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+              {delta === 0 ? "No change" : improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
+            </p>
+          </div>
+          <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
+            {gridYs.map((y, i) => (
+              <line key={i} x1={PAD_X} y1={y.toFixed(1)} x2={W - PAD_X} y2={y.toFixed(1)}
+                stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" className="text-border" />
+            ))}
+            <path d={areaD} fill="currentColor" className="text-primary/8" />
+            <path d={lineD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
+            {pts.map((p, i) => (
+              <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r={i === pts.length - 1 ? "4" : "2.5"}
+                fill="currentColor" className={i === pts.length - 1 ? "text-primary" : "text-primary/60"} />
+            ))}
+          </svg>
+          <div className="flex justify-between mt-1.5">
+            <p className="text-[10px] text-muted-foreground">{fmt(history[0].recordedAt)}</p>
+            <p className="text-[10px] text-muted-foreground">{fmt(history[history.length - 1].recordedAt)}</p>
+          </div>
+        </>
+      ) : statSeries.length === 0 ? (
+        <p className="text-[12px] text-muted-foreground text-center py-4">Log stats with your rounds to see trends here.</p>
+      ) : (
+        <div className="space-y-4">
+          {statSeries.map(({ label, values: vals, invert }) => {
+            const first = vals[0], last = vals[vals.length - 1];
+            const d = +(last - first).toFixed(1);
+            const good = invert ? d < 0 : d > 0;
+            return (
+              <div key={label}>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+                  {d !== 0 && (
+                    <p className={`text-[12px] font-semibold ${good ? "text-[var(--ok)]" : "text-destructive"}`}>
+                      {d > 0 ? `+${d}` : d}
+                    </p>
+                  )}
+                </div>
+                <MiniLineChart values={vals} invert={invert} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
