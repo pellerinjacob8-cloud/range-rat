@@ -10,7 +10,9 @@ import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
   fetchYardages, saveYardage as dbSaveYardage,
+  saveHandicapSnapshot, fetchHandicapHistory,
   type SavedSession, type Club as DbClub, type YardageMap as DbYardageMap,
+  type HandicapSnapshot,
 } from "@/lib/db";
 
 export const Route = createFileRoute("/profile")({
@@ -30,6 +32,7 @@ interface Profile {
   lastName: string;
   createdDate: number;
   handedness?: "lefty" | "righty";
+  handicap?: number;
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -64,6 +67,9 @@ function ProfilePage() {
   const [proOpen, setProOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
   const [allTimeSessions, setAllTimeSessions] = useState<SavedSession[]>([]);
+  const [handicapHistory, setHandicapHistory] = useState<HandicapSnapshot[]>([]);
+  const [editingHandicap, setEditingHandicap] = useState(false);
+  const [handicapInput, setHandicapInput] = useState("");
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -71,9 +77,11 @@ function ProfilePage() {
       setProfile(p);
       setFirstInput(p.firstName);
       setLastInput(p.lastName);
+      if (p.handicap !== undefined) setHandicapInput(String(p.handicap));
       try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
     fetchSessions().then(setAllTimeSessions);
+    fetchHandicapHistory().then(setHandicapHistory);
   }, []);
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
@@ -86,6 +94,17 @@ function ProfilePage() {
     setEditing(false);
   };
   const cancelEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(false); };
+
+  const saveHandicap = async () => {
+    const val = parseFloat(handicapInput);
+    if (isNaN(val) || val < -10 || val > 54) return;
+    const updated = { ...profile, handicap: val };
+    setProfile(updated);
+    setEditingHandicap(false);
+    await dbSaveProfile(updated);
+    await saveHandicapSnapshot(val);
+    setHandicapHistory(prev => [...prev, { handicap: val, recordedAt: new Date().toISOString() }]);
+  };
 
   const totalBalls = allTimeSessions.reduce((s, x) => s + x.totalBalls, 0);
   const formatBalls = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
@@ -204,6 +223,55 @@ function ProfilePage() {
               <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{sub}</p>
             </div>
           ))}
+        </div>
+
+        {/* ── Handicap ── */}
+        <div className="mt-4 rounded-[22px] border border-border bg-card p-4">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Handicap Index</p>
+            {!editingHandicap && (
+              <button type="button" onClick={() => { setHandicapInput(profile.handicap !== undefined ? String(profile.handicap) : ""); setEditingHandicap(true); }}
+                className="text-[12px] font-semibold text-primary">
+                {profile.handicap !== undefined ? "Edit" : "Add"}
+              </button>
+            )}
+          </div>
+
+          {editingHandicap ? (
+            <div className="flex items-center gap-2 mt-2">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={handicapInput}
+                onChange={e => setHandicapInput(e.target.value)}
+                placeholder="e.g. 14.2"
+                autoFocus
+                className="flex-1 bg-transparent border-b-2 border-primary outline-none font-stats text-[32px] leading-none pb-1 placeholder:text-muted-foreground/30"
+              />
+              <button type="button" onMouseDown={e => { e.preventDefault(); saveHandicap(); }}
+                className="h-9 px-4 rounded-[12px] bg-primary text-white text-[13px] font-bold">Save</button>
+              <button type="button" onClick={() => setEditingHandicap(false)}
+                className="h-9 px-3 rounded-[12px] border border-border text-[13px] text-muted-foreground">Cancel</button>
+            </div>
+          ) : (
+            <p className="font-stats text-[42px] leading-none text-primary mt-1">
+              {profile.handicap !== undefined ? profile.handicap : <span className="text-[18px] text-muted-foreground font-sans font-medium">Not set</span>}
+            </p>
+          )}
+
+          {/* Pro history chart */}
+          {isPro && handicapHistory.length > 1 && (
+            <HandicapChart history={handicapHistory} />
+          )}
+          {isPro && handicapHistory.length <= 1 && profile.handicap !== undefined && (
+            <p className="mt-3 text-[12px] text-muted-foreground">Update your handicap over time to see your progress here.</p>
+          )}
+          {!isPro && profile.handicap !== undefined && (
+            <button type="button" onClick={() => setProOpen(true)}
+              className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-gold">
+              <Zap className="h-3 w-3" /> Track progress with Pro
+            </button>
+          )}
         </div>
 
         {/* ── Pro card / upgrade nudge ── */}
@@ -1278,6 +1346,54 @@ function EmptyState({
       </div>
       <h2 className="mt-4 font-display text-xl">{title}</h2>
       <p className="mt-2 text-sm text-muted-foreground max-w-[260px]">{body}</p>
+    </div>
+  );
+}
+
+// ─── Handicap history chart (Pro) ─────────────────────────────────────────────
+
+function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
+  const W = 280, H = 80, PAD = 8;
+  const values = history.map(h => h.handicap);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const pts = history.map((h, i) => {
+    const x = PAD + (i / (history.length - 1)) * (W - PAD * 2);
+    // Invert Y: lower handicap = higher on chart (improvement goes up)
+    const y = PAD + ((max - h.handicap) / range) * (H - PAD * 2);
+    return { x, y, h };
+  });
+
+  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaD = `${pathD} L${pts[pts.length - 1].x.toFixed(1)},${H} L${pts[0].x.toFixed(1)},${H} Z`;
+
+  const lastPt = pts[pts.length - 1];
+  const improved = values[values.length - 1] < values[0];
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Progress</p>
+        <p className={`text-[11px] font-semibold ${improved ? "text-[var(--ok)]" : "text-muted-foreground"}`}>
+          {improved ? `▼ ${(values[0] - values[values.length - 1]).toFixed(1)} strokes` : `▲ ${(values[values.length - 1] - values[0]).toFixed(1)} strokes`}
+        </p>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" className="overflow-visible">
+        <path d={areaD} fill="currentColor" className="text-primary/10" />
+        <path d={pathD} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary" />
+        {pts.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="3" fill="currentColor" className="text-primary" />
+        ))}
+        <text x={lastPt.x} y={lastPt.y - 8} textAnchor="middle" fontSize="10" fontWeight="600" fill="currentColor" className="text-primary">
+          {lastPt.h.handicap}
+        </text>
+      </svg>
+      <div className="flex justify-between mt-1">
+        <p className="text-[10px] text-muted-foreground">{new Date(history[0].recordedAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</p>
+        <p className="text-[10px] text-muted-foreground">{new Date(history[history.length - 1].recordedAt).toLocaleDateString("en-US", { month: "short", year: "2-digit" })}</p>
+      </div>
     </div>
   );
 }

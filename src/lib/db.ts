@@ -13,6 +13,12 @@ export interface Profile {
   handedness?: "lefty" | "righty";
   createdDate: number;
   theme?: "light" | "dark";
+  handicap?: number;
+}
+
+export interface HandicapSnapshot {
+  handicap: number;
+  recordedAt: string;
 }
 
 export interface SavedSession {
@@ -70,6 +76,7 @@ export async function fetchProfile(): Promise<Profile | null> {
     handedness: data.handedness ?? undefined,
     createdDate: data.created_date ?? Date.now(),
     theme: (data.theme as "light" | "dark") ?? undefined,
+    handicap: data.handicap ?? undefined,
   };
 }
 
@@ -84,6 +91,7 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
     handedness: profile.handedness ?? null,
     created_date: profile.createdDate ?? Date.now(),
     theme: profile.theme ?? null,
+    handicap: profile.handicap ?? null,
     updated_at: new Date().toISOString(),
   });
 
@@ -96,6 +104,24 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
       createdDate: profile.createdDate ?? Date.now(),
     }));
   } catch {}
+}
+
+export async function saveHandicapSnapshot(handicap: number): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("handicap_history").insert({ user_id: user.id, handicap });
+}
+
+export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("handicap_history")
+    .select("handicap, recorded_at")
+    .eq("user_id", user.id)
+    .order("recorded_at", { ascending: true });
+  if (!data) return [];
+  return data.map(r => ({ handicap: r.handicap, recordedAt: r.recorded_at }));
 }
 
 export async function saveTheme(theme: "light" | "dark"): Promise<void> {

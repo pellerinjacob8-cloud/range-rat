@@ -13,19 +13,24 @@ function OnboardingName() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [hand, setHand] = useState<"right" | "left">("right");
-
+  const [handicap, setHandicap] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const parsedHandicap = handicap.trim() !== "" ? parseFloat(handicap) : undefined;
+  const handicapValid = handicap.trim() === "" || (!isNaN(parsedHandicap!) && parsedHandicap! >= -10 && parsedHandicap! <= 54);
+
   const handleContinue = async () => {
-    if (!firstName.trim() || saving) return;
+    if (!firstName.trim() || saving || !handicapValid) return;
     setSaving(true);
-    const { saveProfile } = await import("@/lib/db");
+    const { saveProfile, saveHandicapSnapshot } = await import("@/lib/db");
     await saveProfile({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       handedness: hand === "right" ? "righty" : "lefty",
       createdDate: Date.now(),
+      handicap: parsedHandicap,
     });
+    if (parsedHandicap !== undefined) await saveHandicapSnapshot(parsedHandicap);
     setSaving(false);
     navigate({ to: "/onboarding/bag" });
   };
@@ -98,12 +103,33 @@ function OnboardingName() {
         </div>
       </div>
 
+      {/* Handicap */}
+      <div className="mt-8">
+        <div className="flex items-baseline justify-between mb-2">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Handicap index</p>
+          <p className="text-[11px] text-muted-foreground">Optional</p>
+        </div>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={handicap}
+          onChange={e => setHandicap(e.target.value)}
+          placeholder="e.g. 14.2"
+          className={`w-full bg-transparent border-0 border-b-2 outline-none font-display text-[40px] leading-none tracking-[-0.01em] pb-1.5 placeholder:text-muted-foreground/30 ${
+            !handicapValid ? "border-destructive" : "border-border"
+          }`}
+        />
+        {!handicapValid && (
+          <p className="mt-1.5 text-[12px] text-destructive font-medium">Enter a valid handicap index (−10 to 54).</p>
+        )}
+      </div>
+
       <div className="flex-1" />
 
       <div className="pb-10">
         <button
           onClick={handleContinue}
-          disabled={!firstName.trim() || saving}
+          disabled={!firstName.trim() || saving || !handicapValid}
           className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
         >
           {saving ? (
