@@ -167,21 +167,38 @@ export async function deleteHandicapSnapshot(id: string): Promise<void> {
 export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-  const { data } = await supabase
+
+  // Try with stats columns first
+  const { data, error } = await supabase
     .from("handicap_history")
     .select("id, handicap, gir, fairways, putts, up_and_downs, recorded_at")
     .eq("user_id", user.id)
     .order("recorded_at", { ascending: true });
-  if (!data) return [];
-  return data.map(r => ({
-    id: r.id,
-    handicap: r.handicap,
-    gir: r.gir ?? undefined,
-    fairways: r.fairways ?? undefined,
-    putts: r.putts ?? undefined,
-    upAndDowns: r.up_and_downs ?? undefined,
-    recordedAt: r.recorded_at,
-  }));
+
+  if (data) {
+    return data.map(r => ({
+      id: r.id,
+      handicap: r.handicap,
+      gir: r.gir ?? undefined,
+      fairways: r.fairways ?? undefined,
+      putts: r.putts ?? undefined,
+      upAndDowns: r.up_and_downs ?? undefined,
+      recordedAt: r.recorded_at,
+    }));
+  }
+
+  // Fallback: stats columns may not exist yet
+  if (error) {
+    const { data: basic } = await supabase
+      .from("handicap_history")
+      .select("id, handicap, recorded_at")
+      .eq("user_id", user.id)
+      .order("recorded_at", { ascending: true });
+    if (!basic) return [];
+    return basic.map(r => ({ id: r.id, handicap: r.handicap, recordedAt: r.recorded_at }));
+  }
+
+  return [];
 }
 
 export async function saveTheme(theme: "light" | "dark"): Promise<void> {
