@@ -102,12 +102,8 @@ function AuthGate() {
   if (loading || (session && hasProfile === null) || !minTimeElapsed) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center text-center px-8 relative">
-        <img src="/brand/logo-navy-trim.png" alt="Range Rat" className="h-24 w-auto mb-5 dark:hidden" />
-        <img src="/brand/logo-white-solid.png" alt="Range Rat" className="h-24 w-auto mb-5 hidden dark:block" />
-        <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-muted-foreground mb-3">Range Rat</p>
-        <p className="font-display text-[34px] leading-[1.0]">
-          Grind. Practice. <em className="italic">Improve.</em>
-        </p>
+        <img src="/brand/logo-navy-trim.png" alt="Range Rat" className="h-24 w-auto dark:hidden" />
+        <img src="/brand/logo-white-solid.png" alt="Range Rat" className="h-24 w-auto hidden dark:block" />
         <div className="absolute bottom-12 left-0 right-0 flex justify-center">
           <div className="h-6 w-6 rounded-full border-[2.5px] border-border border-t-primary animate-spin" />
         </div>
