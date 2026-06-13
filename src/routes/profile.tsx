@@ -59,6 +59,25 @@ const parseHdx = (raw: string): number => {
   return t.startsWith("+") ? -parseFloat(t.slice(1)) : parseFloat(t);
 };
 
+/**
+ * Parse a percentage stat entry. Accepts a direct percent ("39") OR a count
+ * like "11/18", "11 of 18", "7/9" → the computed percentage, so golfers never
+ * have to do the math. Returns null for empty/invalid/incomplete input.
+ */
+const parsePercentEntry = (raw: string): number | null => {
+  const t = raw.trim();
+  if (!t) return null;
+  const frac = t.match(/^(\d+(?:\.\d+)?)\s*(?:\/|of|out of)\s*(\d+(?:\.\d+)?)$/i);
+  if (frac) {
+    const made = parseFloat(frac[1]);
+    const total = parseFloat(frac[2]);
+    if (total > 0 && made >= 0 && made <= total) return Math.round((made / total) * 100);
+    return null;
+  }
+  const n = parseFloat(t);
+  return isNaN(n) ? null : n;
+};
+
 function loadLocalProfile(): Profile {
   try {
     const raw = localStorage.getItem("rangeRat_profile");
@@ -134,18 +153,24 @@ function ProfilePage() {
     const n = parseFloat(raw);
     return !isNaN(n) && n >= min && n <= max;
   };
+  // Percentage stats accept "11/18"-style counts; valid if empty or resolves to 0–100.
+  const percentValid = (raw: string) => {
+    if (!raw.trim()) return true;
+    const v = parsePercentEntry(raw);
+    return v !== null && v >= 0 && v <= 100;
+  };
   const hdxValue = parseHdx(roundInputs.handicap);
   const roundValid =
     roundInputs.handicap !== "" && !isNaN(hdxValue) && hdxValue >= -10 && hdxValue <= 54 &&
-    inRange(roundInputs.gir, 0, 100) && inRange(roundInputs.fairways, 0, 100) &&
+    percentValid(roundInputs.gir) && percentValid(roundInputs.fairways) &&
     inRange(roundInputs.putts, 0, 72) && inRange(roundInputs.upAndDowns, 0, 18);
 
   const saveRound = async () => {
     if (!roundValid) return;
     const hdx = hdxValue;
     const stats = {
-      gir: roundInputs.gir ? parseInt(roundInputs.gir) : undefined,
-      fairways: roundInputs.fairways ? parseInt(roundInputs.fairways) : undefined,
+      gir: roundInputs.gir ? parsePercentEntry(roundInputs.gir) ?? undefined : undefined,
+      fairways: roundInputs.fairways ? parsePercentEntry(roundInputs.fairways) ?? undefined : undefined,
       putts: roundInputs.putts ? parseFloat(roundInputs.putts) : undefined,
       upAndDowns: roundInputs.upAndDowns ? parseFloat(roundInputs.upAndDowns) : undefined,
     };
@@ -512,27 +537,35 @@ function ProfilePage() {
                 </div>
               </div>
 
-              {/* 2×2 stat inputs */}
+              {/* 2×2 stat inputs. GIR/Fairways accept a percent or a count like "11/18". */}
               <div className="grid grid-cols-2 gap-[9px] mb-[18px]">
                 {[
-                  { key: "gir" as const, label: "GIR %", placeholder: "48" },
-                  { key: "fairways" as const, label: "Fairways %", placeholder: "40" },
-                  { key: "putts" as const, label: "Putts / Round", placeholder: "31" },
-                  { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "2" },
-                ].map(({ key, label, placeholder }) => (
-                  <div key={key}>
-                    <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">{label}</p>
-                    <div className="h-[50px] rounded-[13px] border-[1.5px] border-border bg-card flex items-center px-3 transition-colors focus-within:border-2 focus-within:border-primary focus-within:bg-[rgba(13,45,90,.04)]">
-                      <input
-                        type="number" inputMode="decimal"
-                        value={roundInputs[key]}
-                        onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
-                        placeholder={placeholder}
-                        className="w-full min-w-0 bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
-                      />
+                  { key: "gir" as const, label: "GIR", placeholder: "48 or 11/18", percent: true },
+                  { key: "fairways" as const, label: "Fairways", placeholder: "40 or 8/14", percent: true },
+                  { key: "putts" as const, label: "Putts / Round", placeholder: "31", percent: false },
+                  { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "2", percent: false },
+                ].map(({ key, label, placeholder, percent }) => {
+                  const raw = roundInputs[key];
+                  // Show a live "= NN%" hint only when a count fraction was typed.
+                  const computed = percent && /[/]|of/i.test(raw) ? parsePercentEntry(raw) : null;
+                  return (
+                    <div key={key}>
+                      <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">{label}</p>
+                      <div className="h-[50px] rounded-[13px] border-[1.5px] border-border bg-card flex items-center px-3 transition-colors focus-within:border-2 focus-within:border-primary focus-within:bg-[rgba(13,45,90,.04)]">
+                        <input
+                          type="text" inputMode={percent ? "text" : "decimal"}
+                          value={raw}
+                          onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
+                          placeholder={placeholder}
+                          className="w-full min-w-0 bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
+                        />
+                        {computed !== null && (
+                          <span className="shrink-0 text-[13px] font-bold text-primary tabular-nums">= {computed}%</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="flex gap-[9px]">
