@@ -31,7 +31,6 @@ import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as ProWelcomeRouteImport } from './routes/pro-welcome'
 import { Route as CustomSessionRouteImport } from './routes/custom-session'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
-import { Route as ProfileRoundHistoryRouteImport } from './routes/profile.round-history'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -143,11 +142,6 @@ const AuthConfirmRoute = AuthConfirmRouteImport.update({
   path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileRoundHistoryRoute = ProfileRoundHistoryRouteImport.update({
-  id: '/profile/round-history',
-  path: '/profile/round-history',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -171,7 +165,6 @@ export interface FileRoutesByFullPath {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
-  '/profile/round-history': typeof ProfileRoundHistoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -195,7 +188,6 @@ export interface FileRoutesByTo {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
-  '/profile/round-history': typeof ProfileRoundHistoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -220,7 +212,6 @@ export interface FileRoutesById {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
-  '/profile/round-history': typeof ProfileRoundHistoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -246,7 +237,6 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
-    | '/profile/round-history'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -270,7 +260,6 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
-    | '/profile/round-history'
   id:
     | '__root__'
     | '/'
@@ -294,7 +283,6 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
-    | '/profile/round-history'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -314,7 +302,6 @@ export interface RootRouteChildren {
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
   CustomSessionRoute: typeof CustomSessionRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
-  ProfileRoundHistoryRoute: typeof ProfileRoundHistoryRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -473,13 +460,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/round-history': {
-      id: '/profile/round-history'
-      path: '/profile/round-history'
-      fullPath: '/profile/round-history'
-      preLoaderRoute: typeof ProfileRoundHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -527,7 +507,6 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
   CustomSessionRoute: CustomSessionRoute,
   AuthConfirmRoute: AuthConfirmRoute,
-  ProfileRoundHistoryRoute: ProfileRoundHistoryRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

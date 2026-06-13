@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
-import { BarChart2, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, Crown, Flag, LogOut, Moon, Pencil, Plus, Ruler, Settings, Sun, Target, Trash2, Zap } from "lucide-react";
+import { BarChart2, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, Crown, Flag, LogOut, Moon, Pencil, Plus, Ruler, Settings, Sun, Target, Trash2, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
@@ -38,7 +38,7 @@ interface Profile {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 type Tab = "stats" | "bag" | "yardage";
-type SubView = null | "bag" | "yardage";
+type SubView = null | "bag" | "yardage" | "history";
 
 function loadLocalProfile(): Profile {
   try {
@@ -67,8 +67,10 @@ function ProfilePage() {
   const [proOpen, setProOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
   const [allTimeSessions, setAllTimeSessions] = useState<SavedSession[]>([]);
-  const [handicapHistory, setHandicapHistory] = useState<HandicapSnapshot[]>([]);
-  const [loggingRound, setLoggingRound] = useState(false);
+  const [roundHistory, setRoundHistory] = useState<HandicapSnapshot[]>([]);
+  const [chartTab, setChartTab] = useState<"handicap" | "stats">("handicap");
+  const [logOpen, setLogOpen] = useState(false);
+  const [removingRound, setRemovingRound] = useState<string | null>(null);
   const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "" });
 
   useEffect(() => {
@@ -81,7 +83,7 @@ function ProfilePage() {
       try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
     fetchSessions().then(setAllTimeSessions);
-    fetchHandicapHistory().then(setHandicapHistory);
+    fetchHandicapHistory().then(setRoundHistory);
   }, []);
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
@@ -96,7 +98,7 @@ function ProfilePage() {
   const cancelEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(false); };
 
   const openLogRound = () => {
-    const latest = handicapHistory[handicapHistory.length - 1];
+    const latest = roundHistory[roundHistory.length - 1];
     setRoundInputs({
       handicap: profile.handicap !== undefined ? String(profile.handicap) : "",
       gir: latest?.gir !== undefined ? String(latest.gir) : "",
@@ -104,12 +106,22 @@ function ProfilePage() {
       putts: latest?.putts !== undefined ? String(latest.putts) : "",
       upAndDowns: latest?.upAndDowns !== undefined ? String(latest.upAndDowns) : "",
     });
-    setLoggingRound(true);
+    setLogOpen(true);
   };
 
+  const inRange = (raw: string, min: number, max: number) => {
+    if (!raw) return true;
+    const n = parseFloat(raw);
+    return !isNaN(n) && n >= min && n <= max;
+  };
+  const roundValid =
+    roundInputs.handicap !== "" && inRange(roundInputs.handicap, -10, 54) &&
+    inRange(roundInputs.gir, 0, 100) && inRange(roundInputs.fairways, 0, 100) &&
+    inRange(roundInputs.putts, 0, 72) && inRange(roundInputs.upAndDowns, 0, 100);
+
   const saveRound = async () => {
+    if (!roundValid) return;
     const hdx = parseFloat(roundInputs.handicap);
-    if (isNaN(hdx) || hdx < -10 || hdx > 54) return;
     const stats = {
       gir: roundInputs.gir ? parseInt(roundInputs.gir) : undefined,
       fairways: roundInputs.fairways ? parseInt(roundInputs.fairways) : undefined,
@@ -120,17 +132,18 @@ function ProfilePage() {
     const tempId = `temp-${Date.now()}`;
     const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt: new Date().toISOString() };
     setProfile(prev => ({ ...prev, handicap: hdx }));
-    setHandicapHistory(prev => [...prev, optimistic]);
-    setLoggingRound(false);
+    setRoundHistory(prev => [...prev, optimistic]);
+    setLogOpen(false);
     dbSaveProfile({ ...profile, handicap: hdx });
     const snapshot = await saveHandicapSnapshot(hdx, stats);
-    if (snapshot) setHandicapHistory(prev => prev.map(h => h.id === tempId ? snapshot : h));
+    if (snapshot) setRoundHistory(prev => prev.map(h => h.id === tempId ? snapshot : h));
   };
 
   const removeSnapshot = async (id: string) => {
+    setRemovingRound(null);
     await deleteHandicapSnapshot(id);
-    const next = handicapHistory.filter(h => h.id !== id);
-    setHandicapHistory(next);
+    const next = roundHistory.filter(h => h.id !== id);
+    setRoundHistory(next);
     const latest = next[next.length - 1];
     const updated = { ...profile, handicap: latest?.handicap };
     setProfile(updated);
@@ -180,6 +193,66 @@ function ProfilePage() {
           </button>
           <h1 className="font-display text-[32px] mb-6">Club Yardages</h1>
           <YardageSection />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (subView === "history") {
+    const sorted = [...roundHistory].sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime());
+    const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return (
+      <AppShell>
+        <div className="pb-8">
+          <button type="button" onClick={() => setSubView(null)} className="flex items-center gap-1 text-primary text-[14px] font-semibold mb-4 -ml-1">
+            <ChevronLeft className="h-5 w-5" /> Profile
+          </button>
+          <h1 className="font-display text-[32px] mb-[3px]">Round History</h1>
+          <p className="text-[13px] text-muted-foreground mb-[18px]">{sorted.length} round{sorted.length === 1 ? "" : "s"} logged</p>
+          <div className="flex flex-col gap-[10px]">
+            {sorted.map((entry, i) => (
+              <div key={entry.id} className="rounded-[22px] border border-border bg-card p-[14px_16px]">
+                <div className="flex items-start justify-between mb-[11px]">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{fmtDate(entry.recordedAt)}</p>
+                    <p className="font-stats text-[32px] font-bold text-primary leading-none mt-[2px]">{entry.handicap}</p>
+                    <p className="text-[10px] text-muted-foreground">Handicap Index</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {i === 0 && (
+                      <span className="bg-gold-bg border border-gold-border text-gold rounded-full px-[9px] py-[3px] text-[9.5px] font-bold uppercase tracking-[0.1em]">
+                        Latest
+                      </span>
+                    )}
+                    {removingRound === entry.id ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-muted-foreground">Remove?</span>
+                        <button type="button" onClick={() => removeSnapshot(entry.id)} className="rounded-full bg-destructive px-3 py-1 text-xs font-bold text-white transition active:opacity-80">Yes</button>
+                        <button type="button" onClick={() => setRemovingRound(null)} className="rounded-full border border-border px-3 py-1 text-xs font-bold text-muted-foreground transition active:bg-muted">No</button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => setRemovingRound(entry.id)} aria-label="Delete round" className="text-muted-foreground p-1 -m-1">
+                        <Trash2 className="h-[15px] w-[15px]" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-1 border-t border-border pt-[10px]">
+                  {[
+                    { label: "GIR", value: entry.gir !== undefined ? `${entry.gir}%` : "—" },
+                    { label: "FWY", value: entry.fairways !== undefined ? `${entry.fairways}%` : "—" },
+                    { label: "PUTTS", value: entry.putts !== undefined ? String(entry.putts) : "—" },
+                    { label: "U & D", value: entry.upAndDowns !== undefined ? `${entry.upAndDowns}%` : "—" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+                      <p className="mt-[3px] font-stats text-[20px] font-bold text-foreground leading-none">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </AppShell>
     );
@@ -257,153 +330,170 @@ function ProfilePage() {
         </div>
 
         {/* ── On-Course Stats ── */}
-        <div className="mt-4 rounded-[22px] border border-border bg-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">On-Course Stats</p>
+        <p className="mt-6 mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">On-Course Stats</p>
+        <div className="rounded-[22px] border border-border bg-card p-[18px]">
+          {/* Top row: handicap + trend / Log Round */}
+          <div className="flex items-start justify-between mb-[14px]">
+            <div>
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Handicap Index</p>
+              <p className="mt-[3px] font-stats text-[44px] font-bold leading-none text-primary">
+                {profile.handicap !== undefined
+                  ? profile.handicap
+                  : <span className="text-[18px] text-muted-foreground font-sans font-medium">Not set</span>}
+              </p>
+              {roundHistory.length > 0 && (() => {
+                const latest = roundHistory[roundHistory.length - 1];
+                const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                const first = roundHistory[0];
+                const delta = roundHistory.length > 1 ? +(first.handicap - latest.handicap).toFixed(1) : null;
+                return (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {fmt(latest.recordedAt)}
+                    {delta !== null && delta !== 0 && (
+                      <>
+                        {" · "}
+                        <span className={delta > 0 ? "text-[var(--ok)]" : "text-destructive"}>
+                          {delta > 0 ? `▼ ${delta}` : `▲ ${Math.abs(delta)}`} this month
+                        </span>
+                      </>
+                    )}
+                  </p>
+                );
+              })()}
+            </div>
             <button type="button" onClick={openLogRound}
-              className="flex items-center gap-1 text-[12px] font-semibold text-primary">
-              <Plus className="h-3.5 w-3.5" /> Log Round
+              className="shrink-0 flex items-center gap-1.5 border border-border rounded-[10px] bg-muted px-3 py-[7px] text-[12px] font-bold text-primary">
+              <Plus className="h-3 w-3" /> Log Round
             </button>
           </div>
 
-          {/* Handicap big number */}
-          <div className="mb-3">
-            <p className="font-stats text-[42px] leading-none text-primary">
-              {profile.handicap !== undefined
-                ? profile.handicap
-                : <span className="text-[18px] text-muted-foreground font-sans font-medium">Not set</span>}
-            </p>
-            {handicapHistory.length > 0 && (() => {
-              const latest = handicapHistory[handicapHistory.length - 1];
-              const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-              const prev = handicapHistory.length > 1 ? handicapHistory[handicapHistory.length - 2] : null;
-              const delta = prev ? +(prev.handicap - latest.handicap).toFixed(1) : null;
-              return (
-                <p className="text-[12px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                  {fmt(latest.recordedAt)}
-                  {delta !== null && delta !== 0 && (
-                    <span className={delta > 0 ? "text-[var(--ok)]" : "text-destructive"}>
-                      {delta > 0 ? `▼ ${delta}` : `▲ ${Math.abs(delta)}`}
-                    </span>
-                  )}
-                </p>
-              );
-            })()}
-          </div>
-
           {/* 2×2 stat grid — latest entry */}
-          {handicapHistory.length > 0 && (() => {
-            const latest = handicapHistory[handicapHistory.length - 1];
-            const hasStats = latest.gir !== undefined || latest.fairways !== undefined || latest.putts !== undefined || latest.upAndDowns !== undefined;
-            if (!hasStats) return null;
+          {(() => {
+            const latest = roundHistory[roundHistory.length - 1];
             return (
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: "GIR", value: latest.gir !== undefined ? `${latest.gir}%` : null },
-                  { label: "Fairways", value: latest.fairways !== undefined ? `${latest.fairways}%` : null },
-                  { label: "Putts", value: latest.putts !== undefined ? String(latest.putts) : null },
-                  { label: "Up & Dn", value: latest.upAndDowns !== undefined ? String(latest.upAndDowns) : null },
-                ].filter(s => s.value !== null).map(({ label, value }) => (
-                  <div key={label} className="rounded-[13px] border border-border bg-muted px-3 py-2.5">
+                  { label: "GIR", value: latest?.gir !== undefined ? `${latest.gir}%` : "—" },
+                  { label: "Fairways", value: latest?.fairways !== undefined ? `${latest.fairways}%` : "—" },
+                  { label: "Putts", value: latest?.putts !== undefined ? String(latest.putts) : "—" },
+                  { label: "Up & Dn", value: latest?.upAndDowns !== undefined ? `${latest.upAndDowns}%` : "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-[13px] border border-border bg-muted p-[10px_12px]">
                     <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-                    <p className="mt-1 font-stats text-[28px] leading-none text-primary">{value}</p>
+                    <p className="mt-1 font-stats text-[28px] font-bold text-primary leading-none">{value}</p>
                   </div>
                 ))}
               </div>
             );
           })()}
 
-          {/* Pro chart */}
-          {isPro && handicapHistory.length > 1 && (
-            <HandicapChart history={handicapHistory} />
-          )}
-          {isPro && handicapHistory.length <= 1 && (
-            <p className="mt-1 text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
-          )}
-          {!isPro && handicapHistory.length > 0 && (
-            <button type="button" onClick={() => setProOpen(true)}
-              className="mt-1 flex items-center gap-1.5 text-[12px] font-semibold text-gold">
-              <Zap className="h-3 w-3" /> Track trends with Pro
-            </button>
+          {/* Pro chart section */}
+          {isPro ? (
+            roundHistory.length > 1 ? (
+              <HandicapChart history={roundHistory} tab={chartTab} onTabChange={setChartTab} />
+            ) : (
+              <div className="border-t border-border pt-[14px]">
+                <p className="text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
+              </div>
+            )
+          ) : (
+            <div className="relative border-t border-border pt-[14px]">
+              <div className="blur-[6px] pointer-events-none select-none" aria-hidden>
+                <HandicapChart
+                  history={roundHistory.length > 1 ? roundHistory : [
+                    { id: "demo-1", handicap: 24.5, recordedAt: new Date(Date.now() - 28 * 86400000).toISOString() },
+                    { id: "demo-2", handicap: 23.6, recordedAt: new Date(Date.now() - 14 * 86400000).toISOString() },
+                    { id: "demo-3", handicap: 22.8, recordedAt: new Date().toISOString() },
+                  ]}
+                  tab="handicap" onTabChange={() => {}} bare
+                />
+              </div>
+              <button type="button" onClick={() => setProOpen(true)}
+                className="absolute inset-0 flex items-center justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-border bg-gold-bg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
+                  <Zap className="h-3 w-3" fill="currentColor" /> Upgrade to Pro
+                </span>
+              </button>
+            </div>
           )}
 
           {/* History link */}
-          {handicapHistory.length > 0 && (
-            <button type="button" onClick={() => navigate({ to: "/profile/round-history" })}
+          {roundHistory.length > 0 && (
+            <button type="button" onClick={() => setSubView("history")}
               className="mt-3 w-full text-center text-[12px] font-semibold text-muted-foreground border-t border-border pt-3">
-              View History ({handicapHistory.length})
+              View all {roundHistory.length} round{roundHistory.length === 1 ? "" : "s"} →
             </button>
           )}
         </div>
 
         {/* ── Log Round Sheet ── */}
-        {loggingRound && (
-          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLoggingRound(false)}>
+        {logOpen && (
+          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLogOpen(false)}>
             <div className="absolute inset-0 bg-black/[0.44]" />
-            <div className="relative w-full rounded-t-[24px] bg-background p-5 pb-8" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
+            <div className="relative w-full rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
               {/* handle pill */}
-              <div className="flex justify-center mb-3.5">
-                <div className="h-1 w-8 rounded-full bg-border" />
+              <div className="flex justify-center mb-[14px]">
+                <div className="h-1 w-[34px] rounded-full bg-border" />
               </div>
 
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-[18px]">
                 <div>
                   <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
                   <p className="text-[12px] text-muted-foreground mt-1">
                     {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · from GHIN
                   </p>
                 </div>
-                <button type="button" onClick={() => setLoggingRound(false)} className="text-muted-foreground mt-0.5">
-                  <span className="text-[20px] leading-none">×</span>
+                <button type="button" onClick={() => setLogOpen(false)} aria-label="Close" className="text-muted-foreground mt-0.5">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
               {/* Handicap — large focal input */}
               <div className="mb-3">
-                <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-2">Handicap Index</p>
+                <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">Handicap Index</p>
                 <div className="flex items-center h-[62px] rounded-[16px] border-2 border-primary px-[18px] gap-2.5" style={{ background: "rgba(13,45,90,.04)" }}>
                   <input
                     type="number" inputMode="decimal" autoFocus
                     value={roundInputs.handicap}
                     onChange={e => setRoundInputs(p => ({ ...p, handicap: e.target.value }))}
                     placeholder="22.8"
-                    className="flex-1 bg-transparent outline-none font-stats text-[40px] leading-none text-primary placeholder:text-muted-foreground/30"
+                    className="flex-1 bg-transparent outline-none font-stats text-[40px] font-bold leading-none text-primary placeholder:text-muted-foreground/30"
                   />
                   <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-1">HDX</span>
                 </div>
               </div>
 
               {/* 2×2 stat inputs */}
-              <div className="grid grid-cols-2 gap-2.5 mb-5">
+              <div className="grid grid-cols-2 gap-[9px] mb-[18px]">
                 {[
                   { key: "gir" as const, label: "GIR %", placeholder: "48" },
                   { key: "fairways" as const, label: "Fairways %", placeholder: "40" },
                   { key: "putts" as const, label: "Putts / Round", placeholder: "31" },
-                  { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "3" },
+                  { key: "upAndDowns" as const, label: "Up & Downs %", placeholder: "43" },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
-                    <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-1.5">{label}</p>
-                    <div className="h-[50px] rounded-[13px] border border-border bg-card flex items-center px-3">
+                    <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">{label}</p>
+                    <div className="h-[50px] rounded-[13px] border-[1.5px] border-border bg-card flex items-center px-3 transition-colors focus-within:border-2 focus-within:border-primary focus-within:bg-[rgba(13,45,90,.04)]">
                       <input
                         type="number" inputMode="decimal"
                         value={roundInputs[key]}
                         onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
                         placeholder={placeholder}
-                        className="w-full bg-transparent outline-none font-stats text-[22px] leading-none placeholder:text-muted-foreground/30 focus:text-foreground"
+                        className="w-full bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
                       />
                     </div>
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-2.5">
-                <button type="button" onClick={() => setLoggingRound(false)}
-                  className="flex-1 h-[50px] rounded-[13px] border border-border text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground bg-transparent">
+              <div className="flex gap-[9px]">
+                <button type="button" onClick={() => setLogOpen(false)}
+                  className="flex-1 h-[50px] rounded-[14px] border border-border text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground bg-transparent">
                   Cancel
                 </button>
                 <button type="button" onMouseDown={e => { e.preventDefault(); saveRound(); }}
-                  disabled={!roundInputs.handicap || isNaN(parseFloat(roundInputs.handicap))}
-                  className="flex-[2] h-[50px] rounded-[13px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
+                  disabled={!roundValid}
+                  className="flex-[2] h-[50px] rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
                   Save Round
                 </button>
               </div>
@@ -1510,13 +1600,14 @@ function MiniSparkline({ values, improvIsDown = false, gid = "ms" }: { values: n
   );
 }
 
-function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
-  const [tab, setTab] = useState<"handicap" | "stats">("handicap");
+function HandicapChart({ history, tab, onTabChange, bare = false }: {
+  history: HandicapSnapshot[];
+  tab: "handicap" | "stats";
+  onTabChange: (t: "handicap" | "stats") => void;
+  bare?: boolean;
+}) {
   const W = 300, H = 68, P = 8;
   const values = history.map(h => h.handicap);
-  const first = values[0], last = values[values.length - 1];
-  const delta = +(first - last).toFixed(1);
-  const improved = delta > 0;
   const labels = history.map(h => new Date(h.recordedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }));
 
   const lo = Math.min(...values), hi = Math.max(...values), rng = hi - lo || 1;
@@ -1534,10 +1625,11 @@ function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
     { key: "fairways",   label: "Fairways", vals: history.map(h => h.fairways).filter((v): v is number => v !== undefined),    down: false },
     { key: "putts",      label: "Putts",    vals: history.map(h => h.putts).filter((v): v is number => v !== undefined),      down: true  },
     { key: "upAndDowns", label: "Up & Dn",  vals: history.map(h => h.upAndDowns).filter((v): v is number => v !== undefined), down: false },
-  ].filter(t => t.vals.length > 1);
+  ];
+  const hasAnyStats = TILES.some(t => t.vals.length > 1);
 
   return (
-    <div className="mt-4 pt-4 border-t border-border">
+    <div className={bare ? "" : "border-t border-border pt-[14px]"}>
       {/* header row: Pro pill + pill toggle */}
       <div className="flex items-center justify-between mb-3">
         <span className="inline-flex items-center gap-1 bg-gold-bg border border-gold-border text-gold rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em]">
@@ -1545,8 +1637,9 @@ function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
         </span>
         <div className="inline-flex rounded-full border border-border overflow-hidden bg-muted">
           {(["handicap", "stats"] as const).map(t => (
-            <button key={t} type="button" onClick={() => setTab(t)}
-              className={`px-3 py-1 text-[11px] font-bold tracking-[0.04em] transition-colors ${tab === t ? "bg-primary text-white" : "bg-transparent text-muted-foreground"}`}>
+            <button key={t} type="button" onClick={() => onTabChange(t)}
+              className={cn("px-[13px] py-[5px] text-[11px] font-bold transition-colors",
+                tab === t ? "bg-primary text-primary-foreground" : "bg-transparent text-muted-foreground")}>
               {t === "handicap" ? "Handicap" : "Stats"}
             </button>
           ))}
@@ -1576,20 +1669,17 @@ function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
               <span key={i} className="text-[9.5px] font-semibold text-muted-foreground" style={{ letterSpacing: ".04em" }}>{l}</span>
             ))}
           </div>
-          {delta !== 0 && (
-            <p className={`mt-2 text-[12px] font-semibold ${improved ? "text-[var(--ok)]" : "text-destructive"}`}>
-              {improved ? `▼ ${delta} strokes` : `▲ ${Math.abs(delta)} strokes`}
-            </p>
-          )}
         </>
-      ) : TILES.length === 0 ? (
+      ) : !hasAnyStats ? (
         <p className="text-[12px] text-muted-foreground text-center py-4">Log stats with your rounds to see trends here.</p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {TILES.map(({ key, label, vals, down }) => (
-            <div key={key} className="rounded-[11px] border border-border bg-muted p-2.5">
+            <div key={key} className="rounded-[11px] border border-border bg-muted p-[8px_10px]">
               <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground mb-1">{label}</p>
-              <MiniSparkline values={vals} improvIsDown={down} gid={key} />
+              {vals.length > 1
+                ? <MiniSparkline values={vals} improvIsDown={down} gid={key} />
+                : <p className="font-stats text-[20px] font-bold leading-[28px] text-muted-foreground">—</p>}
             </div>
           ))}
         </div>
