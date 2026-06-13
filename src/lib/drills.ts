@@ -4,12 +4,44 @@ export type TimeAvailable = 15 | 30 | 45 | 60;
 export type Goal = "accuracy" | "consistency" | "distance" | "shot-shaping";
 export type WarmUpPreset = "quick" | "standard" | "full";
 
+// A session is built from several content types, not just drills. The mix of
+// these is what makes practice feel like golf instead of homework.
+export type ContentType = "warmup" | "drill" | "focus" | "challenge" | "transfer" | "test";
+
+// Every session runs the same phases; the player's style dials their sizes.
+export type SessionPhase = "Warm Up" | "Skill" | "Transfer" | "Challenge" | "Test";
+
+// Practice style is derived from handicap (or a level question for new users).
+// It controls phase ratios and difficulty — NOT whether drills are "easy/hard".
+export type PracticeStyle = "foundation" | "development" | "performance" | "elite";
+
+// Fallback when a golfer hasn't logged a handicap yet.
+export type PlayerLevel = "new" | "casual" | "regular" | "competitive";
+
 export interface DrillTemplate {
   name: string;
   description: string;
   // Club-group-specific description overrides
   clubDescriptions?: Partial<Record<ClubGroup, string>>;
   weight: number;
+}
+
+// Focus blocks: tell the golfer what to think about, then they hit naturally.
+export interface FocusTemplate {
+  name: string;
+  description: string;
+}
+
+// Challenges & tests carry a score target that tightens as style climbs.
+export interface ScoredTemplate {
+  name: string;
+  describe: (style: PracticeStyle) => string;
+}
+
+// Transfer blocks: "practice like you play" — constraints, not instruction.
+export interface TransferTemplate {
+  name: string;
+  describe: (style: PracticeStyle) => string;
 }
 
 export interface SessionDrill {
@@ -20,6 +52,8 @@ export interface SessionDrill {
   balls: number;
   unit?: string; // e.g. "balls", "putts", "reps", "min"
   isTarget?: boolean; // true in unlimited mode — balls are a suggested rep count
+  type?: ContentType;  // which content type this block is
+  phase?: SessionPhase; // which phase of the session it belongs to
 }
 
 // Base club groups shown in the picker (Full Bag is auto-derived).
@@ -57,6 +91,89 @@ export const WARM_UP_PRESETS: { value: WarmUpPreset; label: string; minutes: num
   { value: "standard", label: "Standard", minutes: 20 },
   { value: "full",     label: "Full",     minutes: 30 },
 ];
+
+// Shown in the builder when a golfer has no handicap logged yet.
+export const PLAYER_LEVELS: { value: PlayerLevel; label: string; hint: string }[] = [
+  { value: "new",         label: "New to golf",  hint: "Still building the basics" },
+  { value: "casual",      label: "Casual",       hint: "Out a few times a month" },
+  { value: "regular",     label: "Regular",      hint: "Most weeks; breaking 90 or 80" },
+  { value: "competitive", label: "Competitive",  hint: "Low handicap, chasing scores" },
+];
+
+// ─── Practice styles ──────────────────────────────────────────────────────────
+// The style controls the SHAPE of a session: how big each phase is and how much
+// of the Skill phase is instructional drills vs. free hitting. Better players
+// get less instruction and more scoring — same phases, different ratios.
+
+export interface StyleProfile {
+  label: string;
+  blurb: string;
+  // Fractions of the hitting balls (warm-up excluded). Sum to 1.0.
+  phases: { skill: number; transfer: number; challenge: number };
+  // The Test phase takes whatever balls remain (~17–18%).
+  drillShareOfSkill: number; // how much of the Skill phase is drills vs focus
+}
+
+export const STYLE_PROFILES: Record<PracticeStyle, StyleProfile> = {
+  foundation: {
+    label: "Foundation",
+    blurb: "Structure, reps, and big targets to build a repeatable swing.",
+    phases: { skill: 0.50, transfer: 0.25, challenge: 0.08 },
+    drillShareOfSkill: 0.70,
+  },
+  development: {
+    label: "Development",
+    blurb: "A blend of reps and play with moderate pressure.",
+    phases: { skill: 0.40, transfer: 0.28, challenge: 0.14 },
+    drillShareOfSkill: 0.55,
+  },
+  performance: {
+    label: "Performance",
+    blurb: "Less instruction, more scoring and pressure.",
+    phases: { skill: 0.30, transfer: 0.32, challenge: 0.20 },
+    drillShareOfSkill: 0.40,
+  },
+  elite: {
+    label: "Elite",
+    blurb: "Mostly games, tests, and decisions under pressure.",
+    phases: { skill: 0.22, transfer: 0.36, challenge: 0.24 },
+    drillShareOfSkill: 0.28,
+  },
+};
+
+// Map handicap (or a level fallback) to a practice style.
+export function deriveStyle(handicap?: number, level?: PlayerLevel): PracticeStyle {
+  if (handicap !== undefined && !Number.isNaN(handicap)) {
+    if (handicap >= 20) return "foundation";
+    if (handicap >= 12) return "development";
+    if (handicap >= 5)  return "performance";
+    return "elite";
+  }
+  switch (level) {
+    case "new":         return "foundation";
+    case "casual":      return "foundation";
+    case "regular":     return "development";
+    case "competitive": return "performance";
+    default:            return "development";
+  }
+}
+
+// Pick the worst-trending stat to bias a session's focus (Pro recommendation).
+// Returns the goal most likely to help, or null when there's no signal.
+export function recommendGoal(stats?: {
+  gir?: number; fairways?: number; putts?: number; upAndDowns?: number;
+}): { goal: Goal; reason: string } | null {
+  if (!stats) return null;
+  const candidates: { goal: Goal; severity: number; reason: string }[] = [];
+  if (stats.gir !== undefined)
+    candidates.push({ goal: "accuracy", severity: 65 - stats.gir, reason: `greens in regulation are at ${stats.gir}%` });
+  if (stats.fairways !== undefined)
+    candidates.push({ goal: "accuracy", severity: 60 - stats.fairways, reason: `you're hitting ${stats.fairways}% of fairways` });
+  if (stats.upAndDowns !== undefined)
+    candidates.push({ goal: "consistency", severity: (50 - stats.upAndDowns) * 0.6, reason: `your up-and-down rate is ${stats.upAndDowns}%` });
+  const worst = candidates.filter(c => c.severity > 0).sort((a, b) => b.severity - a.severity)[0];
+  return worst ? { goal: worst.goal, reason: worst.reason } : null;
+}
 
 // ─── Club definitions ─────────────────────────────────────────────────────────
 
@@ -318,6 +435,152 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
   ],
 };
 
+// ─── Focus library ────────────────────────────────────────────────────────────
+// Single-cue blocks. The golfer hits balls naturally while holding one thought —
+// how good players actually practice.
+
+export const FOCUS_BY_GOAL: Record<Goal, FocusTemplate[]> = {
+  accuracy: [
+    { name: "Start Line", description: "Pick an intermediate spot a foot ahead of the ball and roll every shot directly over it." },
+    { name: "Commit to a Target", description: "Choose one precise target, not a general direction. Fully commit before the club moves." },
+    { name: "One Look", description: "One look at the target, then go. Trust your aim instead of re-checking it." },
+    { name: "Narrow Window", description: "Picture a 10-yard-wide gate out at your target and send every ball through it." },
+    { name: "Soft Hands", description: "Relax your grip pressure to about a 4 out of 10. Tension is what steers the face offline." },
+    { name: "Quiet Finish", description: "Hold a balanced, still finish on every shot. Aim comes from control, not effort." },
+  ],
+  consistency: [
+    { name: "Center Face", description: "Feel the ball leave the middle of the face. Listen for the flush sound on each strike." },
+    { name: "Same Tempo", description: "Count '1-2' going back and '3' through impact on every swing, whatever the club." },
+    { name: "Full Routine", description: "Run your complete pre-shot routine before every single ball. No shortcuts." },
+    { name: "Hold the Finish", description: "Freeze your finish for three seconds after each shot. If you can't, you swung too hard." },
+    { name: "One Swing Thought", description: "Pick a single feel for this whole block and stick with it. No mid-block tinkering." },
+    { name: "Breathe & Reset", description: "Take one slow breath before each ball. Rehearse the calm you want on the course." },
+  ],
+  distance: [
+    { name: "Ground Up", description: "Feel your lead foot press into the ground before you fire. Speed starts from the ground." },
+    { name: "Complete the Turn", description: "Finish your backswing turn fully. Don't let the transition rush you off the top." },
+    { name: "Lazy Start, Fast Finish", description: "Let the club fall gently before you accelerate. The speed belongs at the bottom." },
+    { name: "Athletic Setup", description: "Set up wide and ready, like you're about to jump. Stay tall and turn through." },
+    { name: "Release Through", description: "Let the clubhead pass your hands through impact. Free speed, not a steered hit." },
+    { name: "Commit to Speed", description: "Pick your number and swing to carry it — no flinching or holding back mid-swing." },
+  ],
+  "shot-shaping": [
+    { name: "See It First", description: "Picture the full curve before you swing, then shape the shot you just saw." },
+    { name: "Start-Line First", description: "The start line matters more than the curve. Pick it, hit it, let the shape happen." },
+    { name: "Face Awareness", description: "Feel where the face points at impact — that's what sets your start line." },
+    { name: "Commit to the Curve", description: "Once you pick draw or fade, fully commit. Half-shaped shots leak into trouble." },
+    { name: "Match a Height", description: "Pair every shape with a trajectory — low draw, high fade. Shape and flight together." },
+    { name: "Both Ways Ready", description: "Remind yourself you can move it either direction, then pick the shape the hole asks for." },
+  ],
+};
+
+// ─── Challenge library ────────────────────────────────────────────────────────
+// Scored, pressure blocks. Targets tighten as the player's style climbs.
+// The 4-tuple is [foundation, development, performance, elite].
+
+const STYLE_INDEX: Record<PracticeStyle, 0 | 1 | 2 | 3> = {
+  foundation: 0, development: 1, performance: 2, elite: 3,
+};
+function pick<T>(style: PracticeStyle, vals: readonly [T, T, T, T]): T {
+  return vals[STYLE_INDEX[style]];
+}
+
+export const CHALLENGE_BY_GOAL: Record<Goal, ScoredTemplate[]> = {
+  accuracy: [
+    { name: "Fairway Finder", describe: s => `Set two markers ${pick(s, [30, 24, 18, 12])} yards apart as your fairway. Land ${pick(s, [5, 6, 7, 8])} of 10 inside them.` },
+    { name: "Target Window", describe: s => `Pick a ${pick(s, [25, 20, 15, 10])}-yard-wide window. Score a point for each shot that finishes inside — beat ${pick(s, [5, 6, 7, 8])}/10.` },
+    { name: "Three in a Row", describe: s => `Hit ${pick(s, [2, 3, 3, 4])} shots in a row inside your window. Miss one and the count resets to zero.` },
+    { name: "Edge to Edge", describe: s => `Alternate aiming at the left and right edge of your target zone. Start ${pick(s, [5, 6, 7, 8])} of 10 on the called side.` },
+  ],
+  consistency: [
+    { name: "Flush Count", describe: s => `Hit 10 shots and count the flush, center-face strikes. Beat ${pick(s, [4, 5, 6, 7])}/10.` },
+    { name: "Carbon Copy", describe: s => `Repeat one ball flight exactly. Count your longest streak of matching shots — beat ${pick(s, [3, 4, 5, 6])} in a row.` },
+    { name: "No Two Alike Penalty", describe: s => `Same strike, same flight, every ball. Score ${pick(s, [6, 7, 8, 9])} of 10 that you'd call identical.` },
+    { name: "Up-to-Speed Ladder", describe: s => `Sets of smooth-stock-committed. Every committed swing must still hold its line — clear ${pick(s, [2, 3, 4, 5])} clean sets.` },
+  ],
+  distance: [
+    { name: "Carry Window", describe: s => `Pick your stock number. Land ${pick(s, [5, 6, 7, 8])} of 10 within ${pick(s, [12, 9, 6, 4])} yards of it.` },
+    { name: "Long & In Play", describe: s => `Max carry that still finishes in a ${pick(s, [40, 32, 24, 16])}-yard window. Score ${pick(s, [5, 6, 7, 8])} of 10.` },
+    { name: "Number Caller", describe: s => `Call a carry number before each ball and try to match it. Get ${pick(s, [4, 5, 6, 7])} of 10 within a flag's length.` },
+    { name: "Speed Stretch", describe: s => `Carry one club-length past your stock distance while keeping it in play — ${pick(s, [4, 5, 6, 7])} of 10.` },
+  ],
+  "shot-shaping": [
+    { name: "Shape on Call", describe: s => `Call draw or fade on each ball. Count how many of 10 curve the right way — beat ${pick(s, [5, 6, 7, 8])}.` },
+    { name: "Start-Line Gate", describe: s => `Start ${pick(s, [5, 6, 7, 8])} of 10 on your chosen line, then let the ball curve back to target.` },
+    { name: "Both Ways", describe: s => `Alternate a draw and a fade to the same target. Score ${pick(s, [3, 4, 5, 6])} pairs where both work.` },
+    { name: "Escape Artist", describe: s => `Imagine a tree on your line. Start the ball around it and curve back — ${pick(s, [4, 5, 6, 7])} of 10 finish near target.` },
+  ],
+};
+
+// ─── Transfer library ─────────────────────────────────────────────────────────
+// "Practice like you play." Shared across goals; pressure scales with style.
+
+export const TRANSFER_TEMPLATES: TransferTemplate[] = [
+  {
+    name: "Practice Like You Play",
+    describe: s => pick(s, [
+      "Run your full routine on every ball and say your club and target out loud before each shot.",
+      "Change clubs every ball, commit to a real target, and judge the result like it counts.",
+      "Play imaginary holes — tee shot, then approach — and grade each shot good or bad.",
+      "Play 9 holes in your head. A poor shot means you replay that hole before moving on.",
+    ]),
+  },
+  {
+    name: "Random Club Switch",
+    describe: s => pick(s, [
+      "Never hit the same club twice in a row. Pick a target that fits each one.",
+      "Switch clubs every ball and change your target to match the club.",
+      "Random club, random target, full routine — like you never get two of the same shot on the course.",
+      "Random club and target each ball; one bad strike means you owe yourself two good ones.",
+    ]),
+  },
+  {
+    name: "One-Ball Routine",
+    describe: s => pick(s, [
+      "One ball, full routine, no rehearsal swing. Make the first one count.",
+      "Single ball per target with your complete routine — no do-overs.",
+      "First-ball-only: one shot per target, score yourself on the result you'd accept on the course.",
+      "One ball per target under self-imposed pressure: name the shot, hit it, live with it.",
+    ]),
+  },
+  {
+    name: "Par-18 Game",
+    describe: s => pick(s, [
+      "Pick a target and try to 'hit the green' — a generous zone. Score yourself across 9 targets.",
+      "Nine targets, one ball each, a fair-sized green. Count how many you find.",
+      "Nine 'greens' of realistic size. Track greens hit out of 9 and try to beat it next time.",
+      "Nine tight targets, one ball each. This is your scoring round — log the number and chase it.",
+    ]),
+  },
+  {
+    name: "Worst-Ball",
+    describe: s => pick(s, [
+      "Hit two balls to a target and play the worse one again until you put a good one down.",
+      "Two balls per target; replay the worse shot. Move on after one you're happy with.",
+      "Worst-ball to each target — you only advance after the bad shot becomes a good one.",
+      "Worst-ball, and you need two acceptable shots in a row before moving to the next target.",
+    ]),
+  },
+];
+
+// ─── Test library ─────────────────────────────────────────────────────────────
+// The closing block. Always ends the session with one measurable number.
+
+export const TEST_BY_GOAL: Record<Goal, ScoredTemplate[]> = {
+  accuracy: [
+    { name: "Fairway Finder Test", describe: s => `Final test: a ${pick(s, [28, 22, 16, 10])}-yard fairway. Count how many of 10 you keep in play — beat ${pick(s, [5, 6, 7, 8])}.` },
+  ],
+  consistency: [
+    { name: "Strike Test", describe: s => `Final test: 10 stock shots. Count the flush, centered strikes — beat ${pick(s, [4, 5, 6, 7])}.` },
+  ],
+  distance: [
+    { name: "Carry Test", describe: s => `Final test: how many of 10 carry within ${pick(s, [12, 9, 6, 4])} yards of your number? Beat ${pick(s, [5, 6, 7, 8])}.` },
+  ],
+  "shot-shaping": [
+    { name: "Shape Test", describe: s => `Final test: call your shape on each ball. Count how many of 10 curve as called — beat ${pick(s, [5, 6, 7, 8])}.` },
+  ],
+};
+
 // ─── Warm-up library ──────────────────────────────────────────────────────────
 
 interface WarmUpItem {
@@ -386,7 +649,11 @@ export interface GenerateInput {
   clubGroups: ClubGroup[];
   bucket: BucketSize;
   time: TimeAvailable;
-  goal: Goal;
+  goal: Goal;             // primary goal (kept for back-compat)
+  goals?: Goal[];         // 1–2 goals; falls back to [goal] when absent
+  handicap?: number;      // drives practice style
+  level?: PlayerLevel;    // style fallback when no handicap is set
+  style?: PracticeStyle;  // explicit override (skips derivation)
   customBalls?: number;   // overrides bucket ball count when set
   customMinutes?: number; // overrides time when set
 }
@@ -440,68 +707,172 @@ function clubToGroup(club: string): ClubGroup | null {
   return null;
 }
 
-// Balls recommended per drill in unlimited mode, based on drill complexity.
-const UNLIMITED_BALLS_PER_DRILL = 15;
+// Suggested rep counts per content type when the bucket is "unlimited".
+const UNLIMITED_COUNTS: Record<ContentType, number> = {
+  warmup: 10, drill: 15, focus: 20, transfer: 20, challenge: 10, test: 10,
+};
 
+// Convert a phase's ball budget into a sensible number of blocks.
+function ballsToBlocks(balls: number, target: number, max: number): number {
+  if (balls <= 0) return 0;
+  return Math.min(max, Math.max(1, Math.round(balls / target)));
+}
+
+// Pick `n` clubs spread evenly across a short-to-long ordered list so a session
+// touches a representative range of the bag rather than clustering.
+function pickSpread(clubs: string[], n: number): string[] {
+  if (n <= 0 || clubs.length === 0) return [];
+  if (n >= clubs.length) return Array.from({ length: n }, (_, i) => clubs[i % clubs.length]);
+  return Array.from({ length: n }, (_, i) =>
+    clubs[Math.round((i * (clubs.length - 1)) / (n - 1 || 1))],
+  );
+}
+
+/**
+ * Build a phase-based practice session. The shape (Skill → Transfer → Challenge
+ * → Test) is constant; the player's practice style dials each phase's size, the
+ * drill-vs-focus mix, and target difficulty. Drills never dominate — even
+ * Foundation tops out around a third of the session.
+ */
 export function generateSession(input: GenerateInput): SessionDrill[] {
-  const isUnlimited = input.bucket === "unlimited";
-  const totalBalls   = isUnlimited
-    ? 0
-    : (input.customBalls ?? BUCKET_SIZES.find((b) => b.value === input.bucket)!.balls);
+  const goals = (input.goals && input.goals.length ? input.goals : [input.goal]).slice(0, 2);
+  const style = input.style ?? deriveStyle(input.handicap, input.level);
+  const profile = STYLE_PROFILES[style];
 
   const clubs = resolveClubs(input.clubGroups);
   if (clubs.length === 0) return [];
 
-  const minutes      = input.customMinutes ?? input.time;
-  const drillsPerClub = minutes <= 15 ? 1 : minutes <= 45 ? 2 : 3;
+  const isUnlimited = input.bucket === "unlimited";
+  const T = isUnlimited
+    ? 0
+    : (input.customBalls ?? BUCKET_SIZES.find((b) => b.value === input.bucket)!.balls);
 
-  // Shuffle the pool so each session feels fresh, then cycle through it
-  const pool = shuffle(DRILLS_BY_GOAL[input.goal]);
+  // Pre-shuffle each library per goal so repeats are spread out and sessions feel fresh.
+  const drillPools = new Map<Goal, DrillTemplate[]>();
+  const focusPools = new Map<Goal, FocusTemplate[]>();
+  const challengePools = new Map<Goal, ScoredTemplate[]>();
+  for (const g of goals) {
+    drillPools.set(g, shuffle(DRILLS_BY_GOAL[g]));
+    focusPools.set(g, shuffle(FOCUS_BY_GOAL[g]));
+    challengePools.set(g, shuffle(CHALLENGE_BY_GOAL[g]));
+  }
+  const transferPool = shuffle(TRANSFER_TEMPLATES);
 
-  // Build (club, drill) pairs — clubs already in short-to-long order
-  const items: Array<{ club: string; drill: DrillTemplate; idx: number }> = [];
-  clubs.forEach((club, ci) => {
-    for (let di = 0; di < drillsPerClub; di++) {
-      items.push({ club, drill: pool[(ci * drillsPerClub + di) % pool.length], idx: di });
+  // ── Phase ball budgets ──────────────────────────────────────────────────────
+  let skillBalls = 0, transferBalls = 0, challengeBalls = 0, testBalls = 0;
+  if (!isUnlimited) {
+    skillBalls     = Math.round(T * profile.phases.skill);
+    transferBalls  = Math.round(T * profile.phases.transfer);
+    challengeBalls = Math.round(T * profile.phases.challenge);
+    // Fold away phases too small to be worth a block; the Test phase absorbs them.
+    if (skillBalls < 5)     skillBalls = 0;
+    if (transferBalls < 5)  transferBalls = 0;
+    if (challengeBalls < 5) challengeBalls = 0;
+    testBalls = Math.max(0, T - skillBalls - transferBalls - challengeBalls);
+  }
+
+  const drillBalls = Math.round(skillBalls * profile.drillShareOfSkill);
+  const focusBalls = skillBalls - drillBalls;
+
+  // ── How many blocks per phase ───────────────────────────────────────────────
+  let drillN: number, focusN: number, transferN: number, challengeN: number, testN: number;
+  if (isUnlimited) {
+    drillN     = profile.drillShareOfSkill >= 0.5 ? 2 : 1;
+    focusN     = 1;
+    transferN  = 1;
+    challengeN = style === "performance" || style === "elite" ? 2 : 1;
+    testN      = 1;
+  } else {
+    drillN     = ballsToBlocks(drillBalls, 12, 3);
+    focusN     = ballsToBlocks(focusBalls, 14, 2);
+    transferN  = ballsToBlocks(transferBalls, 16, 2);
+    challengeN = ballsToBlocks(challengeBalls, 10, 2);
+    testN      = testBalls > 0 ? 1 : 0;
+  }
+
+  // ── Ordered block plan: interleave Skill drills & focus, then the back half ──
+  type Plan = { type: ContentType; phase: SessionPhase };
+  const plan: Plan[] = [];
+  for (let i = 0; i < Math.max(drillN, focusN); i++) {
+    if (i < drillN) plan.push({ type: "drill", phase: "Skill" });
+    if (i < focusN) plan.push({ type: "focus", phase: "Skill" });
+  }
+  for (let i = 0; i < transferN; i++)  plan.push({ type: "transfer",  phase: "Transfer" });
+  for (let i = 0; i < challengeN; i++) plan.push({ type: "challenge", phase: "Challenge" });
+  for (let i = 0; i < testN; i++)      plan.push({ type: "test",      phase: "Test" });
+  if (plan.length === 0) return [];
+
+  // ── Ball counts within each phase (sum stays exact in bucket mode) ──────────
+  const counts = (n: number, balls: number): number[] =>
+    n > 0 ? (isUnlimited ? Array(n).fill(0) : allocateExact(balls, Array(n).fill(1), 5)) : [];
+  const drillCounts     = counts(drillN, drillBalls);
+  const focusCounts     = counts(focusN, focusBalls);
+  const transferCounts  = counts(transferN, transferBalls);
+  const challengeCounts = counts(challengeN, challengeBalls);
+  const testCounts      = counts(testN, testBalls);
+
+  // Clubs for the Skill phase only, spread short-to-long.
+  const skillClubs = pickSpread(clubs, drillN + focusN);
+
+  // ── Assemble ────────────────────────────────────────────────────────────────
+  const used = new Map<string, number>(); // "goal|type" → how many drawn so far
+  const draw = (goal: Goal, type: ContentType): number => {
+    const key = `${goal}|${type}`;
+    const k = used.get(key) ?? 0;
+    used.set(key, k + 1);
+    return k;
+  };
+  const ballsFor = (type: ContentType, perPhase: number[], idx: number): number =>
+    isUnlimited ? UNLIMITED_COUNTS[type] : (perPhase[idx] ?? 0);
+
+  let di = 0, fi = 0, ti = 0, ci = 0, sci = 0;
+  const result: SessionDrill[] = [];
+
+  plan.forEach((p, idx) => {
+    const goal = goals[idx % goals.length]; // 50/50 interleave across two goals
+    const id = `${p.type}-${idx}`;
+
+    if (p.type === "drill") {
+      const pool = drillPools.get(goal)!;
+      const drill = pool[draw(goal, "drill") % pool.length];
+      const club = skillClubs[sci++] ?? clubs[0];
+      const group = clubToGroup(club);
+      const description = (group && drill.clubDescriptions?.[group]) ?? drill.description;
+      result.push({ id: `${id}-${drill.name}`, club, drillName: drill.name, description,
+        balls: ballsFor("drill", drillCounts, di++), unit: "balls", isTarget: isUnlimited,
+        type: "drill", phase: "Skill" });
+
+    } else if (p.type === "focus") {
+      const pool = focusPools.get(goal)!;
+      const f = pool[draw(goal, "focus") % pool.length];
+      const club = skillClubs[sci++] ?? clubs[0];
+      result.push({ id: `${id}-${f.name}`, club, drillName: `Focus · ${f.name}`, description: f.description,
+        balls: ballsFor("focus", focusCounts, fi++), unit: "balls", isTarget: isUnlimited,
+        type: "focus", phase: "Skill" });
+
+    } else if (p.type === "transfer") {
+      const t = transferPool[ti % transferPool.length];
+      result.push({ id: `${id}-${t.name}`, club: "Transfer", drillName: t.name, description: t.describe(style),
+        balls: ballsFor("transfer", transferCounts, ti++), unit: "balls", isTarget: isUnlimited,
+        type: "transfer", phase: "Transfer" });
+
+    } else if (p.type === "challenge") {
+      const pool = challengePools.get(goal)!;
+      const c = pool[draw(goal, "challenge") % pool.length];
+      result.push({ id: `${id}-${c.name}`, club: "Challenge", drillName: c.name, description: c.describe(style),
+        balls: ballsFor("challenge", challengeCounts, ci++), unit: "balls", isTarget: isUnlimited,
+        type: "challenge", phase: "Challenge" });
+
+    } else {
+      const pool = TEST_BY_GOAL[goal];
+      const t = pool[draw(goal, "test") % pool.length];
+      result.push({ id: `${id}-${t.name}`, club: "Performance Test", drillName: t.name, description: t.describe(style),
+        balls: ballsFor("test", testCounts, 0), unit: "balls", isTarget: isUnlimited,
+        type: "test", phase: "Test" });
     }
   });
 
-  if (isUnlimited) {
-    // Unlimited: assign a fixed target rep count per drill
-    return items.map((item) => {
-      const group = clubToGroup(item.club);
-      const description =
-        (group && item.drill.clubDescriptions?.[group]) ?? item.drill.description;
-      return {
-        id:          `${item.club}-${item.idx}-${item.drill.name}`,
-        club:        item.club,
-        drillName:   item.drill.name,
-        description,
-        balls:       UNLIMITED_BALLS_PER_DRILL,
-        unit:        "balls",
-        isTarget:    true,
-      };
-    });
-  }
-
-  // Bucket mode: allocate balls proportionally, sum must equal totalBalls exactly
-  const weights   = items.map((it) => it.drill.weight);
-  const ballCounts = allocateExact(totalBalls, weights, 3);
-
-  return items.map((item, i) => {
-    const group = clubToGroup(item.club);
-    const description =
-      (group && item.drill.clubDescriptions?.[group]) ?? item.drill.description;
-    return {
-      id:        `${item.club}-${item.idx}-${item.drill.name}`,
-      club:      item.club,
-      drillName: item.drill.name,
-      description,
-      balls:     ballCounts[i],
-      unit:      "balls",
-      isTarget:  false,
-    };
-  });
+  return result;
 }
 
 // Distribute `total` integers across `weights.length` slots proportionally.
