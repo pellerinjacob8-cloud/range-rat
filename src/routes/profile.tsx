@@ -482,9 +482,9 @@ function ProfilePage() {
 
         {/* ── Log Round Sheet ── */}
         {logOpen && (
-          <div className="fixed inset-0 z-50 flex items-end" onClick={() => setLogOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setLogOpen(false)}>
             <div className="absolute inset-0 bg-black/[0.44]" />
-            <div className="relative w-full rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-[430px] rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
               {/* handle pill */}
               <div className="flex justify-center mb-[14px]">
                 <div className="h-1 w-[34px] rounded-full bg-border" />
@@ -1708,9 +1708,9 @@ function StatDetailSheet({ statKey, history, onClose }: {
     : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/[0.44]" />
-      <div className="relative w-full rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-[430px] rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
         <div className="flex justify-center mb-[14px]">
           <div className="h-1 w-[34px] rounded-full bg-border" />
         </div>
@@ -1743,10 +1743,10 @@ function StatDetailSheet({ statKey, history, onClose }: {
           ))}
         </div>
 
-        {/* Chart with actual values on each point */}
+        {/* Chart with actual values on each point — same style as the handicap trend chart */}
         {points.length > 1 ? (
-          <div className="rounded-[16px] border border-border bg-card p-[14px_10px_10px]">
-            <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block" }}>
+          <>
+            <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", overflow: "visible" }}>
               <defs>
                 <linearGradient id="stat-grad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" />
@@ -1769,14 +1769,14 @@ function StatDetailSheet({ statKey, history, onClose }: {
                 </g>
               ))}
             </svg>
-            <div className="flex justify-between mt-1 px-1">
+            <div className="flex justify-between mt-1.5">
               {points.map((p, i) => (
-                <span key={i} className="text-[9px] font-semibold text-muted-foreground" style={{ letterSpacing: ".04em" }}>
+                <span key={i} className="text-[9.5px] font-semibold text-muted-foreground" style={{ letterSpacing: ".04em" }}>
                   {new Date(p.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </span>
               ))}
             </div>
-          </div>
+          </>
         ) : (
           <p className="text-[12px] text-muted-foreground text-center py-6">
             Log at least two rounds with {cfg.label.toLowerCase()} to see your trend.
