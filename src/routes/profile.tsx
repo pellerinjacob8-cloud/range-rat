@@ -484,12 +484,12 @@ function ProfilePage() {
         {logOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setLogOpen(false)}>
             <div className="absolute inset-0 bg-black/[0.44]" />
-            <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-start justify-between mb-[18px]">
                 <div>
                   <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
                   <p className="text-[12px] text-muted-foreground mt-1">
-                    {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · from GHIN
+                    {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
                 </div>
                 <button type="button" onClick={() => setLogOpen(false)} aria-label="Close" className="text-muted-foreground mt-0.5">
@@ -506,7 +506,7 @@ function ProfilePage() {
                     value={roundInputs.handicap}
                     onChange={e => setRoundInputs(p => ({ ...p, handicap: e.target.value }))}
                     placeholder="22.8"
-                    className="flex-1 bg-transparent outline-none font-stats text-[40px] font-bold leading-none text-primary placeholder:text-muted-foreground/30"
+                    className="flex-1 min-w-0 bg-transparent outline-none font-stats text-[40px] font-bold leading-none text-primary placeholder:text-muted-foreground/30"
                   />
                   <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground mt-1">HDX</span>
                 </div>
@@ -528,7 +528,7 @@ function ProfilePage() {
                         value={roundInputs[key]}
                         onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
                         placeholder={placeholder}
-                        className="w-full bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
+                        className="w-full min-w-0 bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
                       />
                     </div>
                   </div>
@@ -1705,7 +1705,7 @@ function StatDetailSheet({ statKey, history, onClose }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/[0.44]" />
-      <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-[18px]">
           <div>
             <h2 className="font-display text-[26px] leading-none">{cfg.label}</h2>
