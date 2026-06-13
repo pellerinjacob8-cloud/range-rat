@@ -908,5 +908,7 @@ export function buildWarmUp(preset: WarmUpPreset): SessionDrill[] {
     balls:    item.count,
     unit:     item.unit,
     isTarget: false,
+    type:     "warmup",
+    phase:    "Warm Up",
   }));
 }

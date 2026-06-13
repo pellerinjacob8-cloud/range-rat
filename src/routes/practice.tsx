@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
 import { GuidedSessionView } from "@/components/GuidedSessionView";
-import { Bookmark, BookmarkCheck, CheckCircle2, Flame, Plus, RotateCcw, Star, Trash2, Trophy, X, Zap } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Flame, Plus, RotateCcw, Sparkles, Star, Target, Trash2, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { SegmentedControl } from "@/components/SegmentedControl";
@@ -28,20 +28,40 @@ import {
   BUCKET_SIZES,
   FULL_BAG_GROUP,
   GOALS,
+  PLAYER_LEVELS,
+  STYLE_PROFILES,
   TIMES,
   WARM_UP_PRESETS,
   buildWarmUp,
+  deriveStyle,
   generateSession,
+  recommendGoal,
   type BucketSize,
   type ClubGroup,
   type GenerateInput,
   type Goal,
+  type PlayerLevel,
   type SessionDrill,
+  type SessionPhase,
   type TimeAvailable,
   type WarmUpPreset,
 } from "@/lib/drills";
+import { fetchProfile, fetchHandicapHistory } from "@/lib/db";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
+
+// Golf convention: a handicap better than scratch reads "+2.1", not "-2.1".
+const fmtHandicap = (h: number) => (h < 0 ? `+${Math.abs(h)}` : String(h));
+
+// Per-phase presentation for the session checklist.
+const PHASE_META: Record<SessionPhase, { icon: typeof Flame; blurb: string }> = {
+  "Warm Up":   { icon: Flame,    blurb: "Loosen up — no scoring." },
+  "Skill":     { icon: Target,   blurb: "Drills and focus blocks." },
+  "Transfer":  { icon: RotateCcw, blurb: "Practice like you play." },
+  "Challenge": { icon: Zap,      blurb: "Add some pressure." },
+  "Test":      { icon: Trophy,   blurb: "End with a score." },
+};
+const PHASE_ORDER: SessionPhase[] = ["Warm Up", "Skill", "Transfer", "Challenge", "Test"];
 
 export const Route = createFileRoute("/practice")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -136,13 +156,38 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
 
 function PracticePage() {
   const { upgraded } = Route.useSearch();
+  const { isPro } = useAuth();
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
+  const [proOpen, setProOpen] = useState(false);
   const [warmUp, setWarmUp] = useState<WarmUpPreset | null>(null);
   const [clubGroups, setClubGroups] = useState<ClubGroup[]>([]);
   const [bucket, setBucket] = useState<BucketSize | null>(null);
   const [time, setTime] = useState<TimeAvailable | null>(null);
-  const [goal, setGoal] = useState<Goal | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+
+  // Practice style inputs: handicap drives it; level is the fallback when none.
+  const [handicap, setHandicap] = useState<number | undefined>(undefined);
+  const [level, setLevel] = useState<PlayerLevel | null>(() => {
+    try { return (localStorage.getItem("rangeRat_level") as PlayerLevel) || null; } catch { return null; }
+  });
+  const [latestStats, setLatestStats] = useState<{ gir?: number; fairways?: number; putts?: number; upAndDowns?: number } | undefined>(undefined);
+
+  const style = useMemo(() => deriveStyle(handicap, level ?? undefined), [handicap, level]);
+  const recommendation = useMemo(() => recommendGoal(latestStats), [latestStats]);
+
+  const chooseLevel = (l: PlayerLevel) => {
+    setLevel(l);
+    try { localStorage.setItem("rangeRat_level", l); } catch {}
+  };
+
+  useEffect(() => {
+    fetchProfile().then((p) => { if (p?.handicap !== undefined) setHandicap(p.handicap); });
+    fetchHandicapHistory().then((h) => {
+      const latest = h[h.length - 1];
+      if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
+    });
+  }, []);
 
   const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);
   const [sessionInput, setSessionInput] = useState<GenerateInput | null>(() => loadActiveSession()?.sessionInput ?? null);
@@ -187,14 +232,14 @@ function PracticePage() {
 
   const hasValidBucket = bucket !== null || (showCustomBucket && customBalls !== null);
   const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
-  const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && goal !== null;
+  const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && goals.length >= 1;
 
   // Tells the user why Generate is still disabled instead of a silent grey button
   const missingSteps = [
     clubGroups.length < 1 && "clubs",
     !hasValidBucket && "bucket size",
     !hasValidTime && "time",
-    goal === null && "a goal",
+    goals.length < 1 && "a goal",
   ].filter(Boolean) as string[];
   const missingHint = missingSteps.length > 0
     ? `Pick ${missingSteps.length === 1 ? missingSteps[0] : `${missingSteps.slice(0, -1).join(", ")} and ${missingSteps[missingSteps.length - 1]}`} to continue`
@@ -206,7 +251,11 @@ function PracticePage() {
       clubGroups,
       bucket: bucket ?? "medium",  // placeholder when custom overrides
       time:   time   ?? 30,        // placeholder when custom overrides
-      goal: goal!,
+      goal: goals[0],
+      goals,
+      handicap,
+      level: level ?? undefined,
+      style,
       ...(showCustomBucket && customBalls !== null ? { customBalls }          : {}),
       ...(showCustomTime   && customMins  !== null ? { customMinutes: customMins } : {}),
     };
@@ -440,6 +489,74 @@ function PracticePage() {
           </p>
         </div>
 
+        {/* Today's plan — practice style, level, and Pro recommendation */}
+        <div className="rounded-[20px] border border-border bg-card p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Practice style</p>
+              <p className="mt-1 font-display text-[24px] leading-none">{STYLE_PROFILES[style].label}</p>
+              <p className="mt-1.5 text-[13px] text-muted-foreground">{STYLE_PROFILES[style].blurb}</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground/80">
+                {handicap !== undefined
+                  ? `Based on your ${fmtHandicap(handicap)} handicap`
+                  : level
+                  ? "Based on your selected level"
+                  : "Pick your level to personalize your plan"}
+              </p>
+            </div>
+          </div>
+
+          {/* Level chips — only when no handicap is logged */}
+          {handicap === undefined && (
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {PLAYER_LEVELS.map((l) => (
+                <button
+                  key={l.value}
+                  type="button"
+                  onClick={() => chooseLevel(l.value)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                    level === l.value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-muted/60 text-foreground active:bg-muted",
+                  )}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Pro recommendation from logged stats */}
+          {recommendation && (
+            isPro ? (
+              <button
+                type="button"
+                onClick={() => setGoals([recommendation.goal])}
+                className="w-full flex items-center gap-2.5 rounded-[14px] border border-gold-border bg-gold-bg p-3 text-left active:opacity-90 transition-opacity"
+              >
+                <Sparkles className="h-4 w-4 text-gold shrink-0" />
+                <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-foreground">
+                  <span className="font-bold">Recommended: {GOALS.find((g) => g.value === recommendation.goal)?.label}</span>
+                  {" "}— {recommendation.reason}. Tap to focus here.
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setProOpen(true)}
+                className="w-full flex items-center gap-2.5 rounded-[14px] border border-border bg-muted/60 p-3 text-left active:bg-muted transition-colors"
+              >
+                <Zap className="h-4 w-4 text-gold shrink-0" />
+                <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-muted-foreground">
+                  <span className="font-bold text-foreground">Pro:</span> a personalized focus picked from your round stats.
+                </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            )
+          )}
+        </div>
+
         {/* Warm Up */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -662,7 +779,18 @@ function PracticePage() {
             )}
           </div>
         </div>
-        <SegmentedControl label="Goal" options={GOALS} value={goal} onChange={setGoal} />
+        <SegmentedControl
+          label="Goal · Pick 1–2"
+          multiple
+          options={GOALS}
+          value={goals}
+          onChange={(next) => setGoals(next.slice(-2))}
+          helper={
+            goals.length === 2
+              ? "Two goals — your session alternates between them."
+              : "Pick one focus, or add a second to blend."
+          }
+        />
 
         </div>
         )}
@@ -687,6 +815,12 @@ function PracticePage() {
           </div>
         </div>
       )}
+
+      <ProModal
+        open={proOpen}
+        onClose={() => setProOpen(false)}
+        reason="Pro reads your logged round stats and recommends what to practice — plus trends, history, and more."
+      />
     </AppShell>
   );
 }
@@ -706,14 +840,17 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
   const allDone = completedCount === session.length && session.length > 0;
 
-  const byClub = useMemo(() => {
-    const map = new Map<string, SessionDrill[]>();
+  // Group by session phase (Warm Up → Skill → Transfer → Challenge → Test).
+  // Falls back to the block's club for any legacy session without a phase.
+  const byPhase = useMemo(() => {
+    const map = new Map<SessionPhase, SessionDrill[]>();
     session.forEach((d) => {
-      const arr = map.get(d.club) ?? [];
+      const phase: SessionPhase = d.phase ?? (d.club === "Warm Up" ? "Warm Up" : "Skill");
+      const arr = map.get(phase) ?? [];
       arr.push(d);
-      map.set(d.club, arr);
+      map.set(phase, arr);
     });
-    return Array.from(map.entries());
+    return PHASE_ORDER.filter((p) => map.has(p)).map((p) => [p, map.get(p)!] as const);
   }, [session]);
 
   return (
@@ -738,22 +875,26 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
         </div>
 
         <div className="mt-6 space-y-6">
-          {byClub.map(([club, drills]) => {
-            const isWarmUp = club === "Warm Up";
+          {byPhase.map(([phase, drills]) => {
+            const meta = PHASE_META[phase];
+            const PhaseIcon = meta.icon;
+            const isWarmUp = phase === "Warm Up";
+            // A block's club is only meaningful in Skill/Warm Up; the back-half
+            // phases use pseudo-clubs ("Transfer", "Challenge", "Performance Test").
+            const showClub = (d: SessionDrill) =>
+              !!d.club && !["Transfer", "Challenge", "Performance Test", "Warm Up"].includes(d.club);
             return (
-              <section key={club}>
-                <h2
-                  className={cn(
-                    "font-ui text-[14px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 pb-2 border-b border-border",
-                    isWarmUp && "text-primary",
-                  )}
-                >
-                  {isWarmUp ? <Flame className="h-4 w-4" /> : null}
-                  {club}
+              <section key={phase}>
+                <div className="flex items-center gap-2 pb-2 border-b border-border">
+                  <PhaseIcon className={cn("h-4 w-4", isWarmUp ? "text-primary" : "text-muted-foreground")} />
+                  <h2 className={cn("font-ui text-[14px] font-bold uppercase tracking-[0.2em]", isWarmUp && "text-primary")}>
+                    {phase}
+                  </h2>
                   <span className="ml-auto font-stats text-[18px] text-muted-foreground tabular-nums">
                     {drills.filter(d => done.has(d.id)).length}/{drills.length}
                   </span>
-                </h2>
+                </div>
+                <p className="mt-1.5 text-[12px] text-muted-foreground">{meta.blurb}</p>
                 <ul className="mt-3 space-y-2">
                   {drills.map((d) => {
                     const isDone = done.has(d.id);
@@ -789,9 +930,14 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
                             </span>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <p className={cn("font-semibold", isDone && "line-through text-muted-foreground")}>
-                                  {d.drillName}
-                                </p>
+                                <div className="min-w-0">
+                                  {showClub(d) && (
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">{d.club}</p>
+                                  )}
+                                  <p className={cn("font-semibold", isDone && "line-through text-muted-foreground")}>
+                                    {d.drillName}
+                                  </p>
+                                </div>
                                 <span className={cn("font-stats text-[22px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-foreground")}>
                                   {d.balls > 0 ? d.balls : d.unit ?? "—"}
                                   {d.balls > 0 && (
