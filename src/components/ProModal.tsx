@@ -40,7 +40,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 pb-8"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-[430px] rounded-[28px] bg-background p-6 shadow-2xl">

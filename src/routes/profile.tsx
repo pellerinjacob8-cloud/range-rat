@@ -482,14 +482,9 @@ function ProfilePage() {
 
         {/* ── Log Round Sheet ── */}
         {logOpen && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setLogOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setLogOpen(false)}>
             <div className="absolute inset-0 bg-black/[0.44]" />
-            <div className="relative w-full max-w-[430px] rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
-              {/* handle pill */}
-              <div className="flex justify-center mb-[14px]">
-                <div className="h-1 w-[34px] rounded-full bg-border" />
-              </div>
-
+            <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-start justify-between mb-[18px]">
                 <div>
                   <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
@@ -1708,13 +1703,9 @@ function StatDetailSheet({ statKey, history, onClose }: {
     : "";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/[0.44]" />
-      <div className="relative w-full max-w-[430px] rounded-t-[24px] bg-background p-[10px_20px_30px]" style={{ boxShadow: "0 -14px 56px rgba(0,0,0,.22)" }} onClick={e => e.stopPropagation()}>
-        <div className="flex justify-center mb-[14px]">
-          <div className="h-1 w-[34px] rounded-full bg-border" />
-        </div>
-
+      <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-[18px]">
           <div>
             <h2 className="font-display text-[26px] leading-none">{cfg.label}</h2>
