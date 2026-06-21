@@ -1,4 +1,5 @@
 import { loadStripe } from "@stripe/stripe-js";
+import { supabase } from "./supabase";
 
 export const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY!
@@ -9,17 +10,21 @@ export const PRICES = {
   yearly: import.meta.env.VITE_STRIPE_YEARLY_PRICE_ID,
 };
 
-export async function startCheckout(
-  priceId: string,
-  userId: string,
-  userEmail: string
-) {
+export async function startCheckout(priceId: string) {
   if (!priceId) throw new Error("Price not configured. Contact support.");
+
+  // The server derives the user from this token — we never send a raw userId.
+  const { data: { session } } = await supabase.auth.getSession();
+  const accessToken = session?.access_token;
+  if (!accessToken) throw new Error("Please sign in again to upgrade.");
 
   const res = await fetch("/api/create-checkout-session", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ priceId, userId, userEmail }),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ priceId }),
   });
 
   const text = await res.text();

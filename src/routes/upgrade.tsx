@@ -31,11 +31,7 @@ function UpgradePage() {
     setLoading(true);
     setError(null);
     try {
-      await startCheckout(
-        plan === "monthly" ? PRICES.monthly : PRICES.yearly,
-        user.id,
-        user.email ?? ""
-      );
+      await startCheckout(plan === "monthly" ? PRICES.monthly : PRICES.yearly);
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

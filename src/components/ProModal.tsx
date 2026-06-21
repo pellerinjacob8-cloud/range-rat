@@ -31,7 +31,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
     setError(null);
     setLoading(true);
     try {
-      await startCheckout(PRICES.yearly, user.id, user.email ?? "");
+      await startCheckout(PRICES.yearly);
     } catch (err: any) {
       setError(err.message);
       setLoading(false);

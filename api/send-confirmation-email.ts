@@ -1,19 +1,43 @@
-// Resend email client for sending transactional emails
-// Uses Resend API for professional email delivery
+import type { IncomingMessage, ServerResponse } from "http";
 
-const RESEND_API_KEY = import.meta.env.VITE_RESEND_API_KEY;
+// Server-only. NEVER prefix this with VITE_ — that would inline the key into
+// the public browser bundle.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
-export async function sendConfirmationEmail(
-  email: string,
-  confirmationLink: string,
-  userName?: string
-) {
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => { body += chunk.toString(); });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader("Content-Type", "application/json");
+
+  if (req.method !== "POST") {
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: "Method not allowed" }));
+    return;
+  }
+
   if (!RESEND_API_KEY) {
     console.error("RESEND_API_KEY not configured");
-    return { error: "Email service not configured" };
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: "Email service not configured" }));
+    return;
   }
 
   try {
+    const { email, confirmationLink, userName } = JSON.parse((await readBody(req)) || "{}");
+
+    if (!email || !confirmationLink) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Missing email or confirmationLink" }));
+      return;
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -29,15 +53,19 @@ export async function sendConfirmationEmail(
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const error = await response.json().catch(() => ({}));
       console.error("Resend error:", error);
-      return { error: "Failed to send confirmation email" };
+      res.writeHead(502);
+      res.end(JSON.stringify({ error: "Failed to send confirmation email" }));
+      return;
     }
 
-    return { success: true };
+    res.writeHead(200);
+    res.end(JSON.stringify({ success: true }));
   } catch (err: any) {
     console.error("Email send error:", err);
-    return { error: err.message };
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));
   }
 }
 

@@ -134,6 +134,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       break;
     }
 
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as any;
+      const userId = invoice.subscription_details?.metadata?.userId || invoice.metadata?.userId;
+      // Don't revoke Pro here — Stripe retries failed payments during the dunning
+      // window, and customer.subscription.updated flips is_pro off once the
+      // subscription actually lapses (past_due/unpaid/canceled). Log for now;
+      // this is the place to send a "payment failed, update your card" email.
+      console.warn(`[Webhook] invoice.payment_failed for user ${userId ?? "unknown"}`);
+      break;
+    }
+
     default:
       console.log(`[Webhook] Unhandled event type: ${event.type}`);
   }
