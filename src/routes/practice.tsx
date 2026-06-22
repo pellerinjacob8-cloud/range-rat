@@ -36,6 +36,7 @@ import {
   deriveStyle,
   generateSession,
   recommendGoal,
+  warmUpBallCount,
   type BucketSize,
   type ClubGroup,
   type GenerateInput,
@@ -46,7 +47,8 @@ import {
   type TimeAvailable,
   type WarmUpPreset,
 } from "@/lib/drills";
-import { fetchProfile, fetchHandicapHistory } from "@/lib/db";
+import { fetchProfile, fetchHandicapHistory, fetchBag } from "@/lib/db";
+import type { Club } from "@/lib/db";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
@@ -172,6 +174,7 @@ function PracticePage() {
     try { return (localStorage.getItem("rangeRat_level") as PlayerLevel) || null; } catch { return null; }
   });
   const [latestStats, setLatestStats] = useState<{ gir?: number; fairways?: number; putts?: number; upAndDowns?: number } | undefined>(undefined);
+  const [userBag, setUserBag] = useState<Club[]>([]);
 
   const style = useMemo(() => deriveStyle(handicap, level ?? undefined), [handicap, level]);
   const recommendation = useMemo(() => recommendGoal(latestStats), [latestStats]);
@@ -187,6 +190,7 @@ function PracticePage() {
       const latest = h[h.length - 1];
       if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
     });
+    fetchBag().then(setUserBag);
   }, []);
 
   const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);
@@ -247,6 +251,7 @@ function PracticePage() {
 
   const generate = () => {
     if (!canGenerate) return;
+    const wuBalls = warmUp ? warmUpBallCount(warmUp) : 0;
     const input: GenerateInput = {
       clubGroups,
       bucket: bucket ?? "medium",  // placeholder when custom overrides
@@ -256,6 +261,8 @@ function PracticePage() {
       handicap,
       level: level ?? undefined,
       style,
+      warmUpBalls: wuBalls,
+      bag: userBag.length > 0 ? userBag : undefined,
       ...(showCustomBucket && customBalls !== null ? { customBalls }          : {}),
       ...(showCustomTime   && customMins  !== null ? { customMinutes: customMins } : {}),
     };

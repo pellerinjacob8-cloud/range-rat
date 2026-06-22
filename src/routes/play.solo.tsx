@@ -4,7 +4,9 @@ import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { Check, Flag, RotateCcw, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { generateShot, type Shot } from "@/lib/shots";
+import { generateShot, type Shot, type GenerateShotOptions } from "@/lib/shots";
+import { deriveStyle } from "@/lib/drills";
+import { fetchProfile, fetchBag } from "@/lib/db";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,7 @@ interface Attempt {
 
 function SoloPage() {
   const navigate = useNavigate();
+  const [shotOpts, setShotOpts] = useState<GenerateShotOptions>({});
   const [shot, setShot] = useState<Shot>(() => generateShot());
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [resolved, setResolved] = useState(false);
@@ -45,6 +48,16 @@ function SoloPage() {
   }, []);
 
   useEffect(() => {
+    const opts: GenerateShotOptions = {};
+    Promise.all([fetchProfile(), fetchBag()]).then(([profile, bag]) => {
+      if (bag.length > 0) opts.bag = bag;
+      if (profile?.handicap !== undefined) opts.style = deriveStyle(profile.handicap);
+      setShotOpts(opts);
+      setShot(generateShot(opts));
+    });
+  }, []);
+
+  useEffect(() => {
     saveActiveMarker({
       type: "play-solo",
       route: "/play",
@@ -59,7 +72,7 @@ function SoloPage() {
     setResolved(true);
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     advanceTimer.current = setTimeout(() => {
-      setShot(generateShot());
+      setShot(generateShot(shotOpts));
       setResolved(false);
     }, 700);
   };
@@ -127,7 +140,7 @@ function SoloPage() {
             variant="outline"
             onClick={() => {
               setAttempts([]);
-              setShot(generateShot());
+              setShot(generateShot(shotOpts));
               setResolved(false);
               setSummary(false);
             }}
