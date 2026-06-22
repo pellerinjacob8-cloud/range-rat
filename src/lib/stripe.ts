@@ -43,3 +43,34 @@ export async function startCheckout(priceId: string) {
     throw new Error(data.error || "Failed to start checkout");
   }
 }
+
+export async function openCustomerPortal() {
+  // The server derives the user from this token, we never send a raw userId.
+  const { data: { session } } = await supabase.auth.getSession();
+  const accessToken = session?.access_token;
+  if (!accessToken) throw new Error("Please sign in again to manage your subscription.");
+
+  const res = await fetch("/api/create-portal-session", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const text = await res.text();
+  if (!text) throw new Error("No response from server. Please try again.");
+
+  let data: any;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("Unexpected server error. Please try again.");
+  }
+
+  if (data.url) {
+    window.location.href = data.url;
+  } else {
+    throw new Error(data.error || "Could not open the subscription portal.");
+  }
+}

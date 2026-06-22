@@ -31,6 +31,8 @@ import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as ProWelcomeRouteImport } from './routes/pro-welcome'
 import { Route as CustomSessionRouteImport } from './routes/custom-session'
 import { Route as AuthConfirmRouteImport } from './routes/auth.confirm'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as TermsRouteImport } from './routes/terms'
 
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
@@ -142,6 +144,16 @@ const AuthConfirmRoute = AuthConfirmRouteImport.update({
   path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -165,6 +177,8 @@ export interface FileRoutesByFullPath {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -188,6 +202,8 @@ export interface FileRoutesByTo {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -212,6 +228,8 @@ export interface FileRoutesById {
   '/play/game': typeof PlayGameRoute
   '/play/solo': typeof PlaySoloRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -237,6 +255,8 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
+    | '/privacy'
+    | '/terms'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -260,6 +280,8 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
+    | '/privacy'
+    | '/terms'
   id:
     | '__root__'
     | '/'
@@ -283,6 +305,8 @@ export interface FileRouteTypes {
     | '/play/game'
     | '/play/solo'
     | '/auth/confirm'
+    | '/privacy'
+    | '/terms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -302,6 +326,8 @@ export interface RootRouteChildren {
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
   CustomSessionRoute: typeof CustomSessionRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -460,6 +486,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -507,6 +547,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,
   CustomSessionRoute: CustomSessionRoute,
   AuthConfirmRoute: AuthConfirmRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

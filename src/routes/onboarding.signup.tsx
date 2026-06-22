@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Eye, EyeOff, ChevronLeft, MailCheck, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -306,6 +306,11 @@ function OnboardingSignup() {
             </span>
           ) : "Continue"}
         </button>
+        <p className="mt-3 text-center text-[11.5px] leading-relaxed text-muted-foreground">
+          By creating an account you agree to our{" "}
+          <Link to="/terms" className="text-primary font-semibold">Terms</Link>{" "}and{" "}
+          <Link to="/privacy" className="text-primary font-semibold">Privacy Policy</Link>.
+        </p>
         <div className="mt-3 flex items-center justify-center gap-1 text-[12.5px] text-muted-foreground">
           <span>Already have an account ·</span>
           <button onClick={() => navigate({ to: "/login" })} className="text-primary font-semibold">Sign in</button>

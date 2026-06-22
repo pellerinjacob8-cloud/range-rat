@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, ChevronLeft, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -156,6 +156,11 @@ function UpgradePage() {
 
         <p className="mt-3 text-center text-[12px] text-muted-foreground">
           7 days free, then {plan === "monthly" ? "$4.99/mo" : "$49.99/yr"}. Cancel anytime.
+        </p>
+        <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+          By subscribing you agree to our{" "}
+          <Link to="/terms" className="underline">Terms</Link>{" "}and{" "}
+          <Link to="/privacy" className="underline">Privacy Policy</Link>.
         </p>
       </div>
     </div>
