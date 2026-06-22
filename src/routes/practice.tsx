@@ -178,7 +178,13 @@ function PracticePage() {
   const [categories, setCategories] = useState<PracticeCategory[]>([]);
 
   // Practice style inputs: handicap drives it; level is the fallback when none.
-  const [handicap, setHandicap] = useState<number | undefined>(undefined);
+  // Handicap is cached in localStorage so the style card doesn't flash.
+  const [handicap, setHandicap] = useState<number | undefined>(() => {
+    try {
+      const cached = localStorage.getItem("rangeRat_handicap");
+      return cached !== null ? Number(cached) : undefined;
+    } catch { return undefined; }
+  });
   const [level, setLevel] = useState<PlayerLevel | null>(() => {
     try { return (localStorage.getItem("rangeRat_level") as PlayerLevel) || null; } catch { return null; }
   });
@@ -194,7 +200,12 @@ function PracticePage() {
   };
 
   useEffect(() => {
-    fetchProfile().then((p) => { if (p?.handicap !== undefined) setHandicap(p.handicap); });
+    fetchProfile().then((p) => {
+      if (p?.handicap !== undefined) {
+        setHandicap(p.handicap);
+        try { localStorage.setItem("rangeRat_handicap", String(p.handicap)); } catch {}
+      }
+    });
     fetchHandicapHistory().then((h) => {
       const latest = h[h.length - 1];
       if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
@@ -823,14 +834,7 @@ function PracticePage() {
                       : "border-border bg-card active:bg-muted",
                   )}
                 >
-                  <div className="flex items-center justify-between gap-1">
-                    <p className={cn("text-[13px] font-bold leading-tight", !active && "text-foreground")}>{cat.label}</p>
-                    {cat.env === "green" && (
-                      <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide", active ? "bg-white/20 text-primary-foreground" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400")}>
-                        Green
-                      </span>
-                    )}
-                  </div>
+                  <p className={cn("text-[13px] font-bold leading-tight", !active && "text-foreground")}>{cat.label}</p>
                   <p className={cn("mt-0.5 text-[11px] leading-snug", active ? "text-primary-foreground/70" : "text-muted-foreground")}>{cat.description}</p>
                 </button>
               );

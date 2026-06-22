@@ -15,10 +15,8 @@ export type PracticeCategory =
   | "shot-shaping"
   | "wedges"
   | "driver"
-  | "short-game"
-  | "random"
-  | "course-prep"
-  | "performance-test";
+  | "swing-flow"
+  | "course-prep";
 
 export type ContentType = "warmup" | "drill" | "focus" | "challenge" | "transfer" | "test";
 export type SessionPhase = "Warm Up" | "Skill" | "Transfer" | "Challenge" | "Test";
@@ -152,18 +150,15 @@ export const GOALS: { value: Goal; label: string }[] = [
   { value: "shot-shaping", label: "Shot Shaping" },
 ];
 
-// New 10-category list shown in the builder
 export const CATEGORIES: { value: PracticeCategory; label: string; description: string; env: PracticeEnvironment }[] = [
+  { value: "swing-flow",        label: "Swing Flow",         description: "Work through the bag, find your rhythm",         env: "range" },
   { value: "ball-striking",     label: "Ball Striking",      description: "Contact, strike patterns, consistency",          env: "range" },
   { value: "distance-control",  label: "Distance Control",   description: "Carry numbers, yardage games, ladder drills",    env: "range" },
   { value: "accuracy",          label: "Accuracy",           description: "Target windows, alignment, miss patterns",       env: "range" },
-  { value: "shot-shaping",      label: "Shot Shaping",       description: "Draw, fade, trajectory, 9-shot grid",            env: "range" },
+  { value: "shot-shaping",      label: "Shot Shaping",       description: "Draw, fade, trajectory control",                 env: "range" },
   { value: "wedges",            label: "Wedges",             description: "Scoring zone, partial swings, distance ladders", env: "range" },
   { value: "driver",            label: "Driver",             description: "Speed, fairway finding, tee shot strategy",      env: "range" },
-  { value: "short-game",        label: "Short Game",         description: "Chipping, pitching, greenside touch",            env: "green" },
-  { value: "random",            label: "Random Practice",    description: "No pattern, max variety, simulate the course",   env: "range" },
   { value: "course-prep",       label: "Course Preparation", description: "Simulated holes, pre-round pressure",            env: "range" },
-  { value: "performance-test",  label: "Performance Test",   description: "Standardized scoring, track improvement",        env: "range" },
 ];
 
 export const WARM_UP_PRESETS: { value: WarmUpPreset; label: string; minutes: number }[] = [
@@ -197,10 +192,8 @@ const CATEGORY_ROUTES: Record<PracticeCategory, CategoryRoute> = {
   "shot-shaping":     { goals: ["shot-shaping"] },
   "wedges":           { goals: ["accuracy", "distance"], clubConstraint: ["wedges"] },
   "driver":           { goals: ["accuracy", "distance"], clubConstraint: ["driver"] },
-  "short-game":       { goals: ["consistency", "accuracy"] },
-  "random":           { goals: ["accuracy", "consistency", "distance", "shot-shaping"] },
+  "swing-flow":       { goals: ["consistency"] },
   "course-prep":      { goals: ["accuracy", "consistency"], phaseOverrides: { skill: 0.15, transfer: 0.40, challenge: 0.25 }, drillShareOverride: 0.30 },
-  "performance-test": { goals: ["accuracy", "consistency"], phaseOverrides: { skill: 0.10, transfer: 0.10, challenge: 0.55 }, drillShareOverride: 0.20 },
 };
 
 // Convert a category to the goal(s) used for drill pool selection
@@ -660,39 +653,21 @@ export const CHALLENGE_BY_GOAL: Record<Goal, ScoredTemplate[]> = {
 
 export const TRANSFER_TEMPLATES: TransferTemplate[] = [
   {
-    name: "Practice Like You Play",
+    name: "Play the Hole",
     describe: s => pick(s, [
-      "Run your full routine on every ball and say your club and target out loud before each shot.",
-      "Change clubs every ball, commit to a real target, and judge the result like it counts.",
-      "Play imaginary holes, tee shot, then approach, and grade each shot good or bad.",
-      "Play 9 holes in your head. A poor shot means you replay that hole before moving on.",
+      "Pick a target that represents a fairway. Hit your tee shot, then pick an approach target based on where it would have landed.",
+      "Imagine a par 4. Tee shot to the fairway, then approach to a green-sized target. Grade each shot.",
+      "Play 3 holes in your head: pick the tee shot shape, commit, then hit the approach. Track greens hit.",
+      "Play 6 imaginary holes. Full routine, tee shot then approach. Log how many greens you find.",
     ]),
   },
   {
-    name: "Random Club Switch",
+    name: "Commit and Accept",
     describe: s => pick(s, [
-      "Never hit the same club twice in a row. Pick a target that fits each one.",
-      "Switch clubs every ball and change your target to match the club.",
-      "Random club, random target, full routine, like you never get two of the same shot on the course.",
-      "Random club and target each ball; one bad strike means you owe yourself two good ones.",
-    ]),
-  },
-  {
-    name: "One-Ball Routine",
-    describe: s => pick(s, [
-      "One ball, full routine, no rehearsal swing. Make the first one count.",
-      "Single ball per target with your complete routine, no do-overs.",
-      "First-ball-only: one shot per target, score yourself on the result you'd accept on the course.",
-      "One ball per target under self-imposed pressure: name the shot, hit it, live with it.",
-    ]),
-  },
-  {
-    name: "Par-18 Game",
-    describe: s => pick(s, [
-      "Pick a target and try to 'hit the green', a generous zone. Score yourself across 9 targets.",
-      "Nine targets, one ball each, a fair-sized green. Count how many you find.",
-      "Nine 'greens' of realistic size. Track greens hit out of 9 and try to beat it next time.",
-      "Nine tight targets, one ball each. This is your scoring round, log the number and chase it.",
+      "Pick your target and shape before every ball. Say it out loud, then accept whatever happens.",
+      "Full pre-shot routine on every ball. Pick a specific target, commit fully, hold the finish.",
+      "Name the shot before you hit it: club, target, shape. Then commit. No second-guessing after.",
+      "One decision per shot, fully committed. The goal is decisiveness, not perfection.",
     ]),
   },
   {
@@ -705,21 +680,21 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
     ]),
   },
   {
-    name: "Imaginary Scorecard",
+    name: "Situation Solver",
     describe: s => pick(s, [
-      "Pick 6 targets and play each as a hole. Give yourself a fairway score and an approach score for each one.",
-      "Play 6 holes in your head. Tee shot, then approach. Write down how many greens you hit.",
-      "6-hole mini-round: full routine, tee shot then approach. Log your GIR and try to beat it next time.",
-      "6 holes, full process. Keep a scorecard. Replay any hole you double-bogey. This is your real practice.",
+      "Imagine a specific on-course situation before each ball: downhill lie, wind into you, tight pin. Then hit the shot that situation demands.",
+      "Create a scenario: 150 yards, pin back right, water left. Pick the smart play. Repeat with new scenarios.",
+      "Each ball is a different course situation. Think through the shot selection like you would on the course, then execute.",
+      "Alternate between aggressive pins and safe targets. On the course you'd have to choose, practice choosing here.",
     ]),
   },
   {
-    name: "First-Ball Commit",
+    name: "Tee Shot Routine",
     describe: s => pick(s, [
-      "No warm-up swings. Step up, one look, swing. The first ball is the only ball that matters on the course.",
-      "One shot per club, no do-overs. Score each: in play or not. Move on either way.",
-      "Step up cold to each shot. Full routine, one ball. Grade yourself honestly on commit level, not result.",
-      "Cold-start each shot. No preview swings. The discipline is in the process, not the outcome.",
+      "Full pre-shot routine on every tee shot: stand behind the ball, pick your line, one practice swing, step in, go.",
+      "Treat every driver swing like the first tee. Full routine, deep breath, commit to your shape.",
+      "Pick a different fairway target each ball. Some wide, some narrow. Adjust your strategy each time.",
+      "Alternate between a draw tee shot and a fade tee shot. On the course, the hole tells you which one.",
     ]),
   },
 ];
@@ -897,9 +872,11 @@ const UNLIMITED_COUNTS: Record<ContentType, number> = {
   warmup: 10, drill: 15, focus: 20, transfer: 20, challenge: 10, test: 10,
 };
 
-function ballsToBlocks(balls: number, target: number, max: number): number {
+const MAX_BALLS_PER_BLOCK = 12;
+
+function ballsToBlocks(balls: number, max: number): number {
   if (balls <= 0) return 0;
-  return Math.min(max, Math.max(1, Math.round(balls / target)));
+  return Math.min(max, Math.max(1, Math.ceil(balls / MAX_BALLS_PER_BLOCK)));
 }
 
 function pickSpread(clubs: string[], n: number): string[] {
@@ -922,13 +899,76 @@ function filterByEnv<T extends { env?: PracticeEnvironment }>(templates: T[], en
   return filtered.length > 0 ? filtered : templates;
 }
 
+// ─── Swing Flow generator ────────────────────────────────────────────────────
+// A guided playlist through the bag. No heavy phases, just club-by-club
+// progression short to long with light cues. For golfers who want to hit
+// balls, find their rhythm, and stay on track without being overloaded.
+
+const FLOW_CUES: string[] = [
+  "Easy tempo. Feel the club, don't force it.",
+  "Pick a target before every ball.",
+  "Smooth and controlled. Hold your finish.",
+  "Focus on clean contact, not distance.",
+  "Full routine: step behind, pick a line, commit.",
+  "One swing thought only.",
+  "Trust the club. Let it do the work.",
+  "Match this tempo for the rest of the session.",
+];
+
+function generateSwingFlow(input: GenerateInput): SessionDrill[] {
+  const clubs = resolveClubs(input.clubGroups, input.bag);
+  if (clubs.length === 0) return [];
+
+  const bag = input.bag ?? [];
+  const isUnlimited = input.bucket === "unlimited";
+  const totalBalls = isUnlimited
+    ? 0
+    : Math.max(0, (input.customBalls ?? BUCKET_SIZES.find(b => b.value === input.bucket)!.balls) - (input.warmUpBalls ?? 0));
+
+  const ballsPerClub = isUnlimited ? 10 : Math.max(6, Math.min(12, Math.floor(totalBalls / clubs.length)));
+  const cues = shuffle([...FLOW_CUES]);
+
+  const result: SessionDrill[] = clubs.map((club, i) => {
+    const subbed = substituteClub(club, bag);
+    return {
+      id: `flow-${i}-${subbed}`,
+      club: subbed,
+      drillName: i === 0 ? "Get Loose" : i === clubs.length - 1 ? "Finish Strong" : "Find Your Swing",
+      description: cues[i % cues.length],
+      balls: isUnlimited ? 10 : Math.min(ballsPerClub, totalBalls - ballsPerClub * i > ballsPerClub ? ballsPerClub : Math.max(6, totalBalls - ballsPerClub * i)),
+      unit: "balls",
+      isTarget: isUnlimited,
+      type: "drill" as ContentType,
+      phase: "Skill" as SessionPhase,
+    };
+  });
+
+  // Distribute remaining balls across blocks evenly if math doesn't divide clean
+  if (!isUnlimited) {
+    const used = result.reduce((s, d) => s + d.balls, 0);
+    let remaining = totalBalls - used;
+    let idx = 0;
+    while (remaining > 0 && result.length > 0) {
+      result[idx % result.length].balls++;
+      remaining--;
+      idx++;
+    }
+  }
+
+  recordSessionFingerprint(result);
+  return result;
+}
+
 export function generateSession(input: GenerateInput): SessionDrill[] {
-  // Resolve categories to goals
+  // Swing Flow gets its own generator
   const categories = input.categories?.length
     ? input.categories
     : input.category
     ? [input.category]
     : null;
+  if (categories && categories[0] === "swing-flow") {
+    return generateSwingFlow(input);
+  }
 
   let goals: Goal[];
   let phaseOverrides: Partial<{ skill: number; transfer: number; challenge: number }> | undefined;
@@ -944,8 +984,6 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     drillShareOverride = primaryRoute.drillShareOverride;
     clubGroupOverride = primaryRoute.clubConstraint;
 
-    // For "random" category, shuffle goals so each session feels different
-    if (categories[0] === "random") goals = shuffle(goals);
   } else {
     goals = (input.goals && input.goals.length ? input.goals : [input.goal]).slice(0, 2);
   }
@@ -975,13 +1013,7 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     : profile.phases;
   const effectiveDrillShare = drillShareOverride ?? profile.drillShareOfSkill;
 
-  // Derive environment: explicit, from categories, or default to range
-  const env: PracticeEnvironment = input.env
-    ?? (categories
-      ? (categories.some(c => CATEGORIES.find(x => x.value === c)?.env === "green")
-        ? (categories.some(c => CATEGORIES.find(x => x.value === c)?.env === "range") ? "both" : "green")
-        : "range")
-      : "range");
+  const env: PracticeEnvironment = input.env ?? "range";
 
   // Pre-shuffle each library per goal, filtered by style and environment.
   // Recently-used drills are pushed to the back so sessions feel fresh.
@@ -1020,10 +1052,10 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     challengeN = style === "performance" || style === "elite" ? 2 : 1;
     testN      = 1;
   } else {
-    drillN     = ballsToBlocks(drillBalls, 12, 3);
-    focusN     = ballsToBlocks(focusBalls, 14, 2);
-    transferN  = ballsToBlocks(transferBalls, 16, 2);
-    challengeN = ballsToBlocks(challengeBalls, 10, 2);
+    drillN     = ballsToBlocks(drillBalls, 4);
+    focusN     = ballsToBlocks(focusBalls, 3);
+    transferN  = ballsToBlocks(transferBalls, 2);
+    challengeN = ballsToBlocks(challengeBalls, 2);
     testN      = testBalls > 0 ? 1 : 0;
   }
 
