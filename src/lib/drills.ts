@@ -983,16 +983,18 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
         : "range")
       : "range");
 
-  // Pre-shuffle each library per goal, filtered by style and environment
+  // Pre-shuffle each library per goal, filtered by style and environment.
+  // Recently-used drills are pushed to the back so sessions feel fresh.
+  const recent = recentDrillNames();
   const drillPools = new Map<Goal, DrillTemplate[]>();
   const focusPools = new Map<Goal, FocusTemplate[]>();
   const challengePools = new Map<Goal, ScoredTemplate[]>();
   for (const g of goals) {
-    drillPools.set(g, shuffle(filterByEnv(filterByStyle(DRILLS_BY_GOAL[g], style), env)));
-    focusPools.set(g, shuffle(FOCUS_BY_GOAL[g]));
-    challengePools.set(g, shuffle(CHALLENGE_BY_GOAL[g]));
+    drillPools.set(g, biasedShuffle(filterByEnv(filterByStyle(DRILLS_BY_GOAL[g], style), env), recent));
+    focusPools.set(g, biasedShuffle(FOCUS_BY_GOAL[g], recent));
+    challengePools.set(g, biasedShuffle(CHALLENGE_BY_GOAL[g], recent));
   }
-  const transferPool = shuffle(TRANSFER_TEMPLATES);
+  const transferPool = biasedShuffle(TRANSFER_TEMPLATES, recent);
 
   // Phase ball budgets
   let skillBalls = 0, transferBalls = 0, challengeBalls = 0, testBalls = 0;
@@ -1121,7 +1123,56 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     }
   });
 
+  recordSessionFingerprint(result);
   return result;
+}
+
+// ─── Session history (dedup) ─────────────────────────────────────────────────
+
+const HISTORY_KEY = "range-rat:session-history";
+const MAX_HISTORY = 5;
+
+interface SessionFingerprint {
+  drillNames: string[];
+  timestamp: number;
+}
+
+function loadSessionHistory(): SessionFingerprint[] {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]") as SessionFingerprint[];
+  } catch { return []; }
+}
+
+function recordSessionFingerprint(session: SessionDrill[]): void {
+  try {
+    const names = session
+      .filter(d => d.type !== "warmup")
+      .map(d => d.drillName);
+    const history = loadSessionHistory();
+    history.push({ drillNames: names, timestamp: Date.now() });
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_HISTORY)));
+  } catch {}
+}
+
+function recentDrillNames(): Set<string> {
+  const history = loadSessionHistory();
+  const names = new Set<string>();
+  for (const fp of history) {
+    for (const name of fp.drillNames) names.add(name);
+  }
+  return names;
+}
+
+// Shuffle that pushes recently-used items toward the back of the array.
+// Items not in the recent set get normal random order up front; recent
+// items get shuffled among themselves at the end.
+function biasedShuffle<T extends { name: string }>(arr: T[], recent: Set<string>): T[] {
+  const fresh: T[] = [];
+  const stale: T[] = [];
+  for (const item of arr) {
+    (recent.has(item.name) ? stale : fresh).push(item);
+  }
+  return [...shuffle(fresh), ...shuffle(stale)];
 }
 
 // Distribute `total` integers across `weights.length` slots proportionally.
