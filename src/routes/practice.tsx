@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
 import { GuidedSessionView } from "@/components/GuidedSessionView";
-import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Flame, Plus, RotateCcw, Sparkles, Star, Target, Trash2, Trophy, X, Zap } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Flame, Plus, Sparkles, Star, Trash2, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ import {
 import { fetchProfile, fetchHandicapHistory, fetchBag } from "@/lib/db";
 import type { Club } from "@/lib/db";
 import { loadProfileName } from "@/lib/profile";
+import { PHASE_META, PHASE_ORDER, phaseOf } from "@/lib/phases";
 import { cn } from "@/lib/utils";
 
 // Golf convention: a handicap better than scratch reads "+2.1", not "-2.1".
@@ -62,16 +63,6 @@ const GOAL_TO_CATEGORY: Record<Goal, PracticeCategory> = {
   distance: "distance-control",
   "shot-shaping": "shot-shaping",
 };
-
-// Per-phase presentation for the session checklist.
-const PHASE_META: Record<SessionPhase, { icon: typeof Flame; blurb: string }> = {
-  "Warm Up":   { icon: Flame,    blurb: "Loosen up, no scoring." },
-  "Skill":     { icon: Target,   blurb: "Drills and focus blocks." },
-  "Transfer":  { icon: RotateCcw, blurb: "Practice like you play." },
-  "Challenge": { icon: Zap,      blurb: "Add some pressure." },
-  "Test":      { icon: Trophy,   blurb: "End with a score." },
-};
-const PHASE_ORDER: SessionPhase[] = ["Warm Up", "Skill", "Transfer", "Challenge", "Test"];
 
 export const Route = createFileRoute("/practice")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -333,6 +324,7 @@ function PracticePage() {
 
   // ── Mode picker
   if (session && sessionMode === "pick") {
+    const sessionPhases = PHASE_ORDER.filter((p) => session.some((d) => phaseOf(d) === p));
     return (
       <AppShell showBack onBack={reset}>
         <div className="flex flex-col items-center pt-10 text-center px-2">
@@ -344,7 +336,36 @@ function PracticePage() {
             {session.length} drill{session.length !== 1 ? "s" : ""} · How do you want to work through them?
           </p>
 
-          <div className="mt-10 w-full space-y-3">
+          {/* Session arc: the phases this session moves through, in order, so the
+              structure is clear before the first ball is hit. */}
+          {sessionPhases.length > 1 && (
+            <div className="mt-8 w-full text-left">
+              <p className="mb-3 text-center text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                Your session arc
+              </p>
+              <div className="space-y-2">
+                {sessionPhases.map((p) => {
+                  const meta = PHASE_META[p];
+                  const PhaseIcon = meta.icon;
+                  const count = session.filter((d) => phaseOf(d) === p).length;
+                  return (
+                    <div key={p} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <PhaseIcon className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-bold uppercase tracking-[0.12em] leading-none">{p}</p>
+                        <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{meta.blurb}</p>
+                      </div>
+                      <span className="shrink-0 text-[12px] font-semibold tabular-nums text-muted-foreground">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-8 w-full space-y-3">
             {/* Guided */}
             <button
               type="button"
@@ -902,7 +923,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   const byPhase = useMemo(() => {
     const map = new Map<SessionPhase, SessionDrill[]>();
     session.forEach((d) => {
-      const phase: SessionPhase = d.phase ?? (d.club === "Warm Up" ? "Warm Up" : "Skill");
+      const phase = phaseOf(d);
       const arr = map.get(phase) ?? [];
       arr.push(d);
       map.set(phase, arr);
