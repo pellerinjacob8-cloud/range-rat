@@ -8,17 +8,17 @@
   "theme_color": "#0D2D5A",
   "icons": [
     {
-      "src": "/brand/icon-navy.png",
+      "src": "/brand/monogram-rr-navy.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/brand/icon-navy.png",
+      "src": "/brand/monogram-rr-navy.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/brand/icon-navy.png",
+      "src": "/brand/monogram-rr-navy.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "maskable"
