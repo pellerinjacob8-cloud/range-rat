@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
-import { GuidedSessionView } from "@/components/GuidedSessionView";
+import { GuidedSessionView, ViewToggle } from "@/components/GuidedSessionView";
 import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Flame, Plus, Sparkles, Star, Trash2, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
@@ -406,6 +406,7 @@ function PracticePage() {
         session={session}
         onComplete={handleComplete}
         onReset={reset}
+        onSwitchView={() => setSessionMode("list")}
       />
     );
   }
@@ -425,6 +426,7 @@ function PracticePage() {
         }}
         onReset={reset}
         onComplete={handleComplete}
+        onSwitchView={() => setSessionMode("guided")}
       />
     );
   }
@@ -911,9 +913,10 @@ interface SessionViewProps {
   onToggle: (id: string) => void;
   onReset: () => void;
   onComplete: () => void;
+  onSwitchView: () => void;
 }
 
-function SessionView({ session, done, onToggle, onReset, onComplete }: SessionViewProps) {
+function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView }: SessionViewProps) {
   const completedCount = done.size;
   const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
   const allDone = completedCount === session.length && session.length > 0;
@@ -934,6 +937,10 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   return (
     <AppShell showBack onBack={onReset}>
       <div className="pb-12">
+        {/* Guided/List view switch */}
+        <div className="flex justify-center pb-4">
+          <ViewToggle mode="list" onSwitch={onSwitchView} />
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your Session</p>
