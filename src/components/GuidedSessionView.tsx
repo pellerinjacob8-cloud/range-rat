@@ -50,7 +50,7 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
   const progressPct = ((index) / total) * 100;
 
   return (
-    <AppShell showBack>
+    <AppShell showBack onBack={onReset}>
       {/* Progress bar */}
       <div className="h-1 w-full rounded-full bg-muted overflow-hidden -mx-4 px-0" style={{ width: "calc(100% + 2rem)", marginLeft: "-1rem" }}>
         <div

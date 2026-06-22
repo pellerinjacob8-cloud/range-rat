@@ -15,6 +15,7 @@ function RRLogo({ className }: { className?: string }) {
 interface AppShellProps {
   children: React.ReactNode;
   showBack?: boolean;
+  onBack?: () => void;
   hideTabBar?: boolean;
 }
 
@@ -25,7 +26,7 @@ const tabs = [
   { href: "/profile", label: "Profile", Icon: User },
 ] as const;
 
-export function AppShell({ children, showBack = false, hideTabBar = false }: AppShellProps) {
+export function AppShell({ children, showBack = false, onBack, hideTabBar = false }: AppShellProps) {
   const router = useRouter();
   const location = useLocation();
 
@@ -42,7 +43,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
           <div className="flex items-center">
             {showBack ? (
               <button
-                onClick={() => router.history.back()}
+                onClick={() => onBack ? onBack() : router.history.back()}
                 aria-label="Back"
                 className="-ml-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-muted"
               >

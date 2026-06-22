@@ -334,7 +334,7 @@ function PracticePage() {
   // ── Mode picker
   if (session && sessionMode === "pick") {
     return (
-      <AppShell showBack>
+      <AppShell showBack onBack={reset}>
         <div className="flex flex-col items-center pt-10 text-center px-2">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Session Ready</p>
           <h1 className="mt-2 font-display text-[42px] leading-[0.98] tracking-[-0.01em]">
@@ -897,7 +897,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
   const allDone = completedCount === session.length && session.length > 0;
 
-  // Group by session phase (Warm Up → Skill → Transfer → Challenge → Test).
+  // Group by session phase (Warm Up > Skill > Transfer > Challenge > Test).
   // Falls back to the block's club for any legacy session without a phase.
   const byPhase = useMemo(() => {
     const map = new Map<SessionPhase, SessionDrill[]>();
@@ -911,7 +911,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
   }, [session]);
 
   return (
-    <AppShell showBack>
+    <AppShell showBack onBack={onReset}>
       <div className="pb-12">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
