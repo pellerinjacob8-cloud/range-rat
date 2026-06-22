@@ -5,7 +5,9 @@ import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { generateShot, type Shot } from "@/lib/shots";
+import { generateShot, type Shot, type GenerateShotOptions } from "@/lib/shots";
+import { deriveStyle } from "@/lib/drills";
+import { fetchProfile, fetchBag } from "@/lib/db";
 import { ShotCard } from "./play.solo";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
@@ -33,6 +35,7 @@ type Pick = "yes" | "no" | null;
 
 function GamePage() {
   const [config, setConfig] = useState<MatchConfig | null>(null);
+  const [shotOpts, setShotOpts] = useState<GenerateShotOptions>({});
   const [shot, setShot] = useState<Shot>(() => generateShot());
   const [score, setScore] = useState<[number, number]>([0, 0]);
   const [picks, setPicks] = useState<[Pick, Pick]>([null, null]);
@@ -42,6 +45,16 @@ function GamePage() {
     return () => {
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const opts: GenerateShotOptions = {};
+    Promise.all([fetchProfile(), fetchBag()]).then(([profile, bag]) => {
+      if (bag.length > 0) opts.bag = bag;
+      if (profile?.handicap !== undefined) opts.style = deriveStyle(profile.handicap);
+      setShotOpts(opts);
+      setShot(generateShot(opts));
+    });
   }, []);
 
   const winnerIdx: 0 | 1 | null =
@@ -67,7 +80,7 @@ function GamePage() {
     // Both made or both missed: no point.
 
     advanceTimer.current = setTimeout(() => {
-      setShot(generateShot());
+      setShot(generateShot(shotOpts));
       setPicks([null, null]);
     }, 900);
 
@@ -89,13 +102,13 @@ function GamePage() {
         onPlayAgain={() => {
           setScore([0, 0]);
           setPicks([null, null]);
-          setShot(generateShot());
+          setShot(generateShot(shotOpts));
         }}
         onNewMatch={() => {
           setConfig(null);
           setScore([0, 0]);
           setPicks([null, null]);
-          setShot(generateShot());
+          setShot(generateShot(shotOpts));
         }}
       />
     );

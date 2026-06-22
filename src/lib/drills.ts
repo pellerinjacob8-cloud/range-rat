@@ -818,6 +818,7 @@ export interface GenerateInput {
   customMinutes?: number;
   warmUpBalls?: number;
   bag?: BagClub[];          // user's actual clubs from Supabase
+  env?: PracticeEnvironment; // filter drills by environment
 }
 
 // Estimated minutes per block, used to cap block count by time
@@ -915,6 +916,12 @@ function filterByStyle<T extends { styles?: PracticeStyle[] }>(templates: T[], s
   return filtered.length > 0 ? filtered : templates;
 }
 
+function filterByEnv<T extends { env?: PracticeEnvironment }>(templates: T[], env: PracticeEnvironment): T[] {
+  if (env === "both") return templates;
+  const filtered = templates.filter(t => !t.env || t.env === env || t.env === "both");
+  return filtered.length > 0 ? filtered : templates;
+}
+
 export function generateSession(input: GenerateInput): SessionDrill[] {
   // Resolve categories to goals
   const categories = input.categories?.length
@@ -968,12 +975,20 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     : profile.phases;
   const effectiveDrillShare = drillShareOverride ?? profile.drillShareOfSkill;
 
-  // Pre-shuffle each library per goal, filtered by style
+  // Derive environment: explicit, from categories, or default to range
+  const env: PracticeEnvironment = input.env
+    ?? (categories
+      ? (categories.some(c => CATEGORIES.find(x => x.value === c)?.env === "green")
+        ? (categories.some(c => CATEGORIES.find(x => x.value === c)?.env === "range") ? "both" : "green")
+        : "range")
+      : "range");
+
+  // Pre-shuffle each library per goal, filtered by style and environment
   const drillPools = new Map<Goal, DrillTemplate[]>();
   const focusPools = new Map<Goal, FocusTemplate[]>();
   const challengePools = new Map<Goal, ScoredTemplate[]>();
   for (const g of goals) {
-    drillPools.set(g, shuffle(filterByStyle(DRILLS_BY_GOAL[g], style)));
+    drillPools.set(g, shuffle(filterByEnv(filterByStyle(DRILLS_BY_GOAL[g], style), env)));
     focusPools.set(g, shuffle(FOCUS_BY_GOAL[g]));
     challengePools.set(g, shuffle(CHALLENGE_BY_GOAL[g]));
   }
