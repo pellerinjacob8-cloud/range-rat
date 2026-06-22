@@ -8,6 +8,8 @@ import {
   type RoundDuration,
   type RoundWarmUpItem,
 } from "@/lib/roundWarmUp";
+import { fetchBag } from "@/lib/db";
+import type { Club } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 
@@ -84,9 +86,12 @@ const HOURS = ["1","2","3","4","5","6","7","8","9","10","11","12"];
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 
 function RoundWarmUpPage() {
+  const [userBag, setUserBag] = useState<Club[]>([]);
   const [duration, setDuration] = useState<number | null>(null);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [teeTime, setTeeTime] = useState("");
+
+  useEffect(() => { fetchBag().then(setUserBag); }, []);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerHour, setPickerHour] = useState("7");
   const [pickerMinute, setPickerMinute] = useState("00");
@@ -127,6 +132,7 @@ function RoundWarmUpPage() {
         setDone={setDone}
         onReset={reset}
         teeTime={teeTime}
+        bag={userBag}
       />
     );
   }
@@ -389,12 +395,13 @@ interface ChecklistViewProps {
   setDone: React.Dispatch<React.SetStateAction<Set<string>>>;
   onReset: () => void;
   teeTime: string;
+  bag?: Club[];
 }
 
-function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistViewProps) {
+function ChecklistView({ duration, done, setDone, onReset, teeTime, bag }: ChecklistViewProps) {
   const navigate = useNavigate();
   const snapped = useMemo(() => snapToPreset(duration), [duration]);
-  const items = useMemo(() => buildRoundWarmUp(snapped), [snapped]);
+  const items = useMemo(() => buildRoundWarmUp(snapped, bag), [snapped, bag]);
   const total = items.length;
   const completed = done.size;
 
