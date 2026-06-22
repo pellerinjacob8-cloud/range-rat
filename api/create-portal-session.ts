@@ -1,17 +1,6 @@
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { ensureSentry, Sentry } from "./_sentry";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia" as any,
-});
-
-// Server-side Supabase client used only to verify the caller's access token.
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getStripe, getSupabaseAdmin, missingEnv } from "./_config";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   ensureSentry();
@@ -23,7 +12,20 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  // Fail loud and clear if the deployment is missing a required secret, rather
+  // than crashing at module load with an opaque FUNCTION_INVOCATION_FAILED.
+  const missing = missingEnv();
+  if (missing.length) {
+    console.error("Portal misconfigured, missing env:", missing.join(", "));
+    res.writeHead(503);
+    res.end(JSON.stringify({ error: `Server misconfigured: missing ${missing.join(", ")}` }));
+    return;
+  }
+
   try {
+    const stripe = getStripe();
+    const supabase = getSupabaseAdmin();
+
     // Authenticate the caller from their Supabase JWT.
     const authHeader = req.headers["authorization"] || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
