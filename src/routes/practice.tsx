@@ -6,7 +6,6 @@ import { GuidedSessionView } from "@/components/GuidedSessionView";
 import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, Flame, Plus, RotateCcw, Sparkles, Star, Target, Trash2, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { QuitGameButton } from "@/components/QuitGameButton";
-import { SegmentedControl } from "@/components/SegmentedControl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +25,7 @@ import {
 import {
   BASE_CLUB_GROUPS,
   BUCKET_SIZES,
+  CATEGORIES,
   FULL_BAG_GROUP,
   GOALS,
   PLAYER_LEVELS,
@@ -42,6 +42,7 @@ import {
   type GenerateInput,
   type Goal,
   type PlayerLevel,
+  type PracticeCategory,
   type SessionDrill,
   type SessionPhase,
   type TimeAvailable,
@@ -54,6 +55,13 @@ import { cn } from "@/lib/utils";
 
 // Golf convention: a handicap better than scratch reads "+2.1", not "-2.1".
 const fmtHandicap = (h: number) => (h < 0 ? `+${Math.abs(h)}` : String(h));
+
+const GOAL_TO_CATEGORY: Record<Goal, PracticeCategory> = {
+  accuracy: "accuracy",
+  consistency: "ball-striking",
+  distance: "distance-control",
+  "shot-shaping": "shot-shaping",
+};
 
 // Per-phase presentation for the session checklist.
 const PHASE_META: Record<SessionPhase, { icon: typeof Flame; blurb: string }> = {
@@ -167,6 +175,7 @@ function PracticePage() {
   const [bucket, setBucket] = useState<BucketSize | null>(null);
   const [time, setTime] = useState<TimeAvailable | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [categories, setCategories] = useState<PracticeCategory[]>([]);
 
   // Practice style inputs: handicap drives it; level is the fallback when none.
   const [handicap, setHandicap] = useState<number | undefined>(undefined);
@@ -236,14 +245,14 @@ function PracticePage() {
 
   const hasValidBucket = bucket !== null || (showCustomBucket && customBalls !== null);
   const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
-  const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && goals.length >= 1;
+  const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && categories.length >= 1;
 
   // Tells the user why Generate is still disabled instead of a silent grey button
   const missingSteps = [
     clubGroups.length < 1 && "clubs",
     !hasValidBucket && "bucket size",
     !hasValidTime && "time",
-    goals.length < 1 && "a goal",
+    categories.length < 1 && "a category",
   ].filter(Boolean) as string[];
   const missingHint = missingSteps.length > 0
     ? `Pick ${missingSteps.length === 1 ? missingSteps[0] : `${missingSteps.slice(0, -1).join(", ")} and ${missingSteps[missingSteps.length - 1]}`} to continue`
@@ -256,8 +265,10 @@ function PracticePage() {
       clubGroups,
       bucket: bucket ?? "medium",  // placeholder when custom overrides
       time:   time   ?? 30,        // placeholder when custom overrides
-      goal: goals[0],
-      goals,
+      goal: goals[0] ?? "accuracy",  // back-compat fallback
+      goals: goals.length > 0 ? goals : undefined,
+      category: categories[0],
+      categories,
       handicap,
       level: level ?? undefined,
       style,
@@ -539,12 +550,12 @@ function PracticePage() {
             isPro ? (
               <button
                 type="button"
-                onClick={() => setGoals([recommendation.goal])}
+                onClick={() => setCategories([GOAL_TO_CATEGORY[recommendation.goal]])}
                 className="w-full flex items-center gap-2.5 rounded-[14px] border border-gold-border bg-gold-bg p-3 text-left active:opacity-90 transition-opacity"
               >
                 <Sparkles className="h-4 w-4 text-gold shrink-0" />
                 <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-foreground">
-                  <span className="font-bold">Recommended: {GOALS.find((g) => g.value === recommendation.goal)?.label}</span>
+                  <span className="font-bold">Recommended: {CATEGORIES.find((c) => c.value === GOAL_TO_CATEGORY[recommendation.goal])?.label}</span>
                   {", "}{recommendation.reason}. Tap to focus here.
                 </span>
               </button>
@@ -786,18 +797,46 @@ function PracticePage() {
             )}
           </div>
         </div>
-        <SegmentedControl
-          label="Goal · Pick 1–2"
-          multiple
-          options={GOALS}
-          value={goals}
-          onChange={(next) => setGoals(next.slice(-2))}
-          helper={
-            goals.length === 2
-              ? "Two goals, your session alternates between them."
-              : "Pick one focus, or add a second to blend."
-          }
-        />
+        {/* Category picker */}
+        <div className="space-y-2">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Category{categories.length === 2 ? " (2 selected)" : " · Pick 1-2"}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {CATEGORIES.map((cat) => {
+              const active = categories.includes(cat.value);
+              return (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => {
+                    setCategories((prev) => {
+                      if (active) return prev.filter((c) => c !== cat.value);
+                      return [...prev, cat.value].slice(-2);
+                    });
+                  }}
+                  aria-pressed={active}
+                  className={cn(
+                    "rounded-[14px] border px-3.5 py-3 text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card active:bg-muted",
+                  )}
+                >
+                  <p className={cn("text-[13px] font-bold leading-tight", !active && "text-foreground")}>{cat.label}</p>
+                  <p className={cn("mt-0.5 text-[11px] leading-snug", active ? "text-primary-foreground/70" : "text-muted-foreground")}>{cat.description}</p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {categories.length === 2
+              ? "Two categories selected, your session blends both."
+              : categories.length === 1
+              ? "Tap another to blend two categories, or generate with one."
+              : "Pick a focus for your session."}
+          </p>
+        </div>
 
         </div>
         )}
@@ -1007,7 +1046,10 @@ function CompletionView({
   const drillBalls = session
     .filter((d) => d.club !== "Warm Up")
     .reduce((sum, d) => sum + d.balls, 0);
-  const goalLabel = GOALS.find((g) => g.value === record.filters.goal)?.label ?? "";
+  const categoryLabel = sessionInput.category
+    ? CATEGORIES.find((c) => c.value === sessionInput.category)?.label
+    : GOALS.find((g) => g.value === record.filters.goal)?.label ?? "";
+  const goalLabel = categoryLabel ?? "";
   const bucketLabel = BUCKET_SIZES.find((b) => b.value === record.filters.bucket)?.label ?? "";
 
   const [saveOpen, setSaveOpen] = useState(false);
@@ -1050,7 +1092,7 @@ function CompletionView({
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
             <Stat label="Balls Hit" value={String(drillBalls)} />
             <Stat label="Drills Done" value={String(record.drillCount)} />
-            <Stat label="Goal" value={goalLabel} serif />
+            <Stat label="Focus" value={goalLabel} serif />
             <Stat label="Bucket" value={bucketLabel} serif />
           </div>
         </div>
@@ -1309,7 +1351,9 @@ function SavedTab({
                 ))}
                 {fav.sessionInput && (
                   <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    {fav.sessionInput.goal}
+                    {fav.sessionInput.category
+                      ? CATEGORIES.find((c) => c.value === fav.sessionInput!.category)?.label ?? fav.sessionInput.category
+                      : GOALS.find((g) => g.value === fav.sessionInput!.goal)?.label ?? fav.sessionInput.goal}
                   </span>
                 )}
               </div>
