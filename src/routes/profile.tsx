@@ -326,7 +326,7 @@ function ProfilePage() {
 
         {/* ── Hero ── */}
         <div className="flex items-center gap-4">
-          <div className="h-16 w-16 shrink-0 rounded-[20px] bg-primary text-white flex items-center justify-center font-display text-[30px] leading-none">
+          <div className="h-16 w-16 shrink-0 rounded-[20px] bg-primary text-primary-foreground flex items-center justify-center font-display text-[30px] leading-none">
             {initial}
           </div>
           <div className="flex-1 min-w-0">
@@ -342,7 +342,7 @@ function ProfilePage() {
                   className="w-full bg-transparent font-display text-[22px] outline-none border-b border-border pb-0.5 text-muted-foreground" />
                 <div className="flex gap-2 pt-1">
                   <button type="button" onMouseDown={e => { e.preventDefault(); saveName(); }} disabled={!firstInput.trim()}
-                    className="flex-1 h-10 rounded-[12px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">Save</button>
+                    className="flex-1 h-10 rounded-[12px] bg-primary text-primary-foreground text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">Save</button>
                   <button type="button" onMouseDown={e => { e.preventDefault(); cancelEdit(); }}
                     className="h-10 px-4 rounded-[12px] border border-border text-[13px] font-bold text-muted-foreground">Cancel</button>
                 </div>
@@ -589,7 +589,7 @@ function ProfilePage() {
                 </button>
                 <button type="button" onMouseDown={e => { e.preventDefault(); saveRound(); }}
                   disabled={!roundValid}
-                  className="flex-[2] h-[50px] rounded-[14px] bg-primary text-white text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
+                  className="flex-[2] h-[50px] rounded-[14px] bg-primary text-primary-foreground text-[13px] font-bold uppercase tracking-[0.06em] disabled:opacity-40">
                   Save Round
                 </button>
               </div>

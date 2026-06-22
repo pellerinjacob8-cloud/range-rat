@@ -84,7 +84,7 @@ function AuthConfirm() {
           <p className="text-destructive mt-2">{error || "Something went wrong"}</p>
           <button
             onClick={() => navigate({ to: "/onboarding/welcome" })}
-            className="mt-6 h-12 px-6 rounded-[14px] bg-primary text-white font-bold text-[13px] uppercase tracking-[0.06em]"
+            className="mt-6 h-12 px-6 rounded-[14px] bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-[0.06em]"
           >
             Back to Sign Up
           </button>

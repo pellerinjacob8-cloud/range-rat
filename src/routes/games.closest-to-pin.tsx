@@ -129,7 +129,7 @@ function ClosestToPin() {
               className={cn(
                 "rounded-3xl p-4 border flex items-center gap-3 transition-all",
                 isLeading
-                  ? "bg-primary text-white border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
+                  ? "bg-primary text-primary-foreground border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
                   : "bg-card text-foreground border-border"
               )}
             >
@@ -171,7 +171,7 @@ function ClosestToPin() {
                     "w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-50",
                     isLeading
                       ? "bg-white/18 border border-white/20 text-white"
-                      : "bg-primary text-white"
+                      : "bg-primary text-primary-foreground"
                   )}
                 >
                   <Plus className="h-5 w-5" strokeWidth={2} />

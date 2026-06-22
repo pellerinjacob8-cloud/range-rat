@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
 import { ChevronLeft, Plus, Trash2, X, Minus } from "lucide-react";
-import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { saveCustomSession } from "@/lib/favorites";
 import { DRILLS_BY_GOAL, GOALS } from "@/lib/drills";
 import { cn } from "@/lib/utils";
@@ -72,8 +71,6 @@ function makeDrill(overrides: Partial<BuilderDrill> = {}): BuilderDrill {
 
 export default function CustomSessionBuilderPage() {
   const navigate = useNavigate();
-  useForceLightMode();
-
   const [name, setName] = useState("");
   const [drills, setDrills] = useState<BuilderDrill[]>([makeDrill()]);
   const [showPicker, setShowPicker] = useState(false);
@@ -199,7 +196,7 @@ export default function CustomSessionBuilderPage() {
           type="button"
           onClick={save}
           disabled={!canSave || saving}
-          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
+          className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
         >
           {saving ? (
             <span className="flex items-center justify-center gap-2">

@@ -50,7 +50,7 @@ function UpgradePage() {
         </p>
         <button
           onClick={() => navigate({ to: "/" })}
-          className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em]"
+          className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em]"
         >
           Go to App
         </button>
@@ -144,7 +144,7 @@ function UpgradePage() {
         <button
           onClick={handleUpgrade}
           disabled={loading}
-          className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
+          className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-40 active:opacity-90 transition-opacity"
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">

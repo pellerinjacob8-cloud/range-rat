@@ -257,7 +257,7 @@ function RoundWarmUpPage() {
               className={cn(
                 "flex w-full items-center gap-3.5 rounded-[18px] p-4 border text-left transition active:scale-[0.99]",
                 isActive
-                  ? "bg-primary text-white border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
+                  ? "bg-primary text-primary-foreground border-primary shadow-[0_10px_25px_-16px_rgba(13,45,90,0.5)]"
                   : "bg-card text-foreground border-border"
               )}
             >

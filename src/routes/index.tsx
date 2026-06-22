@@ -210,7 +210,7 @@ function NavCard({ to, title, subtitle, Icon }: NavCardProps) {
       to={to as "/practice" | "/games" | "/play" | "/round-warmup" | "/profile"}
       className="group block rounded-[22px] border border-border bg-card p-3.5 flex items-center gap-3.5 transition active:scale-[0.99]"
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-primary text-white">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-primary text-primary-foreground">
         <Icon className="h-5 w-5" />
       </div>
       <div className="flex-1 min-w-0">
