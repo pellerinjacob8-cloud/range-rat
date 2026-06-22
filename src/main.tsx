@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import { ThemeProvider } from "./context/ThemeContext";
+import { initSentry } from "./lib/sentry";
 import "./styles.css";
+
+initSentry();
 
 const router = getRouter();
 

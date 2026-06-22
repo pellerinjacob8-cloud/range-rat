@@ -1,8 +1,10 @@
 import { createRouter, useRouter } from "@tanstack/react-router";
+import * as Sentry from "@sentry/react";
 import { routeTree } from "./routeTree.gen";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
+  Sentry.captureException(error);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

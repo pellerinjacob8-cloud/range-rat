@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "http";
+import { ensureSentry, Sentry } from "./_sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia" as any,
@@ -13,6 +14,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  ensureSentry();
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
@@ -55,6 +57,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     res.writeHead(200);
     res.end(JSON.stringify({ url: session.url }));
   } catch (err: any) {
+    Sentry.captureException(err);
     console.error("Portal error:", err);
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));

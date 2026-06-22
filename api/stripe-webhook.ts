@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "http";
+import { ensureSentry, Sentry } from "./_sentry";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia" as any,
@@ -21,6 +22,8 @@ function getRawBody(req: IncomingMessage): Promise<Buffer> {
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  ensureSentry();
+
   if (req.method !== "POST") {
     res.writeHead(405);
     res.end(JSON.stringify({ error: "Method not allowed" }));
@@ -36,6 +39,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: any) {
+    Sentry.captureException(err);
     console.error("Webhook signature verification failed:", err.message);
     res.writeHead(400);
     res.end(JSON.stringify({ error: `Webhook Error: ${err.message}` }));

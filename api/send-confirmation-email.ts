@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
+import { ensureSentry, Sentry } from "./_sentry";
 
 // Server-only. NEVER prefix this with VITE_ — that would inline the key into
 // the public browser bundle.
@@ -14,6 +15,7 @@ function readBody(req: IncomingMessage): Promise<string> {
 }
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  ensureSentry();
   res.setHeader("Content-Type", "application/json");
 
   if (req.method !== "POST") {
@@ -63,6 +65,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     res.writeHead(200);
     res.end(JSON.stringify({ success: true }));
   } catch (err: any) {
+    Sentry.captureException(err);
     console.error("Email send error:", err);
     res.writeHead(500);
     res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));
