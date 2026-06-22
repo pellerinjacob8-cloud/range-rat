@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import type { SessionDrill } from "@/lib/drills";
+import { PHASE_META, phaseOf } from "@/lib/phases";
 
 interface GuidedSessionViewProps {
   session: SessionDrill[];
@@ -34,6 +35,19 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
   const total = session.length;
   const isLast = index === total - 1;
   const isFirst = index === 0;
+
+  // Phase context: which phase this drill belongs to, and the user's position
+  // within it. Phases run in contiguous order, so a simple scan is exact.
+  const phase = phaseOf(drill);
+  const phaseMeta = PHASE_META[phase];
+  const PhaseIcon = phaseMeta.icon;
+  const { inPhaseIndex, phaseCount } = useMemo(() => {
+    const same = session.filter((d) => phaseOf(d) === phase);
+    return {
+      inPhaseIndex: same.findIndex((d) => d.id === drill.id) + 1,
+      phaseCount: same.length,
+    };
+  }, [session, phase, drill.id]);
 
   const advance = () => {
     if (isLast) {
@@ -71,8 +85,28 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
           </p>
         </div>
 
+        {/* Phase banner: re-keyed on phase so it animates in as the user crosses
+            from one phase into the next, keeping the session's arc legible. */}
+        <div
+          key={phase}
+          className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300"
+        >
+          <div className="flex items-center gap-2">
+            <PhaseIcon className="h-4 w-4 text-primary" />
+            <span className="text-[13px] font-bold uppercase tracking-[0.18em] text-primary">
+              {phase}
+            </span>
+            <span className="ml-auto text-[12px] font-semibold tabular-nums text-muted-foreground">
+              {inPhaseIndex} of {phaseCount}
+            </span>
+          </div>
+          <p className="mt-1.5 text-[13px] leading-snug text-muted-foreground">
+            {phaseMeta.purpose}
+          </p>
+        </div>
+
         {/* Main drill card, centered vertically */}
-        <div className="flex flex-1 flex-col items-center justify-center text-center px-2 py-10">
+        <div className="flex flex-1 flex-col items-center justify-center text-center px-2 py-8">
 
           {/* Club group label */}
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-primary">
