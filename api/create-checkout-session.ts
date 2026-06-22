@@ -80,8 +80,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       },
       metadata: { userId },
       customer_email: userEmail,
-      success_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/pro-welcome`,
-      cancel_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/upgrade`,
+      success_url: `${process.env.VITE_APP_URL || "https://rangeratapp.com"}/pro-welcome`,
+      cancel_url: `${process.env.VITE_APP_URL || "https://rangeratapp.com"}/upgrade`,
     });
 
     res.writeHead(200);

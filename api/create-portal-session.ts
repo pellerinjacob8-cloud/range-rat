@@ -51,7 +51,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customer.id,
-      return_url: `${process.env.VITE_APP_URL || "https://range-rat.vercel.app"}/profile`,
+      return_url: `${process.env.VITE_APP_URL || "https://rangeratapp.com"}/profile`,
     });
 
     res.writeHead(200);
