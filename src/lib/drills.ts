@@ -928,12 +928,26 @@ function generateSwingFlow(input: GenerateInput): SessionDrill[] {
   const ballsPerClub = isUnlimited ? 10 : Math.max(6, Math.min(12, Math.floor(totalBalls / clubs.length)));
   const cues = shuffle([...FLOW_CUES]);
 
+  const flowName = (club: string, i: number, total: number): string => {
+    if (i === 0) return "Get Loose";
+    if (i === total - 1) return "Finish Strong";
+    const group = clubToGroup(club);
+    switch (group) {
+      case "wedges":      return "Dial It In";
+      case "short-irons": return "Build the Rhythm";
+      case "long-irons":  return "Stretch It Out";
+      case "woods":        return "Open It Up";
+      case "driver":       return "Let It Fly";
+      default:             return "Settle In";
+    }
+  };
+
   const result: SessionDrill[] = clubs.map((club, i) => {
     const subbed = substituteClub(club, bag);
     return {
       id: `flow-${i}-${subbed}`,
       club: subbed,
-      drillName: i === 0 ? "Get Loose" : i === clubs.length - 1 ? "Finish Strong" : "Find Your Swing",
+      drillName: flowName(subbed, i, clubs.length),
       description: cues[i % cues.length],
       balls: isUnlimited ? 10 : Math.min(ballsPerClub, totalBalls - ballsPerClub * i > ballsPerClub ? ballsPerClub : Math.max(6, totalBalls - ballsPerClub * i)),
       unit: "balls",
