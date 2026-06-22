@@ -9,6 +9,33 @@ interface GuidedSessionViewProps {
   session: SessionDrill[];
   onComplete: () => void;
   onReset: () => void;
+  onSwitchView: () => void;
+}
+
+// Shared Guided/List switch shown at the top of both session views. Tapping
+// the inactive side flips modes while the session (and List progress) is kept.
+export function ViewToggle({ mode, onSwitch }: { mode: "guided" | "list"; onSwitch: () => void }) {
+  return (
+    <div className="inline-flex rounded-full border border-border bg-card p-0.5">
+      {(["guided", "list"] as const).map((m) => {
+        const active = mode === m;
+        return (
+          <button
+            key={m}
+            type="button"
+            onClick={() => { if (!active) onSwitch(); }}
+            aria-pressed={active}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-[12px] font-bold uppercase tracking-[0.08em] transition-colors",
+              active ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-muted",
+            )}
+          >
+            {m === "guided" ? "Guided" : "List"}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function formatElapsed(seconds: number): string {
@@ -17,7 +44,7 @@ function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessionViewProps) {
+export function GuidedSessionView({ session, onComplete, onReset, onSwitchView }: GuidedSessionViewProps) {
   const [index, setIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
@@ -74,6 +101,11 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
       </div>
 
       <div className="flex flex-col min-h-[calc(100vh-10rem)] pt-6">
+
+        {/* Guided/List view switch */}
+        <div className="flex justify-center pb-4">
+          <ViewToggle mode="guided" onSwitch={onSwitchView} />
+        </div>
 
         {/* Top meta row */}
         <div className="flex items-center justify-between">
