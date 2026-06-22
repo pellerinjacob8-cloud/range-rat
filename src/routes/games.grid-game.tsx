@@ -13,13 +13,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/games/grid-game")({
   head: () => ({
     meta: [
-      { title: "Grid Game — Range Rat" },
+      { title: "Range Rat: Grid Game" },
       {
         name: "description",
         content:
-          "Two-player Grid Game. Call your quadrant on a 3x3. Don't get spelled out — RAT or RANGE.",
+          "Two-player Grid Game. Call your quadrant on a 3x3. Don't get spelled out, RAT or RANGE.",
       },
-      { property: "og:title", content: "Grid Game — Range Rat" },
+      { property: "og:title", content: "Range Rat: Grid Game" },
       {
         property: "og:description",
         content: "Pick RAT or RANGE. Call your square. Last one standing wins.",
@@ -124,7 +124,7 @@ function GridGameInner() {
   const onCallerAnswer = (hit: boolean) => {
     if (phase.kind !== "callerPrompt") return;
     if (!hit) {
-      // Caller missed — turn ends, no letter.
+      // Caller missed, turn ends, no letter.
       swapAndReset();
     } else {
       setPhase({ kind: "secondPrompt", square: phase.square });
@@ -134,10 +134,10 @@ function GridGameInner() {
   const onSecondAnswer = (hit: boolean) => {
     if (phase.kind !== "secondPrompt") return;
     if (hit) {
-      // Both made it — no letter, swap caller.
+      // Both made it, no letter, swap caller.
       swapAndReset();
     } else {
-      // Second player missed — they get the next letter.
+      // Second player missed, they get the next letter.
       setLetters((prev) => {
         const next: [number, number] = [...prev] as [number, number];
         next[second] = Math.min(target, next[second] + 1);
@@ -250,7 +250,7 @@ function PromptCard({
   return (
     <div className="mt-6 rounded-2xl border border-primary/40 bg-card p-4 shadow-sm animate-[fade-in_0.2s_ease-out]">
       <p className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        {who} — hit it?
+        {who}, hit it?
       </p>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <button

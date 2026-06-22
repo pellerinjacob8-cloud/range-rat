@@ -11,13 +11,13 @@ import { fetchSessions } from "@/lib/db";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Range Rat — Practice & Games" },
+      { title: "Range Rat: Practice & Games" },
       {
         name: "description",
         content:
           "A bold practice companion for the driving range. Generate drill sessions and play simple range games.",
       },
-      { property: "og:title", content: "Range Rat — Practice & Games" },
+      { property: "og:title", content: "Range Rat: Practice & Games" },
       {
         property: "og:description",
         content: "Generate range drills and play games like Closest to Pin.",
@@ -97,7 +97,7 @@ function Home() {
         </h1>
       </section>
 
-      {/* Resume card — only shown when there's a saved in-progress session */}
+      {/* Resume card, only shown when there's a saved in-progress session */}
       {activeSession && (
         <div className="mt-4 relative">
           <button
@@ -162,11 +162,11 @@ function Home() {
         <ProNavCard isPro={isPro} onLock={() => setProReason("Range Rat Combine is a Pro feature. Upgrade to benchmark your game and track progress over time.")} to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
       </div>
 
-      {/* Upgrade nudge — free users only */}
+      {/* Upgrade nudge, free users only */}
       {!isPro && (
         <button
           type="button"
-          onClick={() => setProReason("Upgrade to unlock Combine, Grid Game, yardage tracking, custom sessions, and unlimited saves.")}
+          onClick={() => setProReason("Upgrade to unlock Practice Like You Play, the Combine, stats and handicap tracking, Pro games, yardages, and more.")}
           className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left transition-opacity active:opacity-80"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">
@@ -174,7 +174,7 @@ function Home() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold">Unlock Pro features</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Combine, Grid Game, yardages & more — from $4.99/mo.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Combine, stats, Pro games, yardages, and more. From $4.99/mo.</p>
           </div>
           <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
         </button>

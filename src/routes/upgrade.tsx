@@ -9,12 +9,12 @@ export const Route = createFileRoute("/upgrade")({
 });
 
 const PRO_FEATURES = [
-  "Unlimited saved sessions",
-  "Build your own custom drills",
-  "Combine benchmark tracking + history",
+  "Practice Like You Play mode",
+  "Range Rat Combine benchmark and history",
+  "On-course stats and handicap tracking",
+  "Grid Game and Fairway Game",
   "Club yardage tracking",
-  "Advanced stats + session history",
-  "Grid Game access",
+  "Custom sessions and unlimited saves",
   "Full bag management",
   "Priority support",
 ];

@@ -2,7 +2,7 @@ const PROFILE_KEY = "rangeRat_profile";
 
 type StoredProfile = { firstName?: string; lastName?: string; name?: string };
 
-/** First name only — used to pre-fill Player 1 in games. */
+/** First name only, used to pre-fill Player 1 in games. */
 export function loadProfileName(): string {
   try {
     const raw = localStorage.getItem(PROFILE_KEY);

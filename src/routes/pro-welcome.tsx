@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { BarChart2, Flag, Ruler, Trophy, Zap } from "lucide-react";
+import { Flag, LineChart, Ruler, Shuffle, Sparkles, Trophy, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pro-welcome")({
@@ -13,45 +13,63 @@ const SLIDES = [
     color: "bg-gold-bg border border-gold-border",
     iconColor: "text-gold",
     title: "Welcome to\nRange Rat Pro.",
-    body: "You've unlocked every feature. Here's what's waiting for you.",
+    body: "You just unlocked the full app. Here is everything that comes with Pro.",
     cta: null,
+  },
+  {
+    icon: Shuffle,
+    color: "bg-indigo-500/10",
+    iconColor: "text-indigo-500",
+    title: "Practice Like\nYou Play.",
+    body: "A new club, shape, and distance on every shot, just like a real round. Train the focus that holds up under pressure.",
+    cta: "Play",
   },
   {
     icon: Trophy,
     color: "bg-primary/10",
     iconColor: "text-primary",
-    title: "Range Rat\nCombine.",
-    body: "33 standardized shots across wedges, irons, and driver. Benchmark your game and track your progress over time.",
+    title: "The\nCombine.",
+    body: "33 standardized shots across wedges, irons, and driver. One score to beat, tracked every time you play it.",
     cta: "Combine",
+  },
+  {
+    icon: LineChart,
+    color: "bg-rose-500/10",
+    iconColor: "text-rose-500",
+    title: "Stats &\nHandicap.",
+    body: "Log every round and track GIR, fairways, putts, and up and downs. Watch your handicap trend over time.",
+    cta: "Stats",
   },
   {
     icon: Flag,
     color: "bg-emerald-500/10",
     iconColor: "text-emerald-500",
-    title: "More\nGames.",
-    body: "Grid Game, Fairway Game, Closest to Pin. Range games that make every bucket more competitive.",
+    title: "Pro\nGames.",
+    body: "Grid Game and Fairway Game turn any bucket of balls into a competition worth winning.",
     cta: "Games",
   },
   {
     icon: Ruler,
     color: "bg-blue-500/10",
     iconColor: "text-blue-500",
-    title: "Yardage\nTracking.",
-    body: "Log your carry distances for every club — half swing, three-quarter, and full. Know your numbers.",
+    title: "Know Your\nNumbers.",
+    body: "Log carry distances for every club at half, three-quarter, and full swing. Stop guessing on approach.",
     cta: "Yardages",
   },
   {
-    icon: BarChart2,
+    icon: Sparkles,
     color: "bg-purple-500/10",
     iconColor: "text-purple-500",
-    title: "Unlimited\nSaves.",
-    body: "Save as many practice sessions and custom drills as you want. Your whole range history, always there.",
+    title: "Build\nAnything.",
+    body: "Build your own drills, shape any session to your goals, and save as many as you want. Your full history stays with you.",
     cta: null,
   },
 ];
 
 const CTA_ROUTES: Record<string, string> = {
+  "Play": "/play",
   "Combine": "/combine",
+  "Stats": "/profile",
   "Games": "/games",
   "Yardages": "/profile",
 };
@@ -88,7 +106,7 @@ function ProWelcomePage() {
         )}
       </div>
 
-      {/* Slide content — keyed on index so each slide re-animates in */}
+      {/* Slide content, keyed on index so each slide re-animates in */}
       <div
         key={index}
         className="flex-1 flex flex-col items-center justify-center text-center gap-6 max-w-sm mx-auto w-full animate-in fade-in slide-in-from-bottom-2 duration-300"

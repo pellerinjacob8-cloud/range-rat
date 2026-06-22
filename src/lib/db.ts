@@ -1,5 +1,5 @@
 /**
- * Supabase data layer — replaces localStorage for all persistent user data.
+ * Supabase data layer, replaces localStorage for all persistent user data.
  * Falls back gracefully if the user is not logged in.
  */
 import { supabase } from "./supabase";
@@ -144,7 +144,7 @@ export async function saveHandicapSnapshot(
     };
   }
 
-  // Fallback: stats columns may not exist yet — insert handicap only
+  // Fallback: stats columns may not exist yet, insert handicap only
   if (error) {
     const { data: fallback } = await supabase
       .from("handicap_history")
@@ -385,7 +385,7 @@ export async function removeFavorite(id: string): Promise<void> {
   await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
 }
 
-// ─── Migration — copy localStorage data to Supabase on first login ────────────
+// ─── Migration, copy localStorage data to Supabase on first login ────────────
 
 export async function migrateFromLocalStorage(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();

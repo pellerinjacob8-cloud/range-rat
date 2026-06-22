@@ -38,7 +38,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
     <div className="min-h-screen bg-background text-foreground flex flex-col pt-[env(safe-area-inset-top)]">
       <header className="sticky top-0 z-30 border-b border-border bg-background/86 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between px-4 h-[52px]">
-          {/* Left — back chevron or logo */}
+          {/* Left, back chevron or logo */}
           <div className="flex items-center">
             {showBack ? (
               <button
@@ -53,7 +53,7 @@ export function AppShell({ children, showBack = false, hideTabBar = false }: App
             )}
           </div>
 
-          {/* Right — settings */}
+          {/* Right, settings */}
           <div className="flex items-center justify-end">
             <Link
               to="/profile"

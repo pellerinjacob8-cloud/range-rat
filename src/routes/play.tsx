@@ -6,13 +6,13 @@ import { ProGate } from "@/components/ProGate";
 export const Route = createFileRoute("/play")({
   head: () => ({
     meta: [
-      { title: "Practice Like You Play — Range Rat" },
+      { title: "Range Rat: Practice Like You Play" },
       {
         name: "description",
         content:
-          "Random clubs, shapes, and distances. Practice every shot like it counts — solo or head to head.",
+          "Random clubs, shapes, and distances. Practice every shot like it counts, solo or head to head.",
       },
-      { property: "og:title", content: "Practice Like You Play — Range Rat" },
+      { property: "og:title", content: "Range Rat: Practice Like You Play" },
       {
         property: "og:description",
         content: "Random shot generator for solo practice or two-player games.",

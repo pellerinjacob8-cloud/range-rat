@@ -13,13 +13,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/games/fairway-game")({
   head: () => ({
     meta: [
-      { title: "Fairway Game — Range Rat" },
+      { title: "Range Rat: Fairway Game" },
       {
         name: "description",
         content:
           "Pick a fairway between two markers and track your hit rate. Solo or two-player.",
       },
-      { property: "og:title", content: "Fairway Game — Range Rat" },
+      { property: "og:title", content: "Range Rat: Fairway Game" },
       {
         property: "og:description",
         content: "Define your fairway, hit your shots, track your fairway percentage.",
@@ -152,7 +152,7 @@ function FairwayGame() {
             </p>
             <p className="mt-1 font-display text-5xl leading-none">{currentName}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Their shot {currentShotNumber} of {total} — hit or miss?
+              Their shot {currentShotNumber} of {total}, hit or miss?
             </p>
           </>
         ) : (
@@ -549,7 +549,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
               />
               <ShotOrderCard
                 label="Alternating"
-                description="Players take turns shot by shot — P1, P2, P1, P2…"
+                description="Players take turns shot by shot, P1, P2, P1, P2…"
                 active={shotOrder === "alternating"}
                 onClick={() => setShotOrder("alternating")}
               />
@@ -575,7 +575,7 @@ function SetupView({ onStart }: { onStart: (c: MatchConfig) => void }) {
         <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3.5 flex gap-3 items-start">
           <Target className="h-4 w-4 text-primary mt-0.5 shrink-0" />
           <p className="text-sm text-muted-foreground leading-snug">
-            Pick two objects on the range as your left and right fairway edges — a flag, yardage sign, or mat edge. Count every shot between them as a hit.
+            Pick two objects on the range as your left and right fairway edges, a flag, yardage sign, or mat edge. Count every shot between them as a hit.
           </p>
         </div>
 

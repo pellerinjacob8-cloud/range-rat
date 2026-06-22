@@ -12,7 +12,7 @@ export type ContentType = "warmup" | "drill" | "focus" | "challenge" | "transfer
 export type SessionPhase = "Warm Up" | "Skill" | "Transfer" | "Challenge" | "Test";
 
 // Practice style is derived from handicap (or a level question for new users).
-// It controls phase ratios and difficulty — NOT whether drills are "easy/hard".
+// It controls phase ratios and difficulty, NOT whether drills are "easy/hard".
 export type PracticeStyle = "foundation" | "development" | "performance" | "elite";
 
 // Fallback when a golfer hasn't logged a handicap yet.
@@ -38,7 +38,7 @@ export interface ScoredTemplate {
   describe: (style: PracticeStyle) => string;
 }
 
-// Transfer blocks: "practice like you play" — constraints, not instruction.
+// Transfer blocks: "practice like you play", constraints, not instruction.
 export interface TransferTemplate {
   name: string;
   describe: (style: PracticeStyle) => string;
@@ -51,7 +51,7 @@ export interface SessionDrill {
   description: string;
   balls: number;
   unit?: string; // e.g. "balls", "putts", "reps", "min"
-  isTarget?: boolean; // true in unlimited mode — balls are a suggested rep count
+  isTarget?: boolean; // true in unlimited mode, balls are a suggested rep count
   type?: ContentType;  // which content type this block is
   phase?: SessionPhase; // which phase of the session it belongs to
 }
@@ -103,7 +103,7 @@ export const PLAYER_LEVELS: { value: PlayerLevel; label: string; hint: string }[
 // ─── Practice styles ──────────────────────────────────────────────────────────
 // The style controls the SHAPE of a session: how big each phase is and how much
 // of the Skill phase is instructional drills vs. free hitting. Better players
-// get less instruction and more scoring — same phases, different ratios.
+// get less instruction and more scoring, same phases, different ratios.
 
 export interface StyleProfile {
   label: string;
@@ -233,7 +233,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
     },
     {
       name: "Pin-High Challenge",
-      description: "Pick a target and focus solely on matching the distance — not left or right. Every shot that finishes pin-high counts as a point.",
+      description: "Pick a target and focus solely on matching the distance, not left or right. Every shot that finishes pin-high counts as a point.",
       clubDescriptions: {
         wedges:        "This is your bread and butter. Pick 75%, 100%, and 125% of your full wedge distance. Alternate.",
         "short-irons": "Pick a specific yardage and hold it. 7 out of 10 pin-high is the goal.",
@@ -242,7 +242,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
     },
     {
       name: "9-Shot Ladder",
-      description: "Hit alternating shots at three pins — near, mid, and far. Reset your count if you miss two in a row.",
+      description: "Hit alternating shots at three pins, near, mid, and far. Reset your count if you miss two in a row.",
       weight: 1,
     },
     {
@@ -258,13 +258,13 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
       description: "Hit 10 balls and note where every miss goes. If 6+ miss the same side, adjust your aim one ball width the other way and run it back.",
       clubDescriptions: {
         "long-irons": "Long irons exaggerate path errors. Be honest about the pattern.",
-        driver:       "Note whether misses are left, right, or both — that tells you if it's path or face angle.",
+        driver:       "Note whether misses are left, right, or both, that tells you if it's path or face angle.",
       },
       weight: 1,
     },
     {
       name: "Clock-Face Landing",
-      description: "Imagine a clock face around your target. Call out where you want to land before each shot — 12 o'clock is straight, 11 is left, 1 is right. Check if you matched it.",
+      description: "Imagine a clock face around your target. Call out where you want to land before each shot, 12 o'clock is straight, 11 is left, 1 is right. Check if you matched it.",
       weight: 0.9,
     },
   ],
@@ -298,7 +298,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
       clubDescriptions: {
         wedges:        "Wedge divots should be shallow and point at the target.",
         "short-irons": "You want a slight downward strike. Divot starts after the ball, never before.",
-        "long-irons":  "Long iron divots should be very shallow — just brushing the turf.",
+        "long-irons":  "Long iron divots should be very shallow, just brushing the turf.",
         woods:         "Fairway wood: brush the turf, don't dig.",
         driver:        "No divot with the driver. You should be hitting up or level.",
       },
@@ -359,7 +359,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
     },
     {
       name: "Overspeed Rehearsal",
-      description: "Take 3 practice swings as fast as you can — no ball — then immediately hit a ball trying to recreate that speed sensation.",
+      description: "Take 3 practice swings as fast as you can, no ball, then immediately hit a ball trying to recreate that speed sensation.",
       clubDescriptions: {
         driver: "Overspeed training is most effective with the driver. Swing a lighter club or just a shaft first.",
       },
@@ -369,7 +369,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
       name: "Distance Ladder",
       description: "Pick 4 yardage targets evenly spaced across your range. Hit one ball at each, working from nearest to farthest. Repeat.",
       clubDescriptions: {
-        wedges: "50 · 75 · 100 · 125 yards. This is your scoring zone — get obsessed with it.",
+        wedges: "50 · 75 · 100 · 125 yards. This is your scoring zone, get obsessed with it.",
       },
       weight: 1.1,
     },
@@ -379,7 +379,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
       clubDescriptions: {
         "short-irons": "Hands ahead of the ball at impact. Shaft leans toward the target.",
         "long-irons":  "Catch it thin? Ball is too far forward. Chunk it? Too far back.",
-        woods:         "With fairway woods, you're sweeping — but contact still needs to be crisp.",
+        woods:         "With fairway woods, you're sweeping, but contact still needs to be crisp.",
       },
       weight: 1,
     },
@@ -388,7 +388,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
   "shot-shaping": [
     {
       name: "Draw / Fade Switch",
-      description: "Alternate intentional draw and fade on consecutive shots. Both must finish near the target line — shape without losing control.",
+      description: "Alternate intentional draw and fade on consecutive shots. Both must finish near the target line, shape without losing control.",
       clubDescriptions: {
         wedges:  "Wedge shapes are subtle. Open or close the face slightly rather than changing your swing path dramatically.",
         driver:  "Set up for your shape before you swing. Commit to a start line and trust the curve.",
@@ -397,7 +397,7 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
     },
     {
       name: "Trajectory Window",
-      description: "Hit 3 low, 3 stock, 3 high to the same target. Only the flight changes — same target, same effort.",
+      description: "Hit 3 low, 3 stock, 3 high to the same target. Only the flight changes, same target, same effort.",
       clubDescriptions: {
         driver:  "Low driver: ball back, hands forward, punch finish. High driver: tee it up, ball forward, feel like you're hitting up.",
       },
@@ -429,14 +429,14 @@ export const DRILLS_BY_GOAL: Record<Goal, DrillTemplate[]> = {
     },
     {
       name: "3-Club Shape Test",
-      description: "Take three different clubs and hit a draw with each. Then repeat with a fade. Some clubs shape easier than others — build that awareness.",
+      description: "Take three different clubs and hit a draw with each. Then repeat with a fade. Some clubs shape easier than others, build that awareness.",
       weight: 0.9,
     },
   ],
 };
 
 // ─── Focus library ────────────────────────────────────────────────────────────
-// Single-cue blocks. The golfer hits balls naturally while holding one thought —
+// Single-cue blocks. The golfer hits balls naturally while holding one thought,
 // how good players actually practice.
 
 export const FOCUS_BY_GOAL: Record<Goal, FocusTemplate[]> = {
@@ -462,14 +462,14 @@ export const FOCUS_BY_GOAL: Record<Goal, FocusTemplate[]> = {
     { name: "Lazy Start, Fast Finish", description: "Let the club fall gently before you accelerate. The speed belongs at the bottom." },
     { name: "Athletic Setup", description: "Set up wide and ready, like you're about to jump. Stay tall and turn through." },
     { name: "Release Through", description: "Let the clubhead pass your hands through impact. Free speed, not a steered hit." },
-    { name: "Commit to Speed", description: "Pick your number and swing to carry it — no flinching or holding back mid-swing." },
+    { name: "Commit to Speed", description: "Pick your number and swing to carry it, no flinching or holding back mid-swing." },
   ],
   "shot-shaping": [
     { name: "See It First", description: "Picture the full curve before you swing, then shape the shot you just saw." },
     { name: "Start-Line First", description: "The start line matters more than the curve. Pick it, hit it, let the shape happen." },
-    { name: "Face Awareness", description: "Feel where the face points at impact — that's what sets your start line." },
+    { name: "Face Awareness", description: "Feel where the face points at impact, that's what sets your start line." },
     { name: "Commit to the Curve", description: "Once you pick draw or fade, fully commit. Half-shaped shots leak into trouble." },
-    { name: "Match a Height", description: "Pair every shape with a trajectory — low draw, high fade. Shape and flight together." },
+    { name: "Match a Height", description: "Pair every shape with a trajectory, low draw, high fade. Shape and flight together." },
     { name: "Both Ways Ready", description: "Remind yourself you can move it either direction, then pick the shape the hole asks for." },
   ],
 };
@@ -488,27 +488,27 @@ function pick<T>(style: PracticeStyle, vals: readonly [T, T, T, T]): T {
 export const CHALLENGE_BY_GOAL: Record<Goal, ScoredTemplate[]> = {
   accuracy: [
     { name: "Fairway Finder", describe: s => `Set two markers ${pick(s, [30, 24, 18, 12])} yards apart as your fairway. Land ${pick(s, [5, 6, 7, 8])} of 10 inside them.` },
-    { name: "Target Window", describe: s => `Pick a ${pick(s, [25, 20, 15, 10])}-yard-wide window. Score a point for each shot that finishes inside — beat ${pick(s, [5, 6, 7, 8])}/10.` },
+    { name: "Target Window", describe: s => `Pick a ${pick(s, [25, 20, 15, 10])}-yard-wide window. Score a point for each shot that finishes inside, beat ${pick(s, [5, 6, 7, 8])}/10.` },
     { name: "Three in a Row", describe: s => `Hit ${pick(s, [2, 3, 3, 4])} shots in a row inside your window. Miss one and the count resets to zero.` },
     { name: "Edge to Edge", describe: s => `Alternate aiming at the left and right edge of your target zone. Start ${pick(s, [5, 6, 7, 8])} of 10 on the called side.` },
   ],
   consistency: [
     { name: "Flush Count", describe: s => `Hit 10 shots and count the flush, center-face strikes. Beat ${pick(s, [4, 5, 6, 7])}/10.` },
-    { name: "Carbon Copy", describe: s => `Repeat one ball flight exactly. Count your longest streak of matching shots — beat ${pick(s, [3, 4, 5, 6])} in a row.` },
+    { name: "Carbon Copy", describe: s => `Repeat one ball flight exactly. Count your longest streak of matching shots, beat ${pick(s, [3, 4, 5, 6])} in a row.` },
     { name: "No Two Alike Penalty", describe: s => `Same strike, same flight, every ball. Score ${pick(s, [6, 7, 8, 9])} of 10 that you'd call identical.` },
-    { name: "Up-to-Speed Ladder", describe: s => `Sets of smooth-stock-committed. Every committed swing must still hold its line — clear ${pick(s, [2, 3, 4, 5])} clean sets.` },
+    { name: "Up-to-Speed Ladder", describe: s => `Sets of smooth-stock-committed. Every committed swing must still hold its line, clear ${pick(s, [2, 3, 4, 5])} clean sets.` },
   ],
   distance: [
     { name: "Carry Window", describe: s => `Pick your stock number. Land ${pick(s, [5, 6, 7, 8])} of 10 within ${pick(s, [12, 9, 6, 4])} yards of it.` },
     { name: "Long & In Play", describe: s => `Max carry that still finishes in a ${pick(s, [40, 32, 24, 16])}-yard window. Score ${pick(s, [5, 6, 7, 8])} of 10.` },
     { name: "Number Caller", describe: s => `Call a carry number before each ball and try to match it. Get ${pick(s, [4, 5, 6, 7])} of 10 within a flag's length.` },
-    { name: "Speed Stretch", describe: s => `Carry one club-length past your stock distance while keeping it in play — ${pick(s, [4, 5, 6, 7])} of 10.` },
+    { name: "Speed Stretch", describe: s => `Carry one club-length past your stock distance while keeping it in play, ${pick(s, [4, 5, 6, 7])} of 10.` },
   ],
   "shot-shaping": [
-    { name: "Shape on Call", describe: s => `Call draw or fade on each ball. Count how many of 10 curve the right way — beat ${pick(s, [5, 6, 7, 8])}.` },
+    { name: "Shape on Call", describe: s => `Call draw or fade on each ball. Count how many of 10 curve the right way, beat ${pick(s, [5, 6, 7, 8])}.` },
     { name: "Start-Line Gate", describe: s => `Start ${pick(s, [5, 6, 7, 8])} of 10 on your chosen line, then let the ball curve back to target.` },
     { name: "Both Ways", describe: s => `Alternate a draw and a fade to the same target. Score ${pick(s, [3, 4, 5, 6])} pairs where both work.` },
-    { name: "Escape Artist", describe: s => `Imagine a tree on your line. Start the ball around it and curve back — ${pick(s, [4, 5, 6, 7])} of 10 finish near target.` },
+    { name: "Escape Artist", describe: s => `Imagine a tree on your line. Start the ball around it and curve back, ${pick(s, [4, 5, 6, 7])} of 10 finish near target.` },
   ],
 };
 
@@ -521,7 +521,7 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
     describe: s => pick(s, [
       "Run your full routine on every ball and say your club and target out loud before each shot.",
       "Change clubs every ball, commit to a real target, and judge the result like it counts.",
-      "Play imaginary holes — tee shot, then approach — and grade each shot good or bad.",
+      "Play imaginary holes, tee shot, then approach, and grade each shot good or bad.",
       "Play 9 holes in your head. A poor shot means you replay that hole before moving on.",
     ]),
   },
@@ -530,7 +530,7 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
     describe: s => pick(s, [
       "Never hit the same club twice in a row. Pick a target that fits each one.",
       "Switch clubs every ball and change your target to match the club.",
-      "Random club, random target, full routine — like you never get two of the same shot on the course.",
+      "Random club, random target, full routine, like you never get two of the same shot on the course.",
       "Random club and target each ball; one bad strike means you owe yourself two good ones.",
     ]),
   },
@@ -538,7 +538,7 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
     name: "One-Ball Routine",
     describe: s => pick(s, [
       "One ball, full routine, no rehearsal swing. Make the first one count.",
-      "Single ball per target with your complete routine — no do-overs.",
+      "Single ball per target with your complete routine, no do-overs.",
       "First-ball-only: one shot per target, score yourself on the result you'd accept on the course.",
       "One ball per target under self-imposed pressure: name the shot, hit it, live with it.",
     ]),
@@ -546,10 +546,10 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
   {
     name: "Par-18 Game",
     describe: s => pick(s, [
-      "Pick a target and try to 'hit the green' — a generous zone. Score yourself across 9 targets.",
+      "Pick a target and try to 'hit the green', a generous zone. Score yourself across 9 targets.",
       "Nine targets, one ball each, a fair-sized green. Count how many you find.",
       "Nine 'greens' of realistic size. Track greens hit out of 9 and try to beat it next time.",
-      "Nine tight targets, one ball each. This is your scoring round — log the number and chase it.",
+      "Nine tight targets, one ball each. This is your scoring round, log the number and chase it.",
     ]),
   },
   {
@@ -557,7 +557,7 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
     describe: s => pick(s, [
       "Hit two balls to a target and play the worse one again until you put a good one down.",
       "Two balls per target; replay the worse shot. Move on after one you're happy with.",
-      "Worst-ball to each target — you only advance after the bad shot becomes a good one.",
+      "Worst-ball to each target, you only advance after the bad shot becomes a good one.",
       "Worst-ball, and you need two acceptable shots in a row before moving to the next target.",
     ]),
   },
@@ -568,16 +568,16 @@ export const TRANSFER_TEMPLATES: TransferTemplate[] = [
 
 export const TEST_BY_GOAL: Record<Goal, ScoredTemplate[]> = {
   accuracy: [
-    { name: "Fairway Finder Test", describe: s => `Final test: a ${pick(s, [28, 22, 16, 10])}-yard fairway. Count how many of 10 you keep in play — beat ${pick(s, [5, 6, 7, 8])}.` },
+    { name: "Fairway Finder Test", describe: s => `Final test: a ${pick(s, [28, 22, 16, 10])}-yard fairway. Count how many of 10 you keep in play, beat ${pick(s, [5, 6, 7, 8])}.` },
   ],
   consistency: [
-    { name: "Strike Test", describe: s => `Final test: 10 stock shots. Count the flush, centered strikes — beat ${pick(s, [4, 5, 6, 7])}.` },
+    { name: "Strike Test", describe: s => `Final test: 10 stock shots. Count the flush, centered strikes, beat ${pick(s, [4, 5, 6, 7])}.` },
   ],
   distance: [
     { name: "Carry Test", describe: s => `Final test: how many of 10 carry within ${pick(s, [12, 9, 6, 4])} yards of your number? Beat ${pick(s, [5, 6, 7, 8])}.` },
   ],
   "shot-shaping": [
-    { name: "Shape Test", describe: s => `Final test: call your shape on each ball. Count how many of 10 curve as called — beat ${pick(s, [5, 6, 7, 8])}.` },
+    { name: "Shape Test", describe: s => `Final test: call your shape on each ball. Count how many of 10 curve as called, beat ${pick(s, [5, 6, 7, 8])}.` },
   ],
 };
 
@@ -595,13 +595,13 @@ interface WarmUpItem {
 const WARM_UP_LIBRARY: WarmUpItem[] = [
   {
     name: "Light Stretching",
-    description: "Loosen shoulders, hips, and wrists. Easy rotations — no force.",
+    description: "Loosen shoulders, hips, and wrists. Easy rotations, no force.",
     count: 2,
     unit: "min",
   },
   {
     name: "Easy Half Swings",
-    description: "Grab a wedge. Half swings only — focus on tempo and clean contact. This is not practice, it's just getting loose.",
+    description: "Grab a wedge. Half swings only, focus on tempo and clean contact. This is not practice, it's just getting loose.",
     count: 10,
     unit: "balls",
   },
@@ -631,7 +631,7 @@ const WARM_UP_LIBRARY: WarmUpItem[] = [
   },
   {
     name: "Stock Mid Iron",
-    description: "Full but smooth swings. Lock in your stock shot — this is your baseline for the rest of the session.",
+    description: "Full but smooth swings. Lock in your stock shot, this is your baseline for the rest of the session.",
     count: 8,
     unit: "balls",
   },
@@ -688,7 +688,7 @@ function resolveClubs(groups: ClubGroup[]): string[] {
   return sortClubsShortToLong(result);
 }
 
-// Fisher-Yates shuffle — returns a new array
+// Fisher-Yates shuffle, returns a new array
 function shuffle<T>(arr: T[]): T[] {
   const out = [...arr];
   for (let i = out.length - 1; i > 0; i--) {
@@ -731,7 +731,7 @@ function pickSpread(clubs: string[], n: number): string[] {
 /**
  * Build a phase-based practice session. The shape (Skill → Transfer → Challenge
  * → Test) is constant; the player's practice style dials each phase's size, the
- * drill-vs-focus mix, and target difficulty. Drills never dominate — even
+ * drill-vs-focus mix, and target difficulty. Drills never dominate, even
  * Foundation tops out around a third of the session.
  */
 export function generateSession(input: GenerateInput): SessionDrill[] {

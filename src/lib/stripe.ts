@@ -13,7 +13,7 @@ export const PRICES = {
 export async function startCheckout(priceId: string) {
   if (!priceId) throw new Error("Price not configured. Contact support.");
 
-  // The server derives the user from this token — we never send a raw userId.
+  // The server derives the user from this token, we never send a raw userId.
   const { data: { session } } = await supabase.auth.getSession();
   const accessToken = session?.access_token;
   if (!accessToken) throw new Error("Please sign in again to upgrade.");

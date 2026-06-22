@@ -160,7 +160,7 @@
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.55 0.13 258);
 
-  /* champagne gold — lighter for dark surfaces */
+  /* champagne gold, lighter for dark surfaces */
   --gold: #d8b36a;
   --gold-line: #d8b36a;
   --gold-bg: rgba(216,179,106,.12);

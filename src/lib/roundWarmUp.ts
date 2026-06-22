@@ -88,7 +88,7 @@ const ITEMS_BY_DURATION: Record<RoundDuration, Omit<RoundWarmUpItem, "id">[]> = 
       section: "Putting",
       activity: "Short Putts",
       amount: "5 min",
-      tip: "Inside 4 ft. Build confidence — back of the cup.",
+      tip: "Inside 4 ft. Build confidence, back of the cup.",
     },
   ],
   45: [
@@ -114,7 +114,7 @@ const ITEMS_BY_DURATION: Record<RoundDuration, Omit<RoundWarmUpItem, "id">[]> = 
       section: "Mid Irons",
       activity: "7 Iron",
       amount: "10 balls",
-      tip: "Pick a 10-yard wide window — land it inside.",
+      tip: "Pick a 10-yard wide window, land it inside.",
     },
     {
       section: "Long Irons",
@@ -138,7 +138,7 @@ const ITEMS_BY_DURATION: Record<RoundDuration, Omit<RoundWarmUpItem, "id">[]> = 
       section: "Putting",
       activity: "Lag Putts",
       amount: "5 min",
-      tip: "Two- and three-footers — wrong, focus on speed.",
+      tip: "Two- and three-footers, wrong, focus on speed.",
     },
     {
       section: "Putting",
@@ -162,13 +162,13 @@ const ITEMS_BY_DURATION: Record<RoundDuration, Omit<RoundWarmUpItem, "id">[]> = 
     },
     {
       section: "Wedges",
-      activity: "Sand Wedge — Soft",
+      activity: "Sand Wedge, Soft",
       amount: "10 balls",
       tip: "30–50 yards. Land it like a feather.",
     },
     {
       section: "Wedges",
-      activity: "Pitching Wedge — Stock",
+      activity: "Pitching Wedge, Stock",
       amount: "10 balls",
       tip: "Full but smooth. Lock in your stock yardage.",
     },
@@ -204,13 +204,13 @@ const ITEMS_BY_DURATION: Record<RoundDuration, Omit<RoundWarmUpItem, "id">[]> = 
     },
     {
       section: "Driver",
-      activity: "Driver — Stock",
+      activity: "Driver, Stock",
       amount: "6 balls",
       tip: "Tee high, athletic stance, easy speed.",
     },
     {
       section: "Driver",
-      activity: "Driver — Committed",
+      activity: "Driver, Committed",
       amount: "4 balls",
       tip: "Pick the shape you'll start with on #1.",
     },

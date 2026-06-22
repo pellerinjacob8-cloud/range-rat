@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/games/closest-to-pin")({
   head: () => ({
     meta: [
-      { title: "Closest to Pin — Range Rat" },
+      { title: "Range Rat: Closest to Pin" },
       {
         name: "description",
         content: "Two-player Closest to Pin scorekeeper. Set a target score and play.",
       },
-      { property: "og:title", content: "Closest to Pin — Range Rat" },
+      { property: "og:title", content: "Range Rat: Closest to Pin" },
       {
         property: "og:description",
         content: "Tap who won each round. First to the target score wins.",
@@ -162,7 +162,7 @@ function ClosestToPin() {
                   {player.score}
                 </span>
               </div>
-              {/* Steppers — these are visual only for display; awardPoint is the real action */}
+              {/* Steppers, these are visual only for display; awardPoint is the real action */}
               <div className="flex flex-col gap-1.5">
                 <button
                   onClick={() => awardPoint(player.id)}

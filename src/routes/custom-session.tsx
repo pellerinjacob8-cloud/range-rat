@@ -116,7 +116,7 @@ export default function CustomSessionBuilderPage() {
       .filter((d) => d.drillName.trim())
       .map((d) => ({
         id: d.key,
-        club: d.club.trim() || "—",
+        club: d.club.trim() || "–",
         drillName: d.drillName.trim(),
         description: d.description,
         balls: d.balls,

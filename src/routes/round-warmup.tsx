@@ -14,11 +14,11 @@ import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 export const Route = createFileRoute("/round-warmup")({
   head: () => ({
     meta: [
-      { title: "Round Warm Up — Range Rat" },
+      { title: "Range Rat: Round Warm Up" },
       {
         name: "description",
         content:
-          "A timed pre-round warm-up checklist. Stretches, wedges, irons, driver, and putting — tailored to the time you have.",
+          "A timed pre-round warm-up checklist. Stretches, wedges, irons, driver, and putting, tailored to the time you have.",
       },
     ],
   }),
@@ -116,7 +116,7 @@ function RoundWarmUpPage() {
   const reset = () => {
     setDuration(null);
     setDone(new Set());
-    // teeTime intentionally preserved — user set it for this round
+    // teeTime intentionally preserved, user set it for this round
   };
 
   if (duration !== null) {
@@ -191,12 +191,12 @@ function RoundWarmUpPage() {
             onClick={() => setShowPicker(true)}
             className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary active:opacity-70"
           >
-            — Add
+            Add
           </button>
         )}
       </div>
 
-      {/* Inline time picker — shown when showPicker */}
+      {/* Inline time picker, shown when showPicker */}
       {showPicker && (
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3 mb-3.5">
           <div className="flex gap-2">
@@ -287,7 +287,7 @@ function RoundWarmUpPage() {
 
         {/* ── Custom duration card ── */}
         <div className="rounded-[18px] border border-border bg-card">
-          {/* Header row — always visible, tapping toggles expanded state */}
+          {/* Header row, always visible, tapping toggles expanded state */}
           <button
             type="button"
             onClick={() => setShowCustom((v) => !v)}
@@ -297,7 +297,7 @@ function RoundWarmUpPage() {
               <p className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Custom · Set Your Own
               </p>
-              <p className="mt-0.5 font-stats text-[36px] leading-none tabular-nums text-primary">—</p>
+              <p className="mt-0.5 font-stats text-[36px] leading-none tabular-nums text-primary">–</p>
               <p className="mt-1 text-[12px] text-muted-foreground">Set your own warm-up duration.</p>
               {showCustom && customTotal > 0 && hasTeeTime && (
                 <p className="mt-1.5 text-[11px] font-semibold text-primary">
@@ -470,7 +470,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime }: ChecklistV
           </button>
         </div>
 
-        {/* Schedule strip — sticky floating bar when tee time is set */}
+        {/* Schedule strip, sticky floating bar when tee time is set */}
         {arrival && teeTime && (
           <div className="sticky top-14 z-20 -mx-4 px-4 pt-3 pb-3 bg-background/95 backdrop-blur border-b border-border shadow-sm">
             <div className="grid grid-cols-3 divide-x divide-border text-center">

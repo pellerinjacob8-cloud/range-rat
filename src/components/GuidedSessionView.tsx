@@ -21,7 +21,7 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
 
-  // Timer — uses wall-clock diff so it keeps running when app is backgrounded
+  // Timer, uses wall-clock diff so it keeps running when app is backgrounded
   useEffect(() => {
     startRef.current = Date.now();
     const id = setInterval(() => {
@@ -71,7 +71,7 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
           </p>
         </div>
 
-        {/* Main drill card — centered vertically */}
+        {/* Main drill card, centered vertically */}
         <div className="flex flex-1 flex-col items-center justify-center text-center px-2 py-10">
 
           {/* Club group label */}
@@ -94,7 +94,7 @@ export function GuidedSessionView({ session, onComplete, onReset }: GuidedSessio
           {/* Ball count pill */}
           <div className="mt-8 flex items-baseline gap-2 rounded-2xl border border-border bg-card px-8 py-5">
             <span className="font-stats text-[64px] leading-none tabular-nums text-primary">
-              {drill.balls > 0 ? drill.balls : "—"}
+              {drill.balls > 0 ? drill.balls : "–"}
             </span>
             <span className="text-[15px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
               {drill.balls > 0 ? "balls" : (drill.unit ?? "")}

@@ -86,13 +86,13 @@ function AuthGate() {
       navigate({ to: "/onboarding/name" });
     }
 
-    // Verified session but no profile — welcome page is only for guests, push them forward
+    // Verified session but no profile, welcome page is only for guests, push them forward
     if (session && !hasProfile && pathname === "/onboarding/welcome") {
       navigate({ to: "/onboarding/name" });
     }
 
     // Logged-in + fully set up → bounce off onboarding/login (not reset-password)
-    // Only bounce once onboarding is explicitly complete — prevents kicking users
+    // Only bounce once onboarding is explicitly complete, prevents kicking users
     // mid-flow when a Supabase token refresh re-runs this effect after name is saved
     if (hasProfile && onboardingComplete && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
       navigate({ to: "/" });

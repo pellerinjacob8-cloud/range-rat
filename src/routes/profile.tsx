@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
-      { title: "Profile — Range Rat" },
+      { title: "Range Rat: Profile" },
       { name: "description", content: "Your golfer profile, bag setup, and all-time stats." },
     ],
   }),
@@ -174,7 +174,7 @@ function ProfilePage() {
       putts: roundInputs.putts ? parseFloat(roundInputs.putts) : undefined,
       upAndDowns: roundInputs.upAndDowns ? parseFloat(roundInputs.upAndDowns) : undefined,
     };
-    // Optimistic update — UI reflects the save immediately
+    // Optimistic update, UI reflects the save immediately
     const tempId = `temp-${Date.now()}`;
     const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt: new Date().toISOString() };
     setProfile(prev => ({ ...prev, handicap: hdx }));
@@ -285,10 +285,10 @@ function ProfilePage() {
                 </div>
                 <div className="grid grid-cols-4 gap-1 border-t border-border pt-[10px]">
                   {[
-                    { label: "GIR", value: entry.gir !== undefined ? `${entry.gir}%` : "—" },
-                    { label: "FWY", value: entry.fairways !== undefined ? `${entry.fairways}%` : "—" },
-                    { label: "PUTTS", value: entry.putts !== undefined ? String(entry.putts) : "—" },
-                    { label: "U & D", value: entry.upAndDowns !== undefined ? String(entry.upAndDowns) : "—" },
+                    { label: "GIR", value: entry.gir !== undefined ? `${entry.gir}%` : "–" },
+                    { label: "FWY", value: entry.fairways !== undefined ? `${entry.fairways}%` : "–" },
+                    { label: "PUTTS", value: entry.putts !== undefined ? String(entry.putts) : "–" },
+                    { label: "U & D", value: entry.upAndDowns !== undefined ? String(entry.upAndDowns) : "–" },
                   ].map(({ label, value }) => (
                     <div key={label} className="text-center">
                       <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
@@ -413,7 +413,7 @@ function ProfilePage() {
             </button>
           </div>
 
-          {/* 2×2 stat grid — latest entry, tap a tile for the in-depth view */}
+          {/* 2×2 stat grid, latest entry, tap a tile for the in-depth view */}
           {(() => {
             const latest = roundHistory[roundHistory.length - 1];
             const prev = roundHistory[roundHistory.length - 2];
@@ -434,7 +434,7 @@ function ProfilePage() {
                         <ChevronRight className="h-3 w-3 text-muted-foreground/60" />
                       </div>
                       <p className="mt-1 font-stats text-[28px] font-bold text-primary leading-none">
-                        {cur !== undefined ? cfg.fmt(cur) : "—"}
+                        {cur !== undefined ? cfg.fmt(cur) : "–"}
                       </p>
                       <p className="mt-1 text-[9.5px] font-semibold h-[12px]">
                         {delta !== null && delta !== 0 ? (
@@ -442,7 +442,7 @@ function ProfilePage() {
                             {delta > 0 ? "▲" : "▼"} {Math.abs(delta)} vs last
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/50">{delta === 0 ? "— even vs last" : ""}</span>
+                          <span className="text-muted-foreground/50">{delta === 0 ? "even vs last" : ""}</span>
                         )}
                       </p>
                     </button>
@@ -452,7 +452,7 @@ function ProfilePage() {
             );
           })()}
 
-          {/* Trend section — collapsible handicap chart */}
+          {/* Trend section, collapsible handicap chart */}
           <div className={cn("border-t border-border pt-[14px]", !isPro && "relative")}>
             <div className={!isPro ? "blur-[6px] pointer-events-none select-none" : undefined} aria-hidden={!isPro}>
               <button type="button" onClick={() => setTrendOpen(o => !o)}
@@ -522,7 +522,7 @@ function ProfilePage() {
                 </button>
               </div>
 
-              {/* Handicap — large focal input */}
+              {/* Handicap, large focal input */}
               <div className="mb-3">
                 <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">Handicap Index</p>
                 <div className="flex items-center h-[62px] rounded-[16px] border-2 border-primary px-[18px] gap-2.5" style={{ background: "rgba(13,45,90,.04)" }}>
@@ -713,7 +713,7 @@ function GolfBagIcon({ className }: { className?: string }) {
       strokeLinejoin="round"
       className={className}
     >
-      {/* Bag body — elongated */}
+      {/* Bag body, elongated */}
       <path d="M7 12 L7 22 Q7 23.5 9 23.5 L15 23.5 Q17 23.5 17 22 L17 12 Z" />
       {/* Top collar */}
       <path d="M7 12 Q7 10 12 10 Q17 10 17 12" />
@@ -938,7 +938,7 @@ function BagSection() {
 
     if (removing !== id) { setRemoving(id); return; }
 
-    // Confirmed — perform removal
+    // Confirmed, perform removal
     setRemoving(null);
     let next = clubs.filter((c) => c.id !== id);
 
@@ -959,7 +959,7 @@ function BagSection() {
     setRemovingSet(null);
   };
 
-  // ── Collapse — default all existing iron sets to collapsed ──
+  // ── Collapse, default all existing iron sets to collapsed ──
   const [collapsedSets, setCollapsedSets] = useState<Set<string>>(
     () => new Set(loadBag().filter((c) => c.type === "iron-set").map((c) => c.id)),
   );
@@ -1124,7 +1124,7 @@ function BagSection() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      {/* Toggle area — tapping this collapses/expands children */}
+                      {/* Toggle area, tapping this collapses/expands children */}
                       <button
                         type="button"
                         onClick={() => toggleSet(header.id)}
@@ -1145,7 +1145,7 @@ function BagSection() {
                         />
                       </button>
 
-                      {/* Edit / Delete buttons — independent of toggle */}
+                      {/* Edit / Delete buttons, independent of toggle */}
                       {isHdrRemoving ? (
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs font-semibold text-muted-foreground">Remove set?</span>
@@ -1162,7 +1162,7 @@ function BagSection() {
                   )}
                 </div>
 
-                {/* Children — animated collapse */}
+                {/* Children, animated collapse */}
                 <div
                   className={cn(
                     "overflow-hidden transition-all duration-200 ease-in-out",
@@ -1501,7 +1501,7 @@ function YardageCell({
       onChange={(e) => { setDraft(e.target.value); setError(false); }}
       onBlur={commit}
       onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-      placeholder="—"
+      placeholder="–"
       className={cn(
         "h-11 w-full min-w-[68px] rounded-xl border text-center text-sm font-bold outline-none transition",
         error
@@ -1580,7 +1580,7 @@ function StatsSection() {
 
   return (
     <div className="space-y-3">
-      {/* Stat tiles — first */}
+      {/* Stat tiles, first */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Sessions"   value={String(sessions.length)} />
         <StatCard label="Balls Hit"  value={totalBalls.toLocaleString()} />
@@ -1761,13 +1761,13 @@ function StatDetailSheet({ statKey, history, onClose }: {
             <div key={label} className="rounded-[13px] border border-border bg-muted p-[10px_12px] text-center">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
               <p className="mt-1 font-stats text-[26px] font-bold text-primary leading-none">
-                {value !== undefined ? cfg.fmt(value) : "—"}
+                {value !== undefined ? cfg.fmt(value) : "–"}
               </p>
             </div>
           ))}
         </div>
 
-        {/* Chart with actual values on each point — same style as the handicap trend chart */}
+        {/* Chart with actual values on each point, same style as the handicap trend chart */}
         {points.length > 1 ? (
           <>
             <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: "block", overflow: "visible" }}>

@@ -109,7 +109,7 @@ function ResetPasswordPage() {
     );
   }
 
-  // Loading — waiting for Supabase recovery session
+  // Loading, waiting for Supabase recovery session
   if (!sessionReady) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">

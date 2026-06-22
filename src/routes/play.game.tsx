@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/play/game")({
   head: () => ({
     meta: [
-      { title: "Game Mode — Practice Like You Play" },
+      { title: "Range Rat: Practice Like You Play (Game Mode)" },
       {
         name: "description",
         content: "Two players, same random shot. First to the target score wins.",

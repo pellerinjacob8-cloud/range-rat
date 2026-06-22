@@ -5,11 +5,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { startCheckout, PRICES } from "@/lib/stripe";
 
 const PERKS = [
-  "Unlimited saved sessions",
-  "Build custom practice sessions",
-  "Range Rat Combine — benchmark & track progress",
+  "Practice Like You Play mode",
+  "Range Rat Combine benchmark and history",
+  "On-course stats and handicap tracking",
+  "Grid Game and Fairway Game",
   "Club yardage tracking",
-  "Grid Game access",
 ];
 
 interface ProModalProps {
@@ -94,7 +94,7 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
         >
           {loading ? (
             <span className="flex items-center justify-center gap-2">
-              {/* white spinner — black was invisible on the navy button */}
+              {/* white spinner, black was invisible on the navy button */}
               <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
               Loading…
             </span>

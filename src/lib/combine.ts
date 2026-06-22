@@ -47,10 +47,10 @@ export interface CombineAttempt {
   overallScore: number;
 }
 
-// ─── Shot Sequence (fixed — same every combine) ───────────────────────────────
+// ─── Shot Sequence (fixed, same every combine) ───────────────────────────────
 
 export const COMBINE_SHOTS: CombineShot[] = [
-  // Wedges — 15 shots (60×3, 70×3, 80×3, 90×3, 100×3)
+  // Wedges, 15 shots (60×3, 70×3, 80×3, 90×3, 100×3)
   { id: 1,  category: "wedge",     yardage: 60,  swing: "Half", shape: "Straight", traj: "Standard" },
   { id: 2,  category: "wedge",     yardage: 60,  swing: "Half", shape: "Draw",     traj: "Low"      },
   { id: 3,  category: "wedge",     yardage: 60,  swing: "Half", shape: "Fade",     traj: "Standard" },
@@ -67,7 +67,7 @@ export const COMBINE_SHOTS: CombineShot[] = [
   { id: 14, category: "wedge",     yardage: 100, swing: "Full", shape: "Draw",     traj: "Standard" },
   { id: 15, category: "wedge",     yardage: 100, swing: "Full", shape: "Fade",     traj: "High"     },
 
-  // Mid Irons — 6 shots (120×3, 140×3)
+  // Mid Irons, 6 shots (120×3, 140×3)
   { id: 16, category: "mid-iron",  yardage: 120, swing: "Full", shape: "Straight", traj: "Standard" },
   { id: 17, category: "mid-iron",  yardage: 120, swing: "Full", shape: "Draw",     traj: "Standard" },
   { id: 18, category: "mid-iron",  yardage: 120, swing: "Full", shape: "Fade",     traj: "Low"      },
@@ -75,7 +75,7 @@ export const COMBINE_SHOTS: CombineShot[] = [
   { id: 20, category: "mid-iron",  yardage: 140, swing: "Full", shape: "Draw",     traj: "High"     },
   { id: 21, category: "mid-iron",  yardage: 140, swing: "Full", shape: "Fade",     traj: "Standard" },
 
-  // Long Game — 6 shots (160×3, 180×3)
+  // Long Game, 6 shots (160×3, 180×3)
   { id: 22, category: "long-game", yardage: 160, swing: "Full", shape: "Straight", traj: "Standard" },
   { id: 23, category: "long-game", yardage: 160, swing: "Full", shape: "Draw",     traj: "Standard" },
   { id: 24, category: "long-game", yardage: 160, swing: "Full", shape: "Fade",     traj: "Low"      },
@@ -83,7 +83,7 @@ export const COMBINE_SHOTS: CombineShot[] = [
   { id: 26, category: "long-game", yardage: 180, swing: "Full", shape: "Draw",     traj: "High"     },
   { id: 27, category: "long-game", yardage: 180, swing: "Full", shape: "Fade",     traj: "Standard" },
 
-  // Driver — 6 shots
+  // Driver, 6 shots
   { id: 28, category: "driver",    swing: "Full", shape: "Straight", traj: "Standard" },
   { id: 29, category: "driver",    swing: "Full", shape: "Draw",     traj: "Standard" },
   { id: 30, category: "driver",    swing: "Full", shape: "Fade",     traj: "Standard" },

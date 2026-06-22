@@ -55,7 +55,7 @@ const fmtHandicap = (h: number) => (h < 0 ? `+${Math.abs(h)}` : String(h));
 
 // Per-phase presentation for the session checklist.
 const PHASE_META: Record<SessionPhase, { icon: typeof Flame; blurb: string }> = {
-  "Warm Up":   { icon: Flame,    blurb: "Loosen up — no scoring." },
+  "Warm Up":   { icon: Flame,    blurb: "Loosen up, no scoring." },
   "Skill":     { icon: Target,   blurb: "Drills and focus blocks." },
   "Transfer":  { icon: RotateCcw, blurb: "Practice like you play." },
   "Challenge": { icon: Zap,      blurb: "Add some pressure." },
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/practice")({
   }),
   head: () => ({
     meta: [
-      { title: "Practice — Range Rat" },
+      { title: "Range Rat: Practice" },
       {
         name: "description",
         content:
@@ -208,7 +208,7 @@ function PracticePage() {
   const autoFavorites = favorites.filter((f) => f.sessionInput !== null);
   const customSessions = favorites.filter((f) => f.sessionInput === null);
 
-  // Custom input state — optional overrides for bucket and time
+  // Custom input state, optional overrides for bucket and time
   const [showCustomBucket, setShowCustomBucket] = useState(false);
   const [customBallsStr, setCustomBallsStr] = useState("");
   const [showCustomTime, setShowCustomTime] = useState(false);
@@ -281,7 +281,7 @@ function PracticePage() {
     if (!session) return;
     clearActiveSession();
     if (!sessionInput) {
-      // Custom session — no stats to save, just reset
+      // Custom session, no stats to save, just reset
       reset();
       return;
     }
@@ -470,26 +470,26 @@ function PracticePage() {
           />
         )}
 
-        {/* Builder — hidden when on Saved tab */}
+        {/* Builder, hidden when on Saved tab */}
         {practiceTab === "build" && (
         <div className="space-y-7">
         {/* Heading block */}
         <div className="pb-2">
-          {/* "Step 1 of 1" was noise — there's only one step */}
+          {/* "Step 1 of 1" was noise, there's only one step */}
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Practice</p>
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
             {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
               bucket === "unlimited" ? "Unlimited" :
               showCustomBucket && customBalls ? `${customBalls} balls` :
-              bucket === "small" ? "30 balls" : bucket === "medium" ? "60 balls" : bucket === "large" ? "100 balls" : "— balls"
+              bucket === "small" ? "30 balls" : bucket === "medium" ? "60 balls" : bucket === "large" ? "100 balls" : "– balls"
             } · {
-              showCustomTime && customMins ? `${customMins} min` : time ? `${time} min` : "— min"
+              showCustomTime && customMins ? `${customMins} min` : time ? `${time} min` : "– min"
             }
           </p>
         </div>
 
-        {/* Today's plan — practice style, level, and Pro recommendation */}
+        {/* Today's plan, practice style, level, and Pro recommendation */}
         <div className="rounded-[20px] border border-border bg-card p-4 space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -506,7 +506,7 @@ function PracticePage() {
             </div>
           </div>
 
-          {/* Level chips — only when no handicap is logged */}
+          {/* Level chips, only when no handicap is logged */}
           {handicap === undefined && (
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {PLAYER_LEVELS.map((l) => (
@@ -538,7 +538,7 @@ function PracticePage() {
                 <Sparkles className="h-4 w-4 text-gold shrink-0" />
                 <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-foreground">
                   <span className="font-bold">Recommended: {GOALS.find((g) => g.value === recommendation.goal)?.label}</span>
-                  {" "}— {recommendation.reason}. Tap to focus here.
+                  {", "}{recommendation.reason}. Tap to focus here.
                 </span>
               </button>
             ) : (
@@ -593,7 +593,7 @@ function PracticePage() {
           </p>
         </div>
 
-        {/* Club group picker — custom layout so Full Bag can be wider */}
+        {/* Club group picker, custom layout so Full Bag can be wider */}
         <div className="space-y-2">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
             {isFullBag ? "Club group" : "Club group · Pick 1–5"}
@@ -601,7 +601,7 @@ function PracticePage() {
 
           <div className="flex flex-wrap gap-2">
             {isFullBag ? (
-              // Full Bag active — single full-width pill, tap to clear
+              // Full Bag active, single full-width pill, tap to clear
               <button
                 type="button"
                 onClick={() => setClubGroups([])}
@@ -638,7 +638,7 @@ function PracticePage() {
                   );
                 })}
 
-                {/* Full Bag shortcut — flex-1 makes it fill remaining row space next to Driver */}
+                {/* Full Bag shortcut, flex-1 makes it fill remaining row space next to Driver */}
                 <button
                   type="button"
                   onClick={() => setClubGroups(["full-bag"])}
@@ -787,7 +787,7 @@ function PracticePage() {
           onChange={(next) => setGoals(next.slice(-2))}
           helper={
             goals.length === 2
-              ? "Two goals — your session alternates between them."
+              ? "Two goals, your session alternates between them."
               : "Pick one focus, or add a second to blend."
           }
         />
@@ -819,7 +819,7 @@ function PracticePage() {
       <ProModal
         open={proOpen}
         onClose={() => setProOpen(false)}
-        reason="Pro reads your logged round stats and recommends what to practice — plus trends, history, and more."
+        reason="Pro reads your logged round stats and recommends what to practice, plus trends, history, and more."
       />
     </AppShell>
   );
@@ -939,7 +939,7 @@ function SessionView({ session, done, onToggle, onReset, onComplete }: SessionVi
                                   </p>
                                 </div>
                                 <span className={cn("font-stats text-[22px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-foreground")}>
-                                  {d.balls > 0 ? d.balls : d.unit ?? "—"}
+                                  {d.balls > 0 ? d.balls : d.unit ?? "–"}
                                   {d.balls > 0 && (
                                     <span className="text-[13px] font-bold tracking-[0.14em] ml-0.5">
                                       {d.isTarget ? "TARGET" : "BALLS"}

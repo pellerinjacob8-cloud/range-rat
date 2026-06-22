@@ -8,12 +8,12 @@ import { ProModal } from "@/components/ProModal";
 export const Route = createFileRoute("/games")({
   head: () => ({
     meta: [
-      { title: "Games — Range Rat" },
+      { title: "Range Rat: Games" },
       {
         name: "description",
         content: "Quick range games to play with a friend. Keep score, settle bets.",
       },
-      { property: "og:title", content: "Games — Range Rat" },
+      { property: "og:title", content: "Range Rat: Games" },
       { property: "og:description", content: "Range games with built-in scoreboards." },
     ],
   }),
@@ -38,7 +38,7 @@ function GamesPage() {
       </div>
 
       <div className="mt-6 space-y-4">
-        {/* Closest to Pin — free */}
+        {/* Closest to Pin, free */}
         <Link
           to="/games/closest-to-pin"
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
@@ -58,7 +58,7 @@ function GamesPage() {
           </div>
         </Link>
 
-        {/* Grid Game — Pro */}
+        {/* Grid Game, Pro */}
         <Link
           to="/games/grid-game"
           className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99] relative overflow-hidden"
@@ -84,7 +84,7 @@ function GamesPage() {
           </div>
         </Link>
 
-        {/* Fairway Game — Pro */}
+        {/* Fairway Game, Pro */}
         {isPro ? (
           <Link
             to="/games/fairway-game"

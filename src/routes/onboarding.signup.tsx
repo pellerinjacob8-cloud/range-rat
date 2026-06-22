@@ -99,7 +99,7 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
       <p className="text-[15px] font-semibold text-foreground mb-6 max-w-xs break-all">{email}</p>
 
       <p className="text-[13px] text-muted-foreground max-w-xs leading-relaxed mb-8">
-        Tap the link in the email — we'll bring you straight in.
+        Tap the link in the email, we'll bring you straight in.
       </p>
 
       {resendError && (

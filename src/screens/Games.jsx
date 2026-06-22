@@ -12,14 +12,14 @@ const GAMES = [
     id: 'fairway',
     Icon: Crosshair,
     title: 'Fairway Game',
-    description: 'Simulate tee shots — track left rough, fairway, and right rough results.',
+    description: 'Simulate tee shots, track left rough, fairway, and right rough results.',
     color: '#4CAF50',
   },
   {
     id: 'shotshape',
     Icon: TrendingUp,
     title: 'Shot Shape Challenge',
-    description: 'Draw, fade, or straight — hit whatever shape the app calls out.',
+    description: 'Draw, fade, or straight, hit whatever shape the app calls out.',
     color: '#F59E0B',
   },
   {
