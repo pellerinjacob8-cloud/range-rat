@@ -29,7 +29,7 @@ function PrivacyPage() {
         <div className="mt-8 space-y-7 text-[15px] leading-relaxed text-foreground">
           <Section title="Introduction">
             Range Rat ("we," "us," or "our") operates the Range Rat golf practice application
-            available at range-rat.vercel.app (the "Service"). This Privacy Policy explains what
+            available at rangeratapp.com (the "Service"). This Privacy Policy explains what
             information we collect, how we use and protect it, and the choices available to you.
             By using the Service you agree to the collection and use of information as described here.
           </Section>
