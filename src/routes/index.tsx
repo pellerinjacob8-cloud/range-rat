@@ -31,6 +31,14 @@ function dayKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+// Most recent Sunday at local midnight, used to scope the "This week" stat.
+function startOfWeek(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  x.setDate(x.getDate() - x.getDay());
+  return x;
+}
+
 function calcStreak(sessions: { completedAt: string }[]): number {
   const dates = new Set(sessions.map(s => dayKey(new Date(s.completedAt))));
   if (dates.size === 0) return 0;
@@ -49,7 +57,7 @@ function StatNum({ value, size }: { value: number; size: number }) {
       className="font-stats leading-none tabular-nums text-primary"
       style={{ fontSize: size }}
     >
-      {value}
+      {value.toLocaleString()}
     </span>
   );
 }
@@ -75,7 +83,9 @@ function Home() {
     fetchSessions().then((sessions) => {
       const balls = sessions.reduce((sum, s) => sum + s.totalBalls, 0);
       const streak = calcStreak(sessions);
-      setStats({ sessions: sessions.length, balls, streak });
+      const weekStart = startOfWeek(new Date());
+      const thisWeek = sessions.filter((s) => new Date(s.completedAt) >= weekStart).length;
+      setStats({ sessions: thisWeek, balls, streak });
     });
   }, []);
 

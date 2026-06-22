@@ -211,7 +211,6 @@ function ProfilePage() {
   };
 
   const totalBalls = allTimeSessions.reduce((s, x) => s + x.totalBalls, 0);
-  const formatBalls = (n: number) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
   // Best streak
   const bestStreak = useMemo(() => {
@@ -378,7 +377,7 @@ function ProfilePage() {
         <div className="mt-3 grid grid-cols-3 gap-2.5">
           {[
             { eyebrow: "Sessions", value: String(allTimeSessions.length), sub: "logged" },
-            { eyebrow: "Balls", value: formatBalls(totalBalls), sub: "hit" },
+            { eyebrow: "Balls", value: totalBalls.toLocaleString(), sub: "hit" },
             { eyebrow: "Best", value: String(bestStreak), sub: "day run" },
           ].map(({ eyebrow, value, sub }) => (
             <div key={eyebrow} className="rounded-[18px] border border-border bg-card p-3 text-center">
