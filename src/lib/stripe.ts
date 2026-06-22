@@ -65,12 +65,17 @@ export async function openCustomerPortal() {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error("Unexpected server error. Please try again.");
+    console.error("Portal response (not JSON):", res.status, text.slice(0, 200));
+    throw new Error(`Server error (${res.status}). Please try again.`);
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || `Server error (${res.status}).`);
   }
 
   if (data.url) {
     window.location.href = data.url;
   } else {
-    throw new Error(data.error || "Could not open the subscription portal.");
+    throw new Error("Could not open the subscription portal.");
   }
 }
