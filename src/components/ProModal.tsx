@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Check, X, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
-import { startCheckout, PRICES } from "@/lib/stripe";
 
 const PERKS = [
   "Practice Like You Play mode",
@@ -21,21 +20,12 @@ interface ProModalProps {
 export function ProModal({ open, onClose, reason }: ProModalProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   if (!open) return null;
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     if (!user) { navigate({ to: "/login" }); return; }
-    setError(null);
-    setLoading(true);
-    try {
-      await startCheckout(PRICES.yearly);
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
+    navigate({ to: "/upgrade" });
   };
 
   return (
@@ -82,23 +72,12 @@ export function ProModal({ open, onClose, reason }: ProModalProps) {
           ))}
         </div>
 
-        {error && (
-          <p className="mb-3 text-[12px] font-semibold text-destructive text-center">{error}</p>
-        )}
-
         <button
           type="button"
           onClick={handleUpgrade}
-          disabled={loading}
-          className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-50 active:opacity-90 transition-opacity"
+          className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
         >
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              {/* white spinner, black was invisible on the navy button */}
-              <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              Loading…
-            </span>
-          ) : "Upgrade to Pro"}
+          Upgrade to Pro
         </button>
 
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
