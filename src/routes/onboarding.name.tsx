@@ -41,7 +41,7 @@ function OnboardingName() {
 
       {/* Step header */}
       <div className="flex items-center justify-between pt-6">
-        <button onClick={() => navigate({ to: "/onboarding/welcome" })} aria-label="Back" className="text-muted-foreground -ml-1 p-1">
+        <button onClick={() => navigate({ to: "/onboarding/signup" })} aria-label="Back" className="text-muted-foreground -ml-1 p-1">
           <ChevronLeft className="h-6 w-6" />
         </button>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Step 2 of 3</p>

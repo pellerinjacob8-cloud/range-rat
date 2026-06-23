@@ -30,12 +30,6 @@ function OnboardingWelcome() {
       </div>
 
       <div className="pb-10">
-        <div className="flex gap-1.5 justify-center mb-5">
-          <span className="h-1.5 w-4 rounded-full bg-primary" />
-          <span className="h-1.5 w-1.5 rounded-full bg-border" />
-          <span className="h-1.5 w-1.5 rounded-full bg-border" />
-        </div>
-
         <button
           onClick={() => navigate({ to: "/onboarding/signup" })}
           className="h-14 w-full rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
