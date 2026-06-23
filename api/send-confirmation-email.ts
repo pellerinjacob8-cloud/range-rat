@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import { ensureSentry, Sentry } from "./_sentry";
+import { ensureSentry, Sentry } from "./_sentry.js";
 
 // Server-only. NEVER prefix this with VITE_ — that would inline the key into
 // the public browser bundle.

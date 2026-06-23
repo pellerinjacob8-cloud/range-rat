@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import { ensureSentry, Sentry } from "./_sentry";
-import { getStripe, getSupabaseAdmin, missingEnv } from "./_config";
+import { ensureSentry, Sentry } from "./_sentry.js";
+import { getStripe, getSupabaseAdmin, missingEnv } from "./_config.js";
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   ensureSentry();

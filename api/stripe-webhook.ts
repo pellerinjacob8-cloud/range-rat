@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import type { IncomingMessage, ServerResponse } from "http";
-import { ensureSentry, Sentry } from "./_sentry";
+import { ensureSentry, Sentry } from "./_sentry.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia" as any,

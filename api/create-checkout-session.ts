@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import { ensureSentry, Sentry } from "./_sentry";
-import { getStripe, getSupabaseAdmin, missingEnv } from "./_config";
+import { ensureSentry, Sentry } from "./_sentry.js";
+import { getStripe, getSupabaseAdmin, missingEnv } from "./_config.js";
 
 // Only these prices may ever be purchased. A caller cannot pass an arbitrary
 // price ID from your Stripe account.
