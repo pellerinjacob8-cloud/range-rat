@@ -84,6 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      localStorage.removeItem("rangeRat_profile");
+      localStorage.removeItem("rangeRat_onboarding_complete");
+    } catch {}
     await supabase.auth.signOut();
   };
 

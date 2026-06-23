@@ -44,12 +44,18 @@ function AuthGate() {
 
   useEffect(() => {
     if (!session) { setHasProfile(null); return; }
+    const uid = session.user.id;
     try {
+      const cachedUid = localStorage.getItem("rangeRat_profile_uid");
+      if (cachedUid && cachedUid !== uid) {
+        localStorage.removeItem("rangeRat_profile");
+        localStorage.removeItem("rangeRat_onboarding_complete");
+        localStorage.removeItem("rangeRat_profile_uid");
+      }
       const cached = localStorage.getItem("rangeRat_profile");
       if (cached) {
         const p = JSON.parse(cached);
         if (p?.firstName?.trim()) {
-          // Migrate existing users who completed onboarding before this flag existed
           try { localStorage.setItem("rangeRat_onboarding_complete", "true"); } catch {}
           setHasProfile(true);
           return;
@@ -61,7 +67,14 @@ function AuthGate() {
       if (has) {
         try {
           localStorage.setItem("rangeRat_profile", JSON.stringify(p));
+          localStorage.setItem("rangeRat_profile_uid", uid);
           localStorage.setItem("rangeRat_onboarding_complete", "true");
+        } catch {}
+      } else {
+        try {
+          localStorage.removeItem("rangeRat_profile");
+          localStorage.removeItem("rangeRat_onboarding_complete");
+          localStorage.setItem("rangeRat_profile_uid", uid);
         } catch {}
       }
       setHasProfile(has);
