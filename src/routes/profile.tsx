@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { openCustomerPortal } from "@/lib/stripe";
 import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
@@ -111,6 +112,8 @@ function ProfilePage() {
   const [logOpen, setLogOpen] = useState(false);
   const [removingRound, setRemovingRound] = useState<string | null>(null);
   const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "" });
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -127,17 +130,17 @@ function ProfilePage() {
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
 
-  // Stripe-hosted customer portal login link. The customer enters their email
-  // and Stripe sends a magic link to manage their subscription, so there's no
-  // server call to fail. SWAP for the live-mode link before launch (Stripe ->
-  // Settings -> Billing -> Customer portal, in live mode), or set
-  // VITE_STRIPE_PORTAL_URL in the environment.
-  const stripePortalUrl =
-    import.meta.env.VITE_STRIPE_PORTAL_URL ||
-    "https://billing.stripe.com/p/login/test_3cI6oH8lS6OoaPP9SL9AA00";
-
-  const handleManageSubscription = () => {
-    window.open(stripePortalUrl, "_blank", "noopener,noreferrer");
+  const handleManageSubscription = async () => {
+    setPortalError(null);
+    setPortalLoading(true);
+    try {
+      // Server creates a Stripe billing-portal session for the logged-in Pro
+      // user's customer and we redirect straight into it -- no email re-entry.
+      await openCustomerPortal();
+    } catch (err: any) {
+      setPortalError(err.message);
+      setPortalLoading(false);
+    }
   };
 
   const startEdit = () => { setFirstInput(profile.firstName); setLastInput(profile.lastName); setEditing(true); };
@@ -597,17 +600,24 @@ function ProfilePage() {
 
         {/* ── Pro card / upgrade nudge ── */}
         {isPro ? (
-          <button type="button" onClick={handleManageSubscription}
-            className="mt-4 w-full flex items-center gap-3.5 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left active:opacity-90 transition-opacity">
-            <div className="h-11 w-11 shrink-0 rounded-[13px] bg-gold-bg border border-gold-border flex items-center justify-center">
-              <Crown className="h-5 w-5 text-gold" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-bold text-foreground">Range Rat Pro</p>
-              <p className="text-[12.5px] text-muted-foreground mt-0.5">Manage subscription</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
+          <>
+            <button type="button" onClick={handleManageSubscription} disabled={portalLoading}
+              className="mt-4 w-full flex items-center gap-3.5 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left active:opacity-90 transition-opacity disabled:opacity-60">
+              <div className="h-11 w-11 shrink-0 rounded-[13px] bg-gold-bg border border-gold-border flex items-center justify-center">
+                <Crown className="h-5 w-5 text-gold" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold text-foreground">Range Rat Pro</p>
+                <p className="text-[12.5px] text-muted-foreground mt-0.5">
+                  {portalLoading ? "Opening..." : "Manage subscription"}
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
+            {portalError && (
+              <p className="mt-2 text-[12.5px] font-semibold text-destructive px-1">{portalError}</p>
+            )}
+          </>
         ) : (
           <button type="button" onClick={() => setProOpen(true)}
             className="mt-4 w-full flex items-center gap-3.5 rounded-[22px] border border-border bg-card px-4 py-3.5 text-left active:bg-muted transition-colors">
