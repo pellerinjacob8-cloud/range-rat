@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { MailCheck, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 export const Route = createFileRoute("/auth/confirm")({
   component: AuthConfirm,
@@ -8,8 +10,11 @@ export const Route = createFileRoute("/auth/confirm")({
 
 function AuthConfirm() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
+  const { resendVerification, signOut } = useAuth();
+  const [status, setStatus] = useState<"loading" | "success" | "error" | "waiting">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   useEffect(() => {
     const confirm = async () => {
@@ -17,8 +22,7 @@ function AuthConfirm() {
       const code = params.get("code");
 
       if (!code) {
-        setStatus("error");
-        setError("Invalid confirmation link");
+        setStatus("waiting");
         return;
       }
 
@@ -35,6 +39,22 @@ function AuthConfirm() {
 
     confirm();
   }, [navigate]);
+
+  const handleResend = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return;
+    setResending(true);
+    const { error } = await resendVerification(user.email);
+    setResending(false);
+    if (error) { setError(error); return; }
+    setResent(true);
+    setTimeout(() => setResent(false), 4000);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate({ to: "/onboarding/welcome" });
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
@@ -55,6 +75,42 @@ function AuthConfirm() {
           </div>
           <h1 className="font-display text-[32px] leading-tight">Email verified!</h1>
           <p className="text-muted-foreground mt-2">Welcome to Range Rat. Taking you to the app...</p>
+        </>
+      )}
+
+      {status === "waiting" && (
+        <>
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
+            <MailCheck className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="font-display text-[34px] leading-tight mb-3">Verify your email</h1>
+          <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mb-2">
+            Check your inbox for a confirmation link to continue.
+          </p>
+          <p className="text-[13px] text-muted-foreground max-w-xs leading-relaxed mb-8">
+            Tap the link in the email, we'll bring you straight in.
+          </p>
+
+          {resent && (
+            <p className="text-sm font-semibold text-[var(--ok)] mb-4 flex items-center justify-center gap-1.5"><Check className="h-4 w-4" /> Email resent</p>
+          )}
+          {error && (
+            <p className="text-sm font-semibold text-destructive mb-4">{error}</p>
+          )}
+
+          <button
+            onClick={handleResend}
+            disabled={resending}
+            className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2 mb-6"
+          >
+            {resending ? "Sending..." : "Didn't get it? Resend email"}
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="text-[13px] text-muted-foreground p-2 -m-2"
+          >
+            Use a different email
+          </button>
         </>
       )}
 
