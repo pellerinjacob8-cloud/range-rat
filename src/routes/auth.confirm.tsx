@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -8,53 +8,40 @@ export const Route = createFileRoute("/auth/confirm")({
 
 function AuthConfirm() {
   const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { type?: string; code?: string };
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const confirmEmail = async () => {
-      try {
-        // Get the current session to extract email
-        const { data: { session } } = await supabase.auth.getSession();
-        const userEmail = session?.user?.email;
+    const confirm = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
 
-        if (!userEmail || !search.code) {
-          setStatus("error");
-          setError("Invalid confirmation link");
-          return;
-        }
-
-        // Verify the OTP with email
-        const { error: verifyError } = await supabase.auth.verifyOtp({
-          email: userEmail,
-          token: search.code,
-          type: "email",
-        });
-
-        if (verifyError) {
-          setStatus("error");
-          setError(verifyError.message);
-          return;
-        }
-
-        setStatus("success");
-        setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
-      } catch (err: any) {
+      if (!code) {
         setStatus("error");
-        setError(err.message || "Confirmation failed");
+        setError("Invalid confirmation link");
+        return;
       }
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        setStatus("error");
+        setError(exchangeError.message);
+        return;
+      }
+
+      setStatus("success");
+      setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
     };
 
-    confirmEmail();
-  }, [search, navigate]);
+    confirm();
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
       {status === "loading" && (
         <>
           <div className="h-12 w-12 rounded-full border-2 border-border border-t-primary animate-spin mb-4" />
-          <h1 className="font-display text-[32px] leading-tight">Verifying…</h1>
+          <h1 className="font-display text-[32px] leading-tight">Verifying...</h1>
           <p className="text-muted-foreground mt-2">Please wait while we confirm your email.</p>
         </>
       )}
@@ -67,7 +54,7 @@ function AuthConfirm() {
             </svg>
           </div>
           <h1 className="font-display text-[32px] leading-tight">Email verified!</h1>
-          <p className="text-muted-foreground mt-2">Welcome to Range Rat. Taking you to the app…</p>
+          <p className="text-muted-foreground mt-2">Welcome to Range Rat. Taking you to the app...</p>
         </>
       )}
 
