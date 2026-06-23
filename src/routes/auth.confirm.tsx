@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MailCheck, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
@@ -15,29 +15,70 @@ function AuthConfirm() {
   const [error, setError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const handled = useRef(false);
 
   useEffect(() => {
-    const confirm = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
+    if (handled.current) return;
 
-      if (!code) {
+    const hasHash = window.location.hash.includes("access_token");
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+
+    // PKCE flow: ?code= param
+    if (code) {
+      handled.current = true;
+      supabase.auth.exchangeCodeForSession(code).then(({ error: exchangeError }) => {
+        if (exchangeError) {
+          setStatus("error");
+          setError(exchangeError.message);
+          return;
+        }
+        setStatus("success");
+        setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
+      });
+      return;
+    }
+
+    // Hash-fragment flow: #access_token= (Supabase processes this automatically)
+    // Give the Supabase client a moment to detect and process the hash
+    if (hasHash) {
+      handled.current = true;
+      // Supabase auto-detects hash tokens via onAuthStateChange
+      // The listener below will catch it
+      return;
+    }
+
+    // No code or hash -- show waiting screen after a short delay
+    // (gives onAuthStateChange time to fire if session exists)
+    const timeout = setTimeout(() => {
+      if (!handled.current) {
         setStatus("waiting");
-        return;
       }
+    }, 1500);
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError) {
-        setStatus("error");
-        setError(exchangeError.message);
-        return;
+    return () => clearTimeout(timeout);
+  }, [navigate]);
+
+  // Listen for auth state changes (handles hash-fragment flow + already-verified)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.email_confirmed_at) {
+        handled.current = true;
+        setStatus("success");
+        setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
       }
+    });
 
-      setStatus("success");
-      setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
-    };
+    // Also check if there's already a valid confirmed session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.email_confirmed_at) {
+        handled.current = true;
+        setStatus("success");
+        setTimeout(() => navigate({ to: "/onboarding/name" }), 1500);
+      }
+    });
 
-    confirm();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleResend = async () => {
