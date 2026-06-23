@@ -69,12 +69,17 @@ function AuthConfirm() {
           </div>
           <h1 className="font-display text-[32px] leading-tight">Verification failed</h1>
           <p className="text-destructive mt-2">{error || "Something went wrong"}</p>
-          <button
-            onClick={() => navigate({ to: "/onboarding/welcome" })}
-            className="mt-6 h-12 px-6 rounded-[14px] bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-[0.06em]"
-          >
-            Back to Sign Up
-          </button>
+          <p className="text-muted-foreground mt-4 text-[14px]">
+            This link may have expired. Check your email for a fresh verification link, or try signing in if you've already verified.
+          </p>
+          <div className="mt-6 flex flex-col gap-3 w-full max-w-xs">
+            <button
+              onClick={() => navigate({ to: "/login" })}
+              className="h-12 px-6 rounded-[14px] bg-primary text-primary-foreground font-bold text-[13px] uppercase tracking-[0.06em]"
+            >
+              Go to Sign In
+            </button>
+          </div>
         </>
       )}
     </div>

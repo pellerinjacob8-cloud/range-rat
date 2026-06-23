@@ -71,18 +71,21 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname.startsWith("/onboarding") || pathname.startsWith("/auth/");
+    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname.startsWith("/auth/");
+    const isOnboarding = pathname.startsWith("/onboarding");
 
     if (!session) {
-      if (!isAuthRoute) navigate({ to: "/onboarding/welcome" });
+      if (!isAuthRoute && !isOnboarding) navigate({ to: "/onboarding/welcome" });
       return;
     }
 
     if (hasProfile === null) return;
 
-    // Force unverified users to /auth/confirm
-    if (session && !session.user.email_confirmed_at && !isAuthRoute) {
-      navigate({ to: "/auth/confirm" });
+    // Force unverified users to /auth/confirm (even from onboarding routes)
+    if (session && !session.user.email_confirmed_at) {
+      if (!pathname.startsWith("/auth/confirm")) {
+        navigate({ to: "/auth/confirm" });
+      }
       return;
     }
 

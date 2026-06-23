@@ -161,7 +161,15 @@ function OnboardingSignup() {
     const { error: signUpError } = await signUp(email.trim(), password);
     setLoading(false);
 
-    if (signUpError) { setError(signUpError); return; }
+    if (signUpError) {
+      const lowerError = signUpError.toLowerCase();
+      if (lowerError.includes("already registered") || lowerError.includes("user already exists")) {
+        setError("This email already has an account. Please sign in instead.");
+      } else {
+        setError(signUpError);
+      }
+      return;
+    }
 
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
