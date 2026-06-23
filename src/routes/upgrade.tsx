@@ -150,11 +150,11 @@ function UpgradePage() {
               <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
               Loading…
             </span>
-          ) : `Start 7-Day Free Trial`}
+          ) : `Upgrade to Pro`}
         </button>
 
         <p className="mt-3 text-center text-[12px] text-muted-foreground">
-          7 days free, then {plan === "monthly" ? "$4.99/mo" : "$49.99/yr"}. Cancel anytime.
+          {plan === "monthly" ? "$4.99/mo" : "$49.99/yr"}. Cancel anytime.
         </p>
         <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
           By subscribing you agree to our{" "}
