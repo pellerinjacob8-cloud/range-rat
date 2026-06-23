@@ -16,6 +16,8 @@ const CLUBS: { id: string; name: string; type: string }[] = [
   { id: "3h", name: "3 Hybrid", type: "hybrid" },
   { id: "4h", name: "4 Hybrid", type: "hybrid" },
   { id: "5h", name: "5 Hybrid", type: "hybrid" },
+  { id: "2i", name: "2 Iron", type: "iron" },
+  { id: "3i", name: "3 Iron", type: "iron" },
   { id: "4i", name: "4 Iron", type: "iron" },
   { id: "5i", name: "5 Iron", type: "iron" },
   { id: "6i", name: "6 Iron", type: "iron" },
@@ -28,7 +30,7 @@ const CLUBS: { id: string; name: string; type: string }[] = [
   { id: "lw", name: "Lob Wedge", type: "wedge" },
 ];
 
-const IRON_IDS = ["4i", "5i", "6i", "7i", "8i", "9i"] as const;
+const IRON_IDS = ["2i", "3i", "4i", "5i", "6i", "7i", "8i", "9i"] as const;
 
 function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
   const next = new Set(prev);
@@ -73,14 +75,16 @@ function OnboardingBag() {
         .map((c, i) => ({ id: c.id, name: c.name, type: c.type, sortOrder: i }));
       await saveBag(clubs);
     }
-    try { localStorage.setItem("rangeRat_onboarding_complete", "true"); } catch {}
-    navigate({ to: "/" });
+    try {
+      localStorage.setItem("rangeRat_onboarding_complete", "true");
+    } catch {}
+    window.location.href = "/";
   };
 
   const groups = [
     { label: "Woods", ids: ["driver", "3w", "5w"] },
     { label: "Hybrids", ids: ["3h", "4h", "5h"] },
-    { label: "Irons", ids: ["4i", "5i", "6i", "7i", "8i", "9i"] },
+    { label: "Irons", ids: ["2i", "3i", "4i", "5i", "6i", "7i", "8i", "9i"] },
     { label: "Wedges", ids: ["pw", "gw", "sw", "lw"] },
   ];
 

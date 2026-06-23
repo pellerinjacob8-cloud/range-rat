@@ -12,11 +12,16 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 function getInitialTheme(): Theme {
   if (typeof window === "undefined") return "light";
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  try {
+    const saved = localStorage.getItem("rr-theme");
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {}
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [userOverride, setUserOverride] = useState(false);
 
   // Apply theme to DOM + localStorage whenever it changes
   useEffect(() => {
@@ -27,17 +32,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Load theme from Supabase on mount and apply if different
   useEffect(() => {
     fetchProfile().then((p) => {
-      if (p?.theme && p.theme !== theme) {
-        setTheme(p.theme);
+      if (p?.theme) {
+        setUserOverride(true);
+        if (p.theme !== theme) setTheme(p.theme);
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Listen for system theme changes and apply automatically
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => {
+      if (!userOverride) {
+        setTheme(e.matches ? "dark" : "light");
+      }
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [userOverride]);
+
   const toggle = useCallback(() => {
     setTheme((t) => {
       const next = t === "dark" ? "light" : "dark";
-      saveTheme(next); // persist to Supabase
+      setUserOverride(true);
+      saveTheme(next);
       return next;
     });
   }, []);

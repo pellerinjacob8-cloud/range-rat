@@ -83,6 +83,8 @@ export const CANONICAL_CLUBS: CanonicalClub[] = [
   { id: "6i",     name: "6 Iron",          group: "long-irons",  type: "iron",   sortOrder: 8  },
   { id: "5i",     name: "5 Iron",          group: "long-irons",  type: "iron",   sortOrder: 9  },
   { id: "4i",     name: "4 Iron",          group: "long-irons",  type: "iron",   sortOrder: 10 },
+  { id: "3i",     name: "3 Iron",          group: "long-irons",  type: "iron",   sortOrder: 11 },
+  { id: "2i",     name: "2 Iron",          group: "long-irons",  type: "iron",   sortOrder: 12 },
   { id: "5h",     name: "5 Hybrid",        group: "long-irons",  type: "hybrid", sortOrder: 9  },
   { id: "4h",     name: "4 Hybrid",        group: "long-irons",  type: "hybrid", sortOrder: 10 },
   { id: "3h",     name: "3 Hybrid",        group: "woods",       type: "hybrid", sortOrder: 11 },

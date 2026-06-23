@@ -16,8 +16,11 @@ function OnboardingName() {
   const [handicap, setHandicap] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const parsedHandicap = handicap.trim() !== "" ? parseFloat(handicap) : undefined;
-  const handicapValid = handicap.trim() === "" || (!isNaN(parsedHandicap!) && parsedHandicap! >= -10 && parsedHandicap! <= 54);
+  const normalizedHandicap = handicap.trim().replace(/^\+/, "");
+  const parsedHandicap = normalizedHandicap !== "" ? parseFloat(normalizedHandicap) : undefined;
+  const isPlus = handicap.trim().startsWith("+");
+  const effectiveHandicap = parsedHandicap !== undefined && isPlus ? -parsedHandicap : parsedHandicap;
+  const handicapValid = handicap.trim() === "" || (parsedHandicap !== undefined && !isNaN(parsedHandicap) && effectiveHandicap! >= -10 && effectiveHandicap! <= 54);
 
   const handleContinue = async () => {
     if (!firstName.trim() || saving || !handicapValid) return;
@@ -28,9 +31,9 @@ function OnboardingName() {
       lastName: lastName.trim(),
       handedness: hand === "right" ? "righty" : "lefty",
       createdDate: Date.now(),
-      handicap: parsedHandicap,
+      handicap: effectiveHandicap,
     });
-    if (parsedHandicap !== undefined) await saveHandicapSnapshot(parsedHandicap);
+    if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
     setSaving(false);
     navigate({ to: "/onboarding/bag" });
   };
@@ -110,17 +113,17 @@ function OnboardingName() {
           <p className="text-[11px] text-muted-foreground">Optional</p>
         </div>
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
           value={handicap}
           onChange={e => setHandicap(e.target.value)}
-          placeholder="e.g. 14.2"
+          placeholder="e.g. 14.2 or +2"
           className={`w-full bg-transparent border-0 border-b-2 outline-none font-display text-[40px] leading-none tracking-[-0.01em] pb-1.5 placeholder:text-muted-foreground/30 ${
             !handicapValid ? "border-destructive" : "border-border"
           }`}
         />
         {!handicapValid && (
-          <p className="mt-1.5 text-[12px] text-destructive font-medium">Enter a valid handicap index (−10 to 54).</p>
+          <p className="mt-1.5 text-[12px] text-destructive font-medium">Enter a valid handicap index (+10 to 54).</p>
         )}
       </div>
 
