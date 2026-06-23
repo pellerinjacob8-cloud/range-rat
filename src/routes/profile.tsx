@@ -393,7 +393,7 @@ function ProfilePage() {
         {/* ── On-Course Stats ── */}
         <p className="mt-6 mb-3 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">On-Course Stats</p>
         <div className="rounded-[22px] border border-border bg-card p-[18px]">
-          {/* Top row: handicap + trend / Log Round */}
+          {/* Top row: handicap + Update/Log Round */}
           <div className="flex items-start justify-between mb-[14px]">
             <div>
               <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Handicap Index</p>
@@ -424,11 +424,29 @@ function ProfilePage() {
             </div>
             <button type="button" onClick={openLogRound}
               className="shrink-0 flex items-center gap-1.5 border border-border rounded-[10px] bg-muted px-3 py-[7px] text-[12px] font-bold text-primary">
-              <Plus className="h-3 w-3" /> Log Round
+              <Plus className="h-3 w-3" /> {isPro ? "Log Round" : "Update"}
             </button>
           </div>
 
-          {/* 2×2 stat grid, latest entry, tap a tile for the in-depth view */}
+          {/* Handicap trend chart (free for all users) */}
+          <div className="mb-4">
+            <button type="button" onClick={() => setTrendOpen(o => !o)}
+              className="w-full flex items-center justify-between mb-2">
+              <span className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Trend</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", trendOpen ? "rotate-0" : "-rotate-90")} />
+            </button>
+            {trendOpen && (
+              <div>
+                {roundHistory.length > 1 ? (
+                  <HandicapChart history={roundHistory} />
+                ) : (
+                  <p className="text-[12px] text-muted-foreground">{isPro ? "Log more rounds to see your trend." : "Update your handicap after each round to track your progress."}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 2×2 stat grid (Pro only) */}
           <div className="relative mb-4">
             <div className={!isPro ? "blur-[6px] pointer-events-none select-none" : undefined} aria-hidden={!isPro}>
               {(() => {
@@ -479,24 +497,6 @@ function ProfilePage() {
             )}
           </div>
 
-          {/* Trend section, collapsible handicap chart (free for all users) */}
-          <div className="border-t border-border pt-[14px]">
-            <button type="button" onClick={() => setTrendOpen(o => !o)}
-              className="w-full flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Handicap Trend</span>
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", trendOpen ? "rotate-0" : "-rotate-90")} />
-            </button>
-            {trendOpen && (
-              <div className="mt-3">
-                {roundHistory.length > 1 ? (
-                  <HandicapChart history={roundHistory} />
-                ) : (
-                  <p className="text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* History link */}
           {roundHistory.length > 0 && (
             <button type="button" onClick={() => setSubView("history")}
@@ -518,7 +518,7 @@ function ProfilePage() {
             <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-start justify-between mb-[18px]">
                 <div>
-                  <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
+                  <h2 className="font-display text-[26px] leading-none">{isPro ? "Log Round Stats" : "Update Handicap"}</h2>
                   <p className="text-[12px] text-muted-foreground mt-1">
                     {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </p>
