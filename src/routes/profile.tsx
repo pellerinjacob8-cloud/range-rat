@@ -429,80 +429,71 @@ function ProfilePage() {
           </div>
 
           {/* 2×2 stat grid, latest entry, tap a tile for the in-depth view */}
-          {(() => {
-            const latest = roundHistory[roundHistory.length - 1];
-            const prev = roundHistory[roundHistory.length - 2];
-            return (
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {(Object.keys(STAT_CONFIG) as StatKey[]).map((key) => {
-                  const cfg = STAT_CONFIG[key];
-                  const cur = latest?.[key];
-                  const last = prev?.[key];
-                  const delta = cur !== undefined && last !== undefined ? +(cur - last).toFixed(1) : null;
-                  const improved = delta !== null && (cfg.betterDown ? delta < 0 : delta > 0);
-                  return (
-                    <button key={key} type="button"
-                      onClick={() => isPro ? setStatDetail(key) : setProOpen(true)}
-                      className="rounded-[13px] border border-border bg-muted p-[10px_12px] text-left active:bg-border/60 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{cfg.short}</p>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground/60" />
-                      </div>
-                      <p className="mt-1 font-stats text-[28px] font-bold text-primary leading-none">
-                        {cur !== undefined ? cfg.fmt(cur) : "–"}
-                      </p>
-                      <p className="mt-1 text-[9.5px] font-semibold h-[12px]">
-                        {delta !== null && delta !== 0 ? (
-                          <span className={improved ? "text-[var(--ok)]" : "text-destructive"}>
-                            {delta > 0 ? "▲" : "▼"} {Math.abs(delta)} vs last
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/50">{delta === 0 ? "even vs last" : ""}</span>
-                        )}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          {/* Trend section, collapsible handicap chart */}
-          <div className={cn("border-t border-border pt-[14px]", !isPro && "relative")}>
+          <div className="relative mb-4">
             <div className={!isPro ? "blur-[6px] pointer-events-none select-none" : undefined} aria-hidden={!isPro}>
-              <button type="button" onClick={() => setTrendOpen(o => !o)}
-                className="w-full flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 bg-gold-bg border border-gold-border text-gold rounded-full px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.1em]">
-                  <Zap className="h-2.5 w-2.5" fill="currentColor" /> Pro
-                </span>
-                <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-                  Trend
-                  <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", trendOpen ? "rotate-0" : "-rotate-90")} />
-                </span>
-              </button>
-              {trendOpen && (
-                <div className="mt-3">
-                  {roundHistory.length > 1 || !isPro ? (
-                    <HandicapChart
-                      history={roundHistory.length > 1 ? roundHistory : [
-                        { id: "demo-1", handicap: 24.5, recordedAt: new Date(Date.now() - 28 * 86400000).toISOString() },
-                        { id: "demo-2", handicap: 23.6, recordedAt: new Date(Date.now() - 14 * 86400000).toISOString() },
-                        { id: "demo-3", handicap: 22.8, recordedAt: new Date().toISOString() },
-                      ]}
-                    />
-                  ) : (
-                    <p className="text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
-                  )}
-                </div>
-              )}
+              {(() => {
+                const latest = roundHistory[roundHistory.length - 1];
+                const prev = roundHistory[roundHistory.length - 2];
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(STAT_CONFIG) as StatKey[]).map((key) => {
+                      const cfg = STAT_CONFIG[key];
+                      const cur = latest?.[key];
+                      const last = prev?.[key];
+                      const delta = cur !== undefined && last !== undefined ? +(cur - last).toFixed(1) : null;
+                      const improved = delta !== null && (cfg.betterDown ? delta < 0 : delta > 0);
+                      return (
+                        <button key={key} type="button"
+                          onClick={() => isPro ? setStatDetail(key) : setProOpen(true)}
+                          className="rounded-[13px] border border-border bg-muted p-[10px_12px] text-left active:bg-border/60 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-muted-foreground">{cfg.short}</p>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground/60" />
+                          </div>
+                          <p className="mt-1 font-stats text-[28px] font-bold text-primary leading-none">
+                            {cur !== undefined ? cfg.fmt(cur) : "–"}
+                          </p>
+                          <p className="mt-1 text-[9.5px] font-semibold h-[12px]">
+                            {delta !== null && delta !== 0 ? (
+                              <span className={improved ? "text-[var(--ok)]" : "text-destructive"}>
+                                {delta > 0 ? "▲" : "▼"} {Math.abs(delta)} vs last
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50">{delta === 0 ? "even vs last" : ""}</span>
+                            )}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
             {!isPro && (
               <button type="button" onClick={() => setProOpen(true)}
                 className="absolute inset-0 flex items-center justify-center">
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-gold-border bg-gold-bg px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-gold">
-                  <Zap className="h-3 w-3" fill="currentColor" /> Upgrade to Pro
+                  <Zap className="h-3 w-3" fill="currentColor" /> Upgrade for Round Stats
                 </span>
               </button>
+            )}
+          </div>
+
+          {/* Trend section, collapsible handicap chart (free for all users) */}
+          <div className="border-t border-border pt-[14px]">
+            <button type="button" onClick={() => setTrendOpen(o => !o)}
+              className="w-full flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Handicap Trend</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", trendOpen ? "rotate-0" : "-rotate-90")} />
+            </button>
+            {trendOpen && (
+              <div className="mt-3">
+                {roundHistory.length > 1 ? (
+                  <HandicapChart history={roundHistory} />
+                ) : (
+                  <p className="text-[12px] text-muted-foreground">Log more rounds to see your progress chart.</p>
+                )}
+              </div>
             )}
           </div>
 
@@ -553,35 +544,43 @@ function ProfilePage() {
               </div>
 
               {/* 2×2 stat inputs. GIR/Fairways accept a percent or a count like "11/18". */}
-              <div className="grid grid-cols-2 gap-[9px] mb-[18px]">
-                {[
-                  { key: "gir" as const, label: "GIR", placeholder: "48 or 11/18", percent: true },
-                  { key: "fairways" as const, label: "Fairways", placeholder: "40 or 8/14", percent: true },
-                  { key: "putts" as const, label: "Putts / Round", placeholder: "31", percent: false },
-                  { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "2", percent: false },
-                ].map(({ key, label, placeholder, percent }) => {
-                  const raw = roundInputs[key];
-                  // Show a live "= NN%" hint only when a count fraction was typed.
-                  const computed = percent && /[/]|of/i.test(raw) ? parsePercentEntry(raw) : null;
-                  return (
-                    <div key={key}>
-                      <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">{label}</p>
-                      <div className="h-[50px] rounded-[13px] border-[1.5px] border-border bg-card flex items-center px-3 transition-colors focus-within:border-2 focus-within:border-primary focus-within:bg-[rgba(13,45,90,.04)]">
-                        <input
-                          type="text" inputMode={percent ? "text" : "decimal"}
-                          value={raw}
-                          onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
-                          placeholder={placeholder}
-                          className="w-full min-w-0 bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
-                        />
-                        {computed !== null && (
-                          <span className="shrink-0 text-[13px] font-bold text-primary tabular-nums">= {computed}%</span>
-                        )}
+              {isPro ? (
+                <div className="grid grid-cols-2 gap-[9px] mb-[18px]">
+                  {[
+                    { key: "gir" as const, label: "GIR", placeholder: "48 or 11/18", percent: true },
+                    { key: "fairways" as const, label: "Fairways", placeholder: "40 or 8/14", percent: true },
+                    { key: "putts" as const, label: "Putts / Round", placeholder: "31", percent: false },
+                    { key: "upAndDowns" as const, label: "Up & Downs", placeholder: "2", percent: false },
+                  ].map(({ key, label, placeholder, percent }) => {
+                    const raw = roundInputs[key];
+                    const computed = percent && /[/]|of/i.test(raw) ? parsePercentEntry(raw) : null;
+                    return (
+                      <div key={key}>
+                        <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">{label}</p>
+                        <div className="h-[50px] rounded-[13px] border-[1.5px] border-border bg-card flex items-center px-3 transition-colors focus-within:border-2 focus-within:border-primary focus-within:bg-[rgba(13,45,90,.04)]">
+                          <input
+                            type="text" inputMode={percent ? "text" : "decimal"}
+                            value={raw}
+                            onChange={e => setRoundInputs(p => ({ ...p, [key]: e.target.value }))}
+                            placeholder={placeholder}
+                            className="w-full min-w-0 bg-transparent outline-none font-stats text-[22px] font-semibold leading-none placeholder:text-muted-foreground/30"
+                          />
+                          {computed !== null && (
+                            <span className="shrink-0 text-[13px] font-bold text-primary tabular-nums">= {computed}%</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setLogOpen(false); setProOpen(true); }}
+                  className="w-full mb-[18px] rounded-[16px] border border-gold-border bg-gold-bg p-4 text-center">
+                  <span className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-gold">
+                    <Zap className="h-3.5 w-3.5" fill="currentColor" /> Upgrade to log GIR, Fairways, Putts & more
+                  </span>
+                </button>
+              )}
 
               <div className="flex gap-[9px]">
                 <button type="button" onClick={() => setLogOpen(false)}
