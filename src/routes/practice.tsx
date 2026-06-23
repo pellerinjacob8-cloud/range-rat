@@ -443,7 +443,7 @@ function PracticePage() {
             </div>
             <h2 className="font-display text-[32px] leading-tight">Welcome to Pro.</h2>
             <p className="mt-2 text-[15px] text-muted-foreground">
-              Combine, Grid Game, yardages, and unlimited saves are now unlocked.
+              Combine, Grid Game, custom sessions, and unlimited saves are now unlocked.
             </p>
             <button
               type="button"
@@ -864,7 +864,9 @@ function PracticePage() {
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            {categories.length === 2
+            {categories.length === 1 && categories[0] === "swing-flow"
+              ? "Use full bag for best results."
+              : categories.length === 2
               ? "Two categories selected, your session blends both."
               : categories.length === 1
               ? "Tap another to blend two categories, or generate with one."

@@ -9,7 +9,7 @@ const PERKS = [
   "Range Rat Combine benchmark and history",
   "On-course stats and handicap tracking",
   "Grid Game and Fairway Game",
-  "Club yardage tracking",
+  "Custom sessions and unlimited saves",
 ];
 
 interface ProModalProps {

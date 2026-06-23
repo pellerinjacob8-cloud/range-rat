@@ -626,7 +626,7 @@ function ProfilePage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold">Upgrade to Pro</p>
-              <p className="text-[12.5px] text-muted-foreground mt-0.5">Unlock Combine, Grid Game, yardages & more.</p>
+              <p className="text-[12.5px] text-muted-foreground mt-0.5">Unlock Combine, Grid Game, custom sessions & more.</p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
@@ -640,8 +640,7 @@ function ProfilePage() {
           <SetupRow
             icon={Target}
             label="Club yardages"
-            onPress={() => isPro ? setSubView("yardage") : setProOpen(true)}
-            proLocked={!isPro}
+            onPress={() => setSubView("yardage")}
           />
           <div className="h-px bg-border mx-4" />
           {/* chevron=false: this row toggles in place, it doesn't navigate */}
@@ -663,7 +662,7 @@ function ProfilePage() {
 
       </div>
 
-      <ProModal open={proOpen} onClose={() => setProOpen(false)} reason="Yardage tracking is a Pro feature. Log your carry distances for every club." />
+      <ProModal open={proOpen} onClose={() => setProOpen(false)} />
     </AppShell>
   );
 }
@@ -717,7 +716,7 @@ function ProBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold">Upgrade to Pro</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Unlock Combine, Grid Game, yardages & more.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Unlock Combine, Grid Game, custom sessions & more.</p>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
       </button>
