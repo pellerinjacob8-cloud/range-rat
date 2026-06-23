@@ -5,6 +5,11 @@
 import { supabase } from "./supabase";
 import type { GenerateInput, SessionDrill } from "./drills";
 
+async function getLocalUser() {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user ?? null;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Profile {
@@ -64,7 +69,7 @@ export interface Favorite {
 // ─── Profile ──────────────────────────────────────────────────────────────────
 
 export async function fetchProfile(): Promise<Profile | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return null;
 
   const { data } = await supabase
@@ -86,7 +91,7 @@ export async function fetchProfile(): Promise<Profile | null> {
 }
 
 export async function saveProfile(profile: Partial<Profile>): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   await supabase.from("profiles").upsert({
@@ -115,7 +120,7 @@ export async function saveHandicapSnapshot(
   handicap: number,
   stats?: { gir?: number; fairways?: number; putts?: number; upAndDowns?: number }
 ): Promise<HandicapSnapshot | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return null;
 
   // Try full insert with stats columns first
@@ -159,13 +164,13 @@ export async function saveHandicapSnapshot(
 }
 
 export async function deleteHandicapSnapshot(id: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
   await supabase.from("handicap_history").delete().eq("id", id).eq("user_id", user.id);
 }
 
 export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return [];
 
   // Try with stats columns first
@@ -202,7 +207,7 @@ export async function fetchHandicapHistory(): Promise<HandicapSnapshot[]> {
 }
 
 export async function saveTheme(theme: "light" | "dark"): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
   await supabase.from("profiles").update({ theme }).eq("id", user.id);
 }
@@ -210,7 +215,7 @@ export async function saveTheme(theme: "light" | "dark"): Promise<void> {
 // ─── Sessions ─────────────────────────────────────────────────────────────────
 
 export async function fetchSessions(): Promise<SavedSession[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return [];
 
   const { data } = await supabase
@@ -229,7 +234,7 @@ export async function fetchSessions(): Promise<SavedSession[]> {
 }
 
 export async function saveSession(session: SavedSession): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   await supabase.from("sessions").upsert({
@@ -247,7 +252,7 @@ export async function saveSession(session: SavedSession): Promise<void> {
 // ─── Bag ──────────────────────────────────────────────────────────────────────
 
 export async function fetchBag(): Promise<Club[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return [];
 
   const { data } = await supabase
@@ -269,7 +274,7 @@ export async function fetchBag(): Promise<Club[]> {
 }
 
 export async function saveBag(clubs: Club[]): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   // Delete all then re-insert to handle removals cleanly
@@ -295,7 +300,7 @@ export async function saveBag(clubs: Club[]): Promise<void> {
 // ─── Yardages ─────────────────────────────────────────────────────────────────
 
 export async function fetchYardages(): Promise<YardageMap> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return {};
 
   const { data } = await supabase
@@ -318,7 +323,7 @@ export async function saveYardage(
   clubId: string,
   yardages: SwingYardages
 ): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   await supabase.from("yardages").upsert({
@@ -333,7 +338,7 @@ export async function saveYardage(
 // ─── Favorites ────────────────────────────────────────────────────────────────
 
 export async function fetchFavorites(): Promise<Favorite[]> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return [];
 
   const { data } = await supabase
@@ -352,7 +357,7 @@ export async function fetchFavorites(): Promise<Favorite[]> {
 }
 
 export async function insertCustomSession(fav: Favorite): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
   await supabase.from("favorites").insert({
     id: fav.id,
@@ -365,7 +370,7 @@ export async function insertCustomSession(fav: Favorite): Promise<void> {
 }
 
 export async function insertFavorite(fav: Favorite): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   await supabase.from("favorites").insert({
@@ -379,7 +384,7 @@ export async function insertFavorite(fav: Favorite): Promise<void> {
 }
 
 export async function removeFavorite(id: string): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
@@ -388,7 +393,7 @@ export async function removeFavorite(id: string): Promise<void> {
 // ─── Migration, copy localStorage data to Supabase on first login ────────────
 
 export async function migrateFromLocalStorage(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getLocalUser();
   if (!user) return;
 
   const migrationKey = `range-rat:migrated:${user.id}`;
