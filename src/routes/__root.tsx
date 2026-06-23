@@ -80,6 +80,12 @@ function AuthGate() {
 
     if (hasProfile === null) return;
 
+    // Force unverified users to /auth/confirm
+    if (session && !session.user.email_confirmed_at && !isAuthRoute) {
+      navigate({ to: "/auth/confirm" });
+      return;
+    }
+
     const onboardingComplete = (() => { try { return localStorage.getItem("rangeRat_onboarding_complete") === "true"; } catch { return false; } })();
 
     if (!isAuthRoute && !hasProfile && !onboardingComplete) {
