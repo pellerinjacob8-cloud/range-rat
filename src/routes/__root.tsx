@@ -3,6 +3,7 @@ import type { ErrorInfo, ReactNode } from "react";
 import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { fetchProfile } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 function NotFoundComponent() {
   return (
@@ -97,9 +98,13 @@ function AuthGate() {
 
     // Force unverified users to /auth/confirm (even from onboarding routes)
     if (session && !session.user.email_confirmed_at) {
-      if (!pathname.startsWith("/auth/confirm")) {
-        navigate({ to: "/auth/confirm" });
-      }
+      // Session token may be stale: refresh to check if email was verified elsewhere
+      supabase.auth.refreshSession().then(({ data }) => {
+        if (data.session?.user?.email_confirmed_at) return; // re-render will handle it
+        if (!pathname.startsWith("/auth/confirm")) {
+          navigate({ to: "/auth/confirm" });
+        }
+      });
       return;
     }
 
