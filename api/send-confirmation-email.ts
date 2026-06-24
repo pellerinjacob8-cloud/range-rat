@@ -65,7 +65,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Range Rat <onboarding@range-rat.resend.dev>",
+        from: "Range Rat <noreply@send.rangeratapp.com>",
         to: email,
         subject: "Verify your Range Rat account",
         html: confirmationEmailHtml(confirmationLink, userName),
