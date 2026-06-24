@@ -115,6 +115,10 @@ function ProfilePage() {
   const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "" });
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [hasBag, setHasBag] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useState(() => {
+    try { return localStorage.getItem("rr-checklist-dismissed") === "true"; } catch { return false; }
+  });
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -127,6 +131,7 @@ function ProfilePage() {
     });
     fetchSessions().then(setAllTimeSessions);
     fetchHandicapHistory().then(setRoundHistory);
+    fetchBag().then((b) => setHasBag(b.length > 0));
   }, []);
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
@@ -387,6 +392,57 @@ function ProfilePage() {
             </button>
           )}
         </div>
+
+        {/* ── Setup checklist ── */}
+        {!checklistDismissed && (() => {
+          const steps = [
+            { label: "Set up your bag", done: hasBag, action: () => setSubView("bag") },
+            { label: "Complete a practice session", done: allTimeSessions.length > 0, action: () => navigate({ to: "/practice" }) },
+            { label: "Log your handicap", done: roundHistory.length > 0, action: () => openLogRound() },
+          ];
+          const completed = steps.filter(s => s.done).length;
+          if (completed === steps.length) return null;
+          return (
+            <div className="mt-5 rounded-[22px] border border-border bg-card p-4 relative">
+              <button
+                type="button"
+                onClick={() => { setChecklistDismissed(true); try { localStorage.setItem("rr-checklist-dismissed", "true"); } catch {} }}
+                aria-label="Dismiss"
+                className="absolute top-3 right-3 text-muted-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Get started</p>
+              <p className="mt-1 text-[14px] font-semibold">{completed} of {steps.length} complete</p>
+              <div className="mt-2 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${(completed / steps.length) * 100}%` }} />
+              </div>
+              <div className="mt-3 space-y-1">
+                {steps.map((step) => (
+                  <button
+                    key={step.label}
+                    type="button"
+                    onClick={step.done ? undefined : step.action}
+                    disabled={step.done}
+                    className={cn(
+                      "w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors",
+                      step.done ? "opacity-60" : "active:bg-muted"
+                    )}
+                  >
+                    <div className={cn(
+                      "h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center",
+                      step.done ? "border-primary bg-primary" : "border-border"
+                    )}>
+                      {step.done && <Check className="h-3 w-3 text-primary-foreground" />}
+                    </div>
+                    <span className={cn("text-[14px] font-medium", step.done && "line-through text-muted-foreground")}>{step.label}</span>
+                    {!step.done && <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── All-time stats ── */}
         <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">All-time</p>

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ChevronRight, Download, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -70,14 +70,59 @@ function Eyebrow({ children, className }: { children: React.ReactNode; className
   );
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function useInstallPrompt() {
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("rr-pwa-dismissed") === "true"; } catch { return false; }
+  });
+
+  useEffect(() => {
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+      || (navigator as any).standalone === true;
+    if (isStandalone) return;
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e as BeforeInstallPromptEvent;
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const install = async () => {
+    if (!deferredPrompt.current) return;
+    await deferredPrompt.current.prompt();
+    const { outcome } = await deferredPrompt.current.userChoice;
+    if (outcome === "accepted") setCanInstall(false);
+    deferredPrompt.current = null;
+  };
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { localStorage.setItem("rr-pwa-dismissed", "true"); } catch {}
+  };
+
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !(navigator as any).standalone;
+  const showBanner = (!dismissed && (canInstall || isIOS)) && !window.matchMedia("(display-mode: standalone)").matches;
+
+  return { showBanner, canInstall, isIOS, install, dismiss };
+}
+
 function Home() {
   const navigate = useNavigate();
   const name = loadProfileName();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
   const { isPro } = useAuth();
-  // Holds the context line for the Pro modal so each lock explains its own feature
   const [proReason, setProReason] = useState<string | null>(null);
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
+  const pwa = useInstallPrompt();
 
   useEffect(() => {
     fetchSessions().then((sessions) => {
@@ -160,6 +205,40 @@ function Home() {
           </div>
         ))}
       </div>
+
+      {/* PWA install banner */}
+      {pwa.showBanner && (
+        <div className="mt-4 rounded-[22px] border border-border bg-card p-4 flex items-center gap-3.5 relative">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <Download className="h-5 w-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-semibold">Add to Home Screen</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {pwa.isIOS
+                ? "Tap the share button, then \"Add to Home Screen.\""
+                : "Install Range Rat for quick access."}
+            </p>
+          </div>
+          {pwa.canInstall && (
+            <button
+              type="button"
+              onClick={pwa.install}
+              className="shrink-0 rounded-[10px] bg-primary px-3.5 py-[7px] text-[12px] font-bold text-primary-foreground uppercase tracking-[0.06em]"
+            >
+              Install
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={pwa.dismiss}
+            aria-label="Dismiss"
+            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-foreground text-background flex items-center justify-center shadow-sm"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Train section */}
       <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
