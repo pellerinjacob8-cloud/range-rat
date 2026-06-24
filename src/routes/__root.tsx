@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { fetchProfile } from "@/lib/db";
@@ -136,10 +137,50 @@ function AuthGate() {
   return <Outlet />;
 }
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("App crash:", error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background px-6">
+          <div className="max-w-sm text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <span className="text-2xl">!</span>
+            </div>
+            <h1 className="font-display text-[28px] leading-tight">Something went wrong</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              An unexpected error occurred. Tap below to reload.
+            </p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-6 h-12 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
+            >
+              Reload app
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function RootComponent() {
   return (
-    <AuthProvider>
-      <AuthGate />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
