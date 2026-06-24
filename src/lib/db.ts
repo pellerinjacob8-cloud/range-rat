@@ -118,22 +118,26 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
 
 export async function saveHandicapSnapshot(
   handicap: number,
-  stats?: { gir?: number; fairways?: number; putts?: number; upAndDowns?: number }
+  stats?: { gir?: number; fairways?: number; putts?: number; upAndDowns?: number },
+  recordedAt?: string
 ): Promise<HandicapSnapshot | null> {
   const user = await getLocalUser();
   if (!user) return null;
 
+  const row: Record<string, unknown> = {
+    user_id: user.id,
+    handicap,
+    gir: stats?.gir ?? null,
+    fairways: stats?.fairways ?? null,
+    putts: stats?.putts ?? null,
+    up_and_downs: stats?.upAndDowns ?? null,
+  };
+  if (recordedAt) row.recorded_at = recordedAt;
+
   // Try full insert with stats columns first
   const { data, error } = await supabase
     .from("handicap_history")
-    .insert({
-      user_id: user.id,
-      handicap,
-      gir: stats?.gir ?? null,
-      fairways: stats?.fairways ?? null,
-      putts: stats?.putts ?? null,
-      up_and_downs: stats?.upAndDowns ?? null,
-    })
+    .insert(row)
     .select("id, handicap, gir, fairways, putts, up_and_downs, recorded_at")
     .single();
 

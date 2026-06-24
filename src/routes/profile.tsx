@@ -112,7 +112,7 @@ function ProfilePage() {
   const [statDetail, setStatDetail] = useState<StatKey | null>(null);
   const [logOpen, setLogOpen] = useState(false);
   const [removingRound, setRemovingRound] = useState<string | null>(null);
-  const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "" });
+  const [roundInputs, setRoundInputs] = useState({ handicap: "", gir: "", fairways: "", putts: "", upAndDowns: "", date: new Date().toISOString().slice(0, 10) });
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [hasBag, setHasBag] = useState(false);
@@ -181,6 +181,7 @@ function ProfilePage() {
       fairways: latest?.fairways !== undefined ? String(latest.fairways) : "",
       putts: latest?.putts !== undefined ? String(latest.putts) : "",
       upAndDowns: latest?.upAndDowns !== undefined ? String(latest.upAndDowns) : "",
+      date: new Date().toISOString().slice(0, 10),
     });
     setLogOpen(true);
   };
@@ -211,14 +212,17 @@ function ProfilePage() {
       putts: roundInputs.putts ? parseFloat(roundInputs.putts) : undefined,
       upAndDowns: roundInputs.upAndDowns ? parseFloat(roundInputs.upAndDowns) : undefined,
     };
+    const recordedAt = roundInputs.date
+      ? new Date(roundInputs.date + "T12:00:00").toISOString()
+      : new Date().toISOString();
     // Optimistic update, UI reflects the save immediately
     const tempId = `temp-${Date.now()}`;
-    const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt: new Date().toISOString() };
+    const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt };
     setProfile(prev => ({ ...prev, handicap: hdx }));
-    setRoundHistory(prev => [...prev, optimistic]);
+    setRoundHistory(prev => [...prev, optimistic].sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()));
     setLogOpen(false);
     dbSaveProfile({ ...profile, handicap: hdx });
-    const snapshot = await saveHandicapSnapshot(hdx, stats);
+    const snapshot = await saveHandicapSnapshot(hdx, stats, recordedAt);
     if (snapshot) setRoundHistory(prev => prev.map(h => h.id === tempId ? snapshot : h));
   };
 
@@ -598,9 +602,13 @@ function ProfilePage() {
               <div className="flex items-start justify-between mb-[18px]">
                 <div>
                   <h2 className="font-display text-[26px] leading-none">{isPro ? "Log Round Stats" : "Update Handicap"}</h2>
-                  <p className="text-[12px] text-muted-foreground mt-1">
-                    {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
+                  <input
+                    type="date"
+                    value={roundInputs.date}
+                    max={new Date().toISOString().slice(0, 10)}
+                    onChange={e => setRoundInputs(p => ({ ...p, date: e.target.value }))}
+                    className="mt-1 text-[12px] text-muted-foreground bg-transparent outline-none"
+                  />
                 </div>
                 <button type="button" onClick={() => setLogOpen(false)} aria-label="Close" className="text-muted-foreground mt-0.5">
                   <X className="h-5 w-5" />
