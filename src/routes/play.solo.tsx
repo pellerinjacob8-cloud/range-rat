@@ -171,7 +171,7 @@ function SoloPage() {
       <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-4 border-b border-white/[0.08] bg-[#0A1530]/88 backdrop-blur">
         <button
           type="button"
-          onClick={() => navigate({ to: "/" })}
+          onClick={() => navigate({ to: "/play" })}
           className="text-white/70 text-sm font-bold uppercase tracking-[0.1em] flex items-center gap-1.5"
         >
           ← Back

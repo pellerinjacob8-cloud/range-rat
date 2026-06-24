@@ -114,7 +114,7 @@ function PrivacyPage() {
           <Section title="Contact us">
             If you have questions about this Privacy Policy or want to exercise your data rights,
             email us at{" "}
-            <a href="mailto:pellerinjacob8@gmail.com" className="underline">pellerinjacob8@gmail.com</a>.
+            <a href="mailto:support@rangeratapp.com" className="underline">support@rangeratapp.com</a>.
           </Section>
         </div>
       </div>

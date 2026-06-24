@@ -5,10 +5,22 @@ import { ensureSentry, Sentry } from "./_sentry.js";
 // the public browser bundle.
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+const ALLOWED_ORIGINS = ["https://rangeratapp.com", "https://www.rangeratapp.com"];
+const MAX_BODY_BYTES = 8192;
+
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", (chunk) => { body += chunk.toString(); });
+    let bytes = 0;
+    req.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > MAX_BODY_BYTES) { req.destroy(); reject(new Error("Body too large")); return; }
+      body += chunk.toString();
+    });
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
@@ -40,6 +52,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
     }
 
+    if (!ALLOWED_ORIGINS.some((o) => confirmationLink.startsWith(o))) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Invalid confirmation link" }));
+      return;
+    }
+
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -68,12 +86,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     Sentry.captureException(err);
     console.error("Email send error:", err);
     res.writeHead(500);
-    res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));
+    res.end(JSON.stringify({ error: "Internal server error" }));
   }
 }
 
 function confirmationEmailHtml(confirmationLink: string, userName?: string) {
-  const name = userName ? `Hi ${userName}` : "Welcome to Range Rat";
+  const name = userName ? `Hi ${escapeHtml(userName)}` : "Welcome to Range Rat";
+  const safeLink = escapeHtml(confirmationLink);
 
   return `
 <!DOCTYPE html>
@@ -100,7 +119,7 @@ function confirmationEmailHtml(confirmationLink: string, userName?: string) {
       <h1 style="margin-top: 0;">${name}</h1>
       <p>Thanks for signing up for Range Rat. Tap the button below to verify your email and get started.</p>
 
-      <a href="${confirmationLink}" class="button">Verify Email</a>
+      <a href="${safeLink}" class="button">Verify Email</a>
 
       <p style="color: #666; font-size: 14px;">If you didn't create this account, you can ignore this email.</p>
       <p style="color: #999; font-size: 12px;">This link expires in 24 hours.</p>

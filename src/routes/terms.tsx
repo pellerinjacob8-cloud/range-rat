@@ -239,7 +239,7 @@ function TermsPage() {
 
           <Section title="22. Contact us">
             If you have questions about these Terms, email us at{" "}
-            <a href="mailto:pellerinjacob8@gmail.com" className="underline">pellerinjacob8@gmail.com</a>.
+            <a href="mailto:support@rangeratapp.com" className="underline">support@rangeratapp.com</a>.
           </Section>
         </div>
       </div>

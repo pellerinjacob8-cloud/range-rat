@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, ChevronLeft, MailCheck, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
@@ -74,14 +74,23 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   const handleResend = async () => {
+    if (cooldown > 0) return;
     setResending(true);
     setResendError(null);
     const { error } = await resendVerification(email);
     setResending(false);
     if (error) { setResendError(error); return; }
     setResent(true);
+    setCooldown(45);
     setTimeout(() => setResent(false), 4000);
   };
 
@@ -118,10 +127,10 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
 
       <button
         onClick={handleResend}
-        disabled={resending}
+        disabled={resending || cooldown > 0}
         className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2"
       >
-        {resending ? "Sending…" : "Didn't get it? Resend email"}
+        {resending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Didn't get it? Resend email"}
       </button>
     </div>
   );

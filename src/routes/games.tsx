@@ -59,30 +59,50 @@ function GamesPage() {
         </Link>
 
         {/* Grid Game, Pro */}
-        <Link
-          to="/games/grid-game"
-          className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99] relative overflow-hidden"
-        >
-          {!isPro && (
+        {isPro ? (
+          <Link
+            to="/games/grid-game"
+            className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-4">
+              <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <Grid3x3 className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">2 PLAYERS · RAT/RANGE</p>
+                <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Grid Game</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  RAT or RANGE. Call your square, don't get spelled out.
+                </p>
+              </div>
+              <ChevronRight className="h-6 w-6 text-muted-foreground" />
+            </div>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setProOpen(true)}
+            className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm text-left active:scale-[0.99] transition relative overflow-hidden"
+          >
             <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5">
               <Lock className="h-3 w-3 text-gold" />
               <span className="text-[10px] font-bold text-gold uppercase tracking-wide">Pro</span>
             </div>
-          )}
-          <div className="flex items-center gap-4">
-            <div className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl ${isPro ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-              <Grid3x3 className="h-6 w-6" />
+            <div className="flex items-center gap-4">
+              <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                <Grid3x3 className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-muted-foreground">2 PLAYERS · RAT/RANGE</p>
+                <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Grid Game</h2>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  RAT or RANGE. Call your square, don't get spelled out.
+                </p>
+              </div>
+              <ChevronRight className="h-6 w-6 text-muted-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[9.5px] font-bold tracking-[0.18em] uppercase text-primary">2 PLAYERS · RAT/RANGE</p>
-              <h2 className="font-display text-[22px] leading-none tracking-[-0.005em]">Grid Game</h2>
-              <p className="mt-1.5 text-sm text-muted-foreground">
-                RAT or RANGE. Call your square, don't get spelled out.
-              </p>
-            </div>
-            <ChevronRight className="h-6 w-6 text-muted-foreground" />
-          </div>
-        </Link>
+          </button>
+        )}
 
         {/* Fairway Game, Pro */}
         {isPro ? (

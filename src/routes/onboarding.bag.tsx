@@ -4,6 +4,7 @@ import { ChevronLeft, Check } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { saveBag } from "@/lib/db";
 import type { Club } from "@/lib/db";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/onboarding/bag")({
   component: OnboardingBag,
@@ -46,9 +47,17 @@ function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
     return next;
   }
 
-  const lo = Math.min(...selectedIronIdxs, tappedIdx);
-  const hi = Math.max(...selectedIronIdxs, tappedIdx);
-  for (let i = lo; i <= hi; i++) next.add(IRON_IDS[i]);
+  const lo = Math.min(...selectedIronIdxs);
+  const hi = Math.max(...selectedIronIdxs);
+
+  if (next.has(tappedId) && (tappedIdx === lo || tappedIdx === hi)) {
+    next.delete(tappedId);
+    return next;
+  }
+
+  const newLo = Math.min(lo, tappedIdx);
+  const newHi = Math.max(hi, tappedIdx);
+  for (let i = newLo; i <= newHi; i++) next.add(IRON_IDS[i]);
   return next;
 }
 
@@ -69,16 +78,21 @@ function OnboardingBag() {
 
   const finish = async (skip = false) => {
     setSaving(true);
-    if (!skip && selected.size > 0) {
-      const clubs: Club[] = CLUBS
-        .filter(c => selected.has(c.id))
-        .map((c, i) => ({ id: c.id, name: c.name, type: c.type, sortOrder: i }));
-      await saveBag(clubs);
-    }
     try {
-      localStorage.setItem("rangeRat_onboarding_complete", "true");
-    } catch {}
-    window.location.href = "/";
+      if (!skip && selected.size > 0) {
+        const clubs: Club[] = CLUBS
+          .filter(c => selected.has(c.id))
+          .map((c, i) => ({ id: c.id, name: c.name, type: c.type, sortOrder: i }));
+        await saveBag(clubs);
+      }
+      try {
+        localStorage.setItem("rangeRat_onboarding_complete", "true");
+      } catch {}
+      window.location.href = "/";
+    } catch {
+      toast("Something went wrong. Please try again.");
+      setSaving(false);
+    }
   };
 
   const groups = [

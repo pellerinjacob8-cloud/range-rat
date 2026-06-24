@@ -66,12 +66,12 @@ const SLIDES = [
   },
 ];
 
-const CTA_ROUTES: Record<string, string> = {
-  "Play": "/play",
-  "Combine": "/combine",
-  "Stats": "/profile",
-  "Games": "/games",
-  "Yardages": "/profile",
+const CTA_ROUTES: Record<string, { to: string; search?: Record<string, string> }> = {
+  "Play": { to: "/play" },
+  "Combine": { to: "/combine" },
+  "Stats": { to: "/profile", search: { view: "stats" } },
+  "Games": { to: "/games" },
+  "Yardages": { to: "/profile", search: { view: "yardage" } },
 };
 
 function ProWelcomePage() {
@@ -127,7 +127,10 @@ function ProWelcomePage() {
         {slide.cta && (
           <button
             type="button"
-            onClick={() => navigate({ to: CTA_ROUTES[slide.cta!] as "/" })}
+            onClick={() => {
+              const route = CTA_ROUTES[slide.cta!];
+              navigate({ to: route.to as "/", search: route.search as any });
+            }}
             className="text-[13px] font-bold text-primary underline underline-offset-4"
           >
             Try {slide.cta} →

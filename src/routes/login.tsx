@@ -184,6 +184,7 @@ function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="Email"
+            aria-label="Email address"
             value={email}
             onChange={e => setEmail(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") submit(); }}

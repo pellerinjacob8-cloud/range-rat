@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Check, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 
@@ -43,6 +43,19 @@ function PasswordInput({
   );
 }
 
+function passwordStrength(pw: string): { label: string; color: string; bars: number } {
+  if (pw.length === 0) return { label: "", color: "", bars: 0 };
+  if (pw.length < 8) return { label: "Too short", color: "bg-primary/40", bars: 1 };
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasNum = /[0-9]/.test(pw);
+  const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+  const score = [hasUpper, hasNum, hasSpecial].filter(Boolean).length;
+  if (score === 0) return { label: "Weak", color: "bg-primary/50", bars: 1 };
+  if (score === 1) return { label: "Fair", color: "bg-primary/65", bars: 2 };
+  if (score === 2) return { label: "Good", color: "bg-primary/80", bars: 3 };
+  return { label: "Strong", color: "bg-primary", bars: 4 };
+}
+
 function ResetPasswordPage() {
   const navigate = useNavigate();
   useForceLightMode();
@@ -53,6 +66,7 @@ function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
 
   // Supabase fires PASSWORD_RECOVERY when the user lands here via the reset link.
   // We wait for that event before allowing the form to submit.
@@ -68,7 +82,18 @@ function ResetPasswordPage() {
       if (data.session) setSessionReady(true);
     });
 
-    return () => subscription.unsubscribe();
+    // If no valid session after 5 seconds, show an error
+    const timeout = setTimeout(() => {
+      setSessionReady((ready) => {
+        if (!ready) setLinkExpired(true);
+        return ready;
+      });
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const submit = async () => {
@@ -109,12 +134,33 @@ function ResetPasswordPage() {
     );
   }
 
+  // Invalid or expired reset link
+  if (!sessionReady && linkExpired) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-5">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <h1 className="font-display text-[34px] leading-tight mb-3">Link expired</h1>
+        <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mb-8">
+          This reset link is invalid or expired. Please request a new one.
+        </p>
+        <Link
+          to="/login"
+          className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] flex items-center justify-center"
+        >
+          Back to Sign In
+        </Link>
+      </div>
+    );
+  }
+
   // Loading, waiting for Supabase recovery session
   if (!sessionReady) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center">
         <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
-        <p className="text-[14px] text-muted-foreground">Verifying reset link…</p>
+        <p className="text-[14px] text-muted-foreground">Verifying reset link...</p>
       </div>
     );
   }
@@ -144,6 +190,19 @@ function ResetPasswordPage() {
             placeholder="New password (min. 8 characters)"
             autoComplete="new-password"
           />
+          {password.length > 0 && (() => {
+            const strength = passwordStrength(password);
+            return (
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 flex-1">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className={`h-1 flex-1 rounded-full ${i <= strength.bars ? strength.color : "bg-border"}`} />
+                  ))}
+                </div>
+                {strength.label && <p className="text-[11px] font-semibold text-muted-foreground w-12 text-right">{strength.label}</p>}
+              </div>
+            );
+          })()}
           <PasswordInput
             value={confirm}
             onChange={setConfirm}

@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/onboarding/name")({
   component: OnboardingName,
@@ -16,6 +18,12 @@ function OnboardingName() {
   const [handicap, setHandicap] = useState("");
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate({ to: "/login" });
+    });
+  }, [navigate]);
+
   const normalizedHandicap = handicap.trim().replace(/^\+/, "");
   const parsedHandicap = normalizedHandicap !== "" ? parseFloat(normalizedHandicap) : undefined;
   const isPlus = handicap.trim().startsWith("+");
@@ -25,17 +33,22 @@ function OnboardingName() {
   const handleContinue = async () => {
     if (!firstName.trim() || saving || !handicapValid) return;
     setSaving(true);
-    const { saveProfile, saveHandicapSnapshot } = await import("@/lib/db");
-    await saveProfile({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      handedness: hand === "right" ? "righty" : "lefty",
-      createdDate: Date.now(),
-      handicap: effectiveHandicap,
-    });
-    if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
-    setSaving(false);
-    navigate({ to: "/onboarding/bag" });
+    try {
+      const { saveProfile, saveHandicapSnapshot } = await import("@/lib/db");
+      await saveProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        handedness: hand === "right" ? "righty" : "lefty",
+        createdDate: Date.now(),
+        handicap: effectiveHandicap,
+      });
+      if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
+      navigate({ to: "/onboarding/bag" });
+    } catch {
+      toast("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

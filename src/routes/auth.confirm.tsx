@@ -15,7 +15,14 @@ function AuthConfirm() {
   const [error, setError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const handled = useRef(false);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
   useEffect(() => {
     if (handled.current) return;
@@ -82,6 +89,7 @@ function AuthConfirm() {
   }, [navigate]);
 
   const handleResend = async () => {
+    if (cooldown > 0) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) return;
     setResending(true);
@@ -89,6 +97,7 @@ function AuthConfirm() {
     setResending(false);
     if (error) { setError(error); return; }
     setResent(true);
+    setCooldown(45);
     setTimeout(() => setResent(false), 4000);
   };
 
@@ -141,10 +150,10 @@ function AuthConfirm() {
 
           <button
             onClick={handleResend}
-            disabled={resending}
+            disabled={resending || cooldown > 0}
             className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2 mb-6"
           >
-            {resending ? "Sending..." : "Didn't get it? Resend email"}
+            {resending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Didn't get it? Resend email"}
           </button>
           <button
             onClick={handleSignOut}

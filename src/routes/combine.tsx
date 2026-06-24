@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProGate } from "@/components/ProGate";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
+import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 import {
   COMBINE_SHOTS,
   calcShotScore,
@@ -44,6 +45,12 @@ function CombinePageInner() {
     setScored([]);
     setAttempt(null);
     setScreen("shot");
+    saveActiveMarker({
+      type: "combine",
+      route: "/combine",
+      label: "Range Rat Combine",
+      subtitle: "Session in progress",
+    });
   };
 
   const handleShotScored = (ss: ScoredShot) => {
@@ -70,17 +77,24 @@ function CombinePageInner() {
     }
   };
 
+  const [restoredInput, setRestoredInput] = useState<ShotScoreInput | null>(null);
+
   const handleBack = (idx: number) => {
-    setScored((prev) => prev.slice(0, idx - 1));
+    setScored((prev) => {
+      const removed = prev[idx - 1];
+      if (removed) setRestoredInput(removed.input);
+      return prev.slice(0, idx - 1);
+    });
   };
 
   if (screen === "shot") {
     return (
       <ShotFlow
         scored={scored}
-        onScored={handleShotScored}
+        onScored={(ss) => { setRestoredInput(null); handleShotScored(ss); }}
         onBack={handleBack}
         onQuit={() => setScreen("lobby")}
+        restoredInput={restoredInput}
       />
     );
   }
@@ -217,9 +231,10 @@ interface ShotFlowProps {
   onScored: (ss: ScoredShot) => void;
   onBack: (idx: number) => void;
   onQuit: () => void;
+  restoredInput?: ShotScoreInput | null;
 }
 
-function ShotFlow({ scored, onScored, onBack, onQuit }: ShotFlowProps) {
+function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput }: ShotFlowProps) {
   const idx  = scored.length;       // 0-based index of current shot
   const shot = COMBINE_SHOTS[idx];
   const total = COMBINE_SHOTS.length;
@@ -229,6 +244,15 @@ function ShotFlow({ scored, onScored, onBack, onQuit }: ShotFlowProps) {
   const [dir,      setDir]      = useState<Direction | null>(null);
   const [dc,       setDc]       = useState<DistanceControl | null>(null);
   const [fairway,  setFairway]  = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (restoredInput) {
+      setStrike(restoredInput.strikeQuality);
+      setDir(restoredInput.direction);
+      setDc(restoredInput.distanceControl ?? null);
+      setFairway(restoredInput.fairwayHit ?? null);
+    }
+  }, [restoredInput]);
 
   const canSubmit = strike !== null && dir !== null && (isDriver ? fairway !== null : dc !== null);
 

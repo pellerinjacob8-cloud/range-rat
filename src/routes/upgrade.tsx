@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check, ChevronLeft, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -20,6 +20,7 @@ const PRO_FEATURES = [
 
 function UpgradePage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const { user, isPro } = useAuth();
   const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState(false);
@@ -58,13 +59,12 @@ function UpgradePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-6">
-      <div className="h-11" />
+    <div className="min-h-screen bg-background flex flex-col px-6 pt-[env(safe-area-inset-top)]">
 
       {/* Header */}
       <div className="pt-6 flex items-center">
         <button
-          onClick={() => navigate({ to: "/" })}
+          onClick={() => router.history.back()}
           className="text-muted-foreground -ml-1 p-1"
         >
           <ChevronLeft className="h-6 w-6" />

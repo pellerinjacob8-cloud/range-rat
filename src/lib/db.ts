@@ -277,12 +277,23 @@ export async function saveBag(clubs: Club[]): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  // Delete all then re-insert to handle removals cleanly
-  await supabase.from("bag").delete().eq("user_id", user.id);
+  const clubIds = clubs.map(c => c.id);
+
+  // Remove clubs no longer in the bag
+  if (clubIds.length > 0) {
+    await supabase
+      .from("bag")
+      .delete()
+      .eq("user_id", user.id)
+      .not("id", "in", `(${clubIds.join(",")})`);
+  } else {
+    await supabase.from("bag").delete().eq("user_id", user.id);
+  }
 
   if (clubs.length === 0) return;
 
-  await supabase.from("bag").insert(
+  // Upsert remaining clubs in a single call
+  await supabase.from("bag").upsert(
     clubs.map((c, i) => ({
       id: c.id,
       user_id: user.id,

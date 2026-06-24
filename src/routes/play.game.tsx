@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { generateShot, type Shot, type GenerateShotOptions } from "@/lib/shots";
 import { deriveStyle } from "@/lib/drills";
 import { fetchProfile, fetchBag } from "@/lib/db";
+import { saveActiveMarker } from "@/lib/active-session";
 import { ShotCard } from "./play.solo";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
@@ -90,7 +91,15 @@ function GamePage() {
   }, [picks, config, winnerIdx]);
 
   if (!config) {
-    return <SetupView onStart={(c) => setConfig(c)} />;
+    return <SetupView onStart={(c) => {
+      setConfig(c);
+      saveActiveMarker({
+        type: "play-game",
+        route: "/play",
+        label: "Game Mode",
+        subtitle: `${c.p1} vs ${c.p2} - First to ${c.target}`,
+      });
+    }} />;
   }
 
   if (winnerIdx !== null) {

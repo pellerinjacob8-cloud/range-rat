@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { ProModal } from "@/components/ProModal";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { BarChart2, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, Crown, Flag, LogOut, Moon, Pencil, Plus, Ruler, Settings, Sun, Target, Trash2, X, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
@@ -130,14 +131,27 @@ function ProfilePage() {
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
 
+  const portalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleManageSubscription = async () => {
     setPortalError(null);
     setPortalLoading(true);
+
+    // Safety net: if the redirect never fires, reset loading after 8s
+    if (portalTimeoutRef.current) clearTimeout(portalTimeoutRef.current);
+    portalTimeoutRef.current = setTimeout(() => {
+      setPortalLoading(false);
+      toast.error("Could not open billing portal. Please try again.");
+    }, 8000);
+
     try {
       // Server creates a Stripe billing-portal session for the logged-in Pro
       // user's customer and we redirect straight into it -- no email re-entry.
       await openCustomerPortal();
+      // If openCustomerPortal resolves without redirecting, clear the timeout
+      if (portalTimeoutRef.current) clearTimeout(portalTimeoutRef.current);
     } catch (err: any) {
+      if (portalTimeoutRef.current) clearTimeout(portalTimeoutRef.current);
       setPortalError(err.message);
       setPortalLoading(false);
     }
@@ -217,7 +231,7 @@ function ProfilePage() {
   // Best streak
   const bestStreak = useMemo(() => {
     if (!allTimeSessions.length) return 0;
-    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const dates = [...new Set(allTimeSessions.map(s => dayKey(new Date(s.completedAt))))].sort();
     let best = 1, cur = 1;
     for (let i = 1; i < dates.length; i++) {
@@ -405,8 +419,14 @@ function ProfilePage() {
               {roundHistory.length > 0 && (() => {
                 const latest = roundHistory[roundHistory.length - 1];
                 const fmt = (d: string) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                const first = roundHistory[0];
-                const delta = roundHistory.length > 1 ? +(first.handicap - latest.handicap).toFixed(1) : null;
+                const now = new Date();
+                const thisMonthRounds = roundHistory.filter((r) => {
+                  const d = new Date(r.recordedAt);
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                });
+                const monthFirst = thisMonthRounds.length > 1 ? thisMonthRounds[0] : null;
+                const monthLatest = thisMonthRounds.length > 1 ? thisMonthRounds[thisMonthRounds.length - 1] : null;
+                const delta = monthFirst && monthLatest ? +(monthFirst.handicap - monthLatest.handicap).toFixed(1) : null;
                 return (
                   <p className="text-[11px] text-muted-foreground mt-1">
                     {fmt(latest.recordedAt)}
@@ -531,7 +551,7 @@ function ProfilePage() {
               {/* Handicap, large focal input */}
               <div className="mb-3">
                 <p className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground mb-[6px]">Handicap Index</p>
-                <div className="flex items-center h-[62px] rounded-[16px] border-2 border-primary px-[18px] gap-2.5" style={{ background: "rgba(13,45,90,.04)" }}>
+                <div className="flex items-center h-[62px] rounded-[16px] border-2 border-primary px-[18px] gap-2.5 bg-primary/[0.04]">
                   <input
                     type="text" inputMode="decimal" autoFocus
                     value={roundInputs.handicap}
@@ -682,49 +702,6 @@ function SetupRow({ icon: Icon, label, detail, onPress, proLocked, chevron = tru
       {detail && <span className="text-[14px] text-muted-foreground">{detail}</span>}
       {chevron && <ChevronRight className="h-[17px] w-[17px] text-muted-foreground shrink-0" />}
     </button>
-  );
-}
-
-// ─── Pro Banner ───────────────────────────────────────────────────────────────
-
-function ProBanner() {
-  const { isPro } = useAuth();
-  const [proOpen, setProOpen] = useState(false);
-
-  if (isPro) {
-    return (
-      <div className="mt-3 flex items-center gap-3 rounded-2xl border border-gold-border bg-gold-bg px-4 py-3.5">
-        <Zap className="h-5 w-5 text-gold shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-gold">Range Rat Pro</p>
-          <p className="text-xs text-muted-foreground mt-0.5">All features unlocked.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setProOpen(true)}
-        className="mt-3 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-left active:bg-muted transition-colors"
-      >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">
-          <Zap className="h-4 w-4 text-gold" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold">Upgrade to Pro</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Unlock Combine, Grid Game, custom sessions & more.</p>
-        </div>
-        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-      </button>
-      <ProModal
-        open={proOpen}
-        onClose={() => setProOpen(false)}
-        reason="Upgrade to Pro for unlimited saves, Combine, Grid Game, custom sessions, and more."
-      />
-    </>
   );
 }
 
@@ -1581,7 +1558,23 @@ function StatsSection() {
       }
     });
     const maxVal = Math.max(...counts, 1);
-    return { bars: counts.map((c) => Math.round((c / maxVal) * 100)), todayIndex: todayDow };
+
+    const thisWeekTotal = counts.reduce((a, b) => a + b, 0);
+    const prevCounts = Array(7).fill(0) as number[];
+    sessions.forEach((s) => {
+      const d = new Date(s.completedAt);
+      const diffMs = today.getTime() - d.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays >= 7 && diffDays < 14) {
+        const dow = (d.getDay() + 6) % 7;
+        prevCounts[dow] += s.totalBalls;
+      }
+    });
+    const prevWeekTotal = prevCounts.reduce((a, b) => a + b, 0);
+    let wowPct: number | null = null;
+    if (prevWeekTotal > 0) wowPct = Math.round(((thisWeekTotal - prevWeekTotal) / prevWeekTotal) * 100);
+
+    return { bars: counts.map((c) => Math.round((c / maxVal) * 100)), todayIndex: todayDow, wowPct };
   }, [sessions]);
 
   const recentSessions = useMemo(() => {
@@ -1621,7 +1614,11 @@ function StatsSection() {
       <div className="rounded-[22px] border border-border bg-card p-4">
         <div className="flex justify-between items-baseline">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Last 7 days</p>
-          <span className="text-[13px] font-semibold text-primary tracking-[0.08em]">+18% vs last week</span>
+          {weekData.wowPct !== null && (
+            <span className={cn("text-[13px] font-semibold tracking-[0.08em]", weekData.wowPct >= 0 ? "text-primary" : "text-muted-foreground")}>
+              {weekData.wowPct >= 0 ? "+" : ""}{weekData.wowPct}% vs last week
+            </span>
+          )}
         </div>
         <div className="mt-3 h-[100px] flex gap-2 items-end">
           {weekData.bars.map((h, i) => (

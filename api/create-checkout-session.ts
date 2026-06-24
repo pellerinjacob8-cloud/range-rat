@@ -34,7 +34,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   if (missing.length) {
     console.error("Checkout misconfigured, missing env:", missing.join(", "));
     res.writeHead(503);
-    res.end(JSON.stringify({ error: `Server misconfigured: missing ${missing.join(", ")}` }));
+    res.end(JSON.stringify({ error: "Server configuration error" }));
     return;
   }
 
@@ -92,6 +92,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     Sentry.captureException(err);
     console.error("Checkout error:", err);
     res.writeHead(500);
-    res.end(JSON.stringify({ error: err.message ?? "Internal server error" }));
+    res.end(JSON.stringify({ error: "Something went wrong" }));
   }
 }

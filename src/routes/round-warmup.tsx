@@ -464,7 +464,7 @@ function ChecklistView({ duration, done, setDone, onReset, teeTime, bag }: Check
             <div className="flex items-center gap-2">
               <Flame className="h-4 w-4 text-primary" />
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Round Warm Up · {formatDuration(duration)}
+                Round Warm Up · {formatDuration(snapped)}
               </p>
             </div>
             <h1 className="mt-1 font-display text-3xl">Get ready.</h1>

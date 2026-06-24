@@ -1,5 +1,5 @@
 export interface ActiveSessionMarker {
-  type: "practice" | "round-warmup" | "play-solo" | "ctp" | "grid" | "fairway";
+  type: "practice" | "round-warmup" | "play-solo" | "play-game" | "combine" | "ctp" | "grid" | "fairway";
   route: string;
   label: string;     // shown as first line on Home resume card
   subtitle: string;  // shown as second line
