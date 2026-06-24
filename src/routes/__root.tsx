@@ -58,7 +58,6 @@ function AuthGate() {
       if (cached) {
         const p = JSON.parse(cached);
         if (p?.firstName?.trim()) {
-          try { localStorage.setItem("rangeRat_onboarding_complete", "true"); } catch {}
           setHasProfile(true);
           return;
         }
@@ -70,6 +69,7 @@ function AuthGate() {
         try {
           localStorage.setItem("rangeRat_profile", JSON.stringify(p));
           localStorage.setItem("rangeRat_profile_uid", uid);
+          // Existing Supabase profile means onboarding was completed previously
           localStorage.setItem("rangeRat_onboarding_complete", "true");
         } catch {}
       } else {
