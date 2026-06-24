@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { supabase } from "@/lib/supabase";
+import { saveProfile, saveHandicapSnapshot } from "@/lib/db";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/onboarding/name")({
@@ -34,7 +35,6 @@ function OnboardingName() {
     if (!firstName.trim() || saving || !handicapValid) return;
     setSaving(true);
     try {
-      const { saveProfile, saveHandicapSnapshot } = await import("@/lib/db");
       await saveProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
