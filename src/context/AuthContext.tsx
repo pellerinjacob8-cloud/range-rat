@@ -10,6 +10,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   resendVerification: (email: string) => Promise<{ error: string | null }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   refreshProStatus: () => Promise<void>;
@@ -90,6 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const verifyOtp = async (email: string, token: string) => {
+    const { error } = await supabase.auth.verifyOtp({ email, token: token.trim(), type: "signup" });
+    return { error: error?.message ?? null };
+  };
+
   const resendVerification = async (email: string) => {
     const { error } = await supabase.auth.resend({ type: "signup", email });
     return { error: error?.message ?? null };
@@ -111,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signIn,
       signOut,
+      verifyOtp,
       resendVerification,
       resetPassword,
       refreshProStatus,

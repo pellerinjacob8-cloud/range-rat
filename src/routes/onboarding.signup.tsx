@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, ChevronLeft, MailCheck, Check } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
@@ -68,13 +68,24 @@ function PasswordInput({
   );
 }
 
-// ── Email sent screen ─────────────────────────────────────────────────────────
-function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void }) {
-  const { resendVerification } = useAuth();
+// ── Code entry screen ─────────────────────────────────────────────────────────
+function CodeEntryScreen({
+  email,
+  onVerified,
+  onBack,
+}: {
+  email: string;
+  onVerified: () => void;
+  onBack: () => void;
+}) {
+  const { verifyOtp, resendVerification } = useAuth();
+  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
-  const [resendError, setResendError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -82,17 +93,71 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
     return () => clearTimeout(t);
   }, [cooldown]);
 
+  useEffect(() => {
+    inputsRef.current[0]?.focus();
+  }, []);
+
+  const submitCode = async (code: string) => {
+    setVerifying(true);
+    setError(null);
+    const { error: otpError } = await verifyOtp(email, code);
+    setVerifying(false);
+    if (otpError) {
+      setError("That code is incorrect or expired. Try again.");
+      setDigits(["", "", "", "", "", ""]);
+      inputsRef.current[0]?.focus();
+      return;
+    }
+    onVerified();
+  };
+
+  const handleChange = (index: number, value: string) => {
+    const clean = value.replace(/\D/g, "");
+    if (!clean) {
+      // Allow clearing
+      const next = [...digits];
+      next[index] = "";
+      setDigits(next);
+      return;
+    }
+    // Handle paste of full code into one box
+    if (clean.length > 1) {
+      const chars = clean.slice(0, 6).split("");
+      const next = ["", "", "", "", "", ""];
+      chars.forEach((c, i) => { next[i] = c; });
+      setDigits(next);
+      const lastIdx = Math.min(chars.length, 6) - 1;
+      inputsRef.current[lastIdx]?.focus();
+      if (chars.length === 6) submitCode(next.join(""));
+      return;
+    }
+    const next = [...digits];
+    next[index] = clean;
+    setDigits(next);
+    setError(null);
+    if (index < 5) inputsRef.current[index + 1]?.focus();
+    if (index === 5 && next.every(d => d !== "")) submitCode(next.join(""));
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
+  };
+
   const handleResend = async () => {
     if (cooldown > 0) return;
     setResending(true);
-    setResendError(null);
-    const { error } = await resendVerification(email);
+    setError(null);
+    const { error: resendError } = await resendVerification(email);
     setResending(false);
-    if (error) { setResendError(error); return; }
+    if (resendError) { setError(resendError); return; }
     setResent(true);
     setCooldown(45);
     setTimeout(() => setResent(false), 4000);
   };
+
+  const allFilled = digits.every(d => d !== "");
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 text-center">
@@ -100,37 +165,64 @@ function EmailSentScreen({ email, onBack }: { email: string; onBack: () => void 
         <MailCheck className="h-8 w-8 text-primary" />
       </div>
 
-      <h1 className="font-display text-[34px] leading-tight mb-3">Verify your email</h1>
+      <h1 className="font-display text-[34px] leading-tight mb-3">Enter your code</h1>
 
       <p className="text-[15px] text-muted-foreground leading-relaxed max-w-xs mb-2">
-        We sent a confirmation link to
+        We sent a 6-digit code to
       </p>
-      <p className="text-[15px] font-semibold text-foreground mb-6 max-w-xs break-all">{email}</p>
+      <p className="text-[15px] font-semibold text-foreground mb-7 max-w-xs break-all">{email}</p>
 
-      <p className="text-[13px] text-muted-foreground max-w-xs leading-relaxed mb-8">
-        Tap the link in the email, we'll bring you straight in.
-      </p>
+      <div className="flex gap-2 mb-5">
+        {digits.map((digit, i) => (
+          <input
+            key={i}
+            ref={el => { inputsRef.current[i] = el; }}
+            type="text"
+            inputMode="numeric"
+            autoComplete={i === 0 ? "one-time-code" : "off"}
+            maxLength={6}
+            value={digit}
+            onChange={e => handleChange(i, e.target.value)}
+            onKeyDown={e => handleKeyDown(i, e)}
+            disabled={verifying}
+            className={`h-14 w-12 rounded-[12px] border-2 bg-card text-center font-display text-[26px] outline-none transition-colors ${
+              error ? "border-destructive" : digit ? "border-primary" : "border-border focus:border-primary"
+            }`}
+          />
+        ))}
+      </div>
 
-      {resendError && (
-        <p className="text-sm font-semibold text-destructive mb-4">{resendError}</p>
+      {verifying && (
+        <p className="text-[13px] text-muted-foreground mb-4 flex items-center justify-center gap-2">
+          <span className="h-3.5 w-3.5 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
+          Verifying...
+        </p>
+      )}
+      {error && !verifying && (
+        <p className="text-sm font-semibold text-destructive mb-4 max-w-xs">{error}</p>
       )}
       {resent && (
-        <p className="text-sm font-semibold text-[var(--ok)] mb-4 flex items-center justify-center gap-1.5"><Check className="h-4 w-4" /> Email resent</p>
+        <p className="text-sm font-semibold text-[var(--ok)] mb-4 flex items-center justify-center gap-1.5"><Check className="h-4 w-4" /> New code sent</p>
       )}
 
       <button
-        onClick={onBack}
-        className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] mb-4 active:opacity-90 transition-opacity"
+        onClick={() => submitCode(digits.join(""))}
+        disabled={!allFilled || verifying}
+        className="h-14 w-full max-w-xs rounded-[14px] bg-primary text-white font-bold text-[14px] uppercase tracking-[0.06em] mb-4 disabled:opacity-40 active:opacity-90 transition-opacity"
       >
-        Back to Sign In
+        Verify
       </button>
 
       <button
         onClick={handleResend}
         disabled={resending || cooldown > 0}
-        className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2"
+        className="text-[13px] text-muted-foreground disabled:opacity-50 p-2 -m-2 mb-2"
       >
-        {resending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Didn't get it? Resend email"}
+        {resending ? "Sending..." : cooldown > 0 ? `Resend in ${cooldown}s` : "Didn't get it? Resend code"}
+      </button>
+
+      <button onClick={onBack} className="text-[13px] text-muted-foreground p-2 -m-2">
+        Use a different email
       </button>
     </div>
   );
@@ -148,7 +240,7 @@ function OnboardingSignup() {
   const [touched, setTouched] = useState({ email: false, password: false, confirm: false });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [awaitingCode, setAwaitingCode] = useState(false);
 
   const strength = passwordStrength(password);
   const emailValid = validateEmail(email);
@@ -174,14 +266,21 @@ function OnboardingSignup() {
 
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
-      setEmailSent(true);
+      // Email confirmation required: collect the 6-digit code in-app
+      setAwaitingCode(true);
     } else {
       navigate({ to: "/onboarding/name" });
     }
   };
 
-  if (emailSent) {
-    return <EmailSentScreen email={email} onBack={() => navigate({ to: "/login" })} />;
+  if (awaitingCode) {
+    return (
+      <CodeEntryScreen
+        email={email.trim()}
+        onVerified={() => navigate({ to: "/onboarding/name" })}
+        onBack={() => setAwaitingCode(false)}
+      />
+    );
   }
 
   return (
