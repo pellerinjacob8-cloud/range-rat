@@ -52,7 +52,9 @@ function OnboardingName() {
       if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
       navigate({ to: "/onboarding/bag" });
     } catch (err) {
-      toast("Something went wrong. Please try again.");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      console.error("Onboarding save failed:", msg);
+      toast(`Save failed: ${msg}`);
     } finally {
       setSaving(false);
     }

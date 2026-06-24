@@ -94,7 +94,7 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
   const user = await getLocalUser();
   if (!user) throw new Error("No active session");
 
-  await supabase.from("profiles").upsert({
+  const { error } = await supabase.from("profiles").upsert({
     id: user.id,
     first_name: profile.firstName ?? "",
     last_name: profile.lastName ?? "",
@@ -104,6 +104,7 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
     handicap: profile.handicap ?? null,
     updated_at: new Date().toISOString(),
   });
+  if (error) throw new Error(error.message);
 
   // Keep localStorage in sync so loadProfileName() still works for nav
   try {
