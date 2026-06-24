@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import { ThemeProvider } from "./context/ThemeContext";
+import { Toaster } from "./components/ui/sonner";
 import { initSentry } from "./lib/sentry";
 import "./styles.css";
 
@@ -15,6 +16,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider>
       <RouterProvider router={router} />
+      <Toaster />
     </ThemeProvider>
   </StrictMode>
 );

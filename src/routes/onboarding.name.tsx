@@ -35,6 +35,13 @@ function OnboardingName() {
     if (!firstName.trim() || saving || !handicapValid) return;
     setSaving(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast("Session expired. Please sign in again.");
+        setSaving(false);
+        navigate({ to: "/login" });
+        return;
+      }
       await saveProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -44,7 +51,7 @@ function OnboardingName() {
       });
       if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
       navigate({ to: "/onboarding/bag" });
-    } catch {
+    } catch (err) {
       toast("Something went wrong. Please try again.");
     } finally {
       setSaving(false);

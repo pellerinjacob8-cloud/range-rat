@@ -92,7 +92,7 @@ export async function fetchProfile(): Promise<Profile | null> {
 
 export async function saveProfile(profile: Partial<Profile>): Promise<void> {
   const user = await getLocalUser();
-  if (!user) return;
+  if (!user) throw new Error("No active session");
 
   await supabase.from("profiles").upsert({
     id: user.id,
