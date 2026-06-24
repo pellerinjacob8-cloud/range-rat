@@ -116,6 +116,7 @@ function ProfilePage() {
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [hasBag, setHasBag] = useState(false);
+  const [hasYardages, setHasYardages] = useState(false);
   const [checklistDismissed, setChecklistDismissed] = useState(() => {
     try { return localStorage.getItem("rr-checklist-dismissed") === "true"; } catch { return false; }
   });
@@ -132,6 +133,7 @@ function ProfilePage() {
     fetchSessions().then(setAllTimeSessions);
     fetchHandicapHistory().then(setRoundHistory);
     fetchBag().then((b) => setHasBag(b.length > 0));
+    fetchYardages().then((y) => setHasYardages(Object.keys(y).length > 0));
   }, []);
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
@@ -399,6 +401,7 @@ function ProfilePage() {
             { label: "Set up your bag", done: hasBag, action: () => setSubView("bag") },
             { label: "Complete a practice session", done: allTimeSessions.length > 0, action: () => navigate({ to: "/practice" }) },
             { label: "Log your handicap", done: roundHistory.length > 0, action: () => openLogRound() },
+            { label: "Set your yardages", done: hasYardages, action: () => setSubView("yardage") },
           ];
           const completed = steps.filter(s => s.done).length;
           if (completed === steps.length) return null;
