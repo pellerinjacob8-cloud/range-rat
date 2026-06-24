@@ -32,16 +32,23 @@ function OnboardingName() {
   const handicapValid = handicap.trim() === "" || (parsedHandicap !== undefined && !isNaN(parsedHandicap) && effectiveHandicap! >= -10 && effectiveHandicap! <= 54);
 
   const handleContinue = async () => {
-    if (!firstName.trim() || saving || !handicapValid) return;
+    console.log("[onboarding] handleContinue called", { firstName: firstName.trim(), saving, handicapValid });
+    if (!firstName.trim() || saving || !handicapValid) {
+      console.log("[onboarding] early return: guard failed", { hasName: !!firstName.trim(), saving, handicapValid });
+      return;
+    }
     setSaving(true);
     try {
+      console.log("[onboarding] getting session...");
       const { data: { session } } = await supabase.auth.getSession();
+      console.log("[onboarding] session:", session ? "found" : "null");
       if (!session) {
         toast("Session expired. Please sign in again.");
         setSaving(false);
         navigate({ to: "/login" });
         return;
       }
+      console.log("[onboarding] saving profile...");
       await saveProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -49,11 +56,17 @@ function OnboardingName() {
         createdDate: Date.now(),
         handicap: effectiveHandicap,
       });
-      if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
+      console.log("[onboarding] profile saved OK");
+      if (effectiveHandicap !== undefined) {
+        console.log("[onboarding] saving handicap snapshot...");
+        await saveHandicapSnapshot(effectiveHandicap);
+        console.log("[onboarding] handicap saved OK");
+      }
+      console.log("[onboarding] navigating to /onboarding/bag");
       navigate({ to: "/onboarding/bag" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
-      console.error("Onboarding save failed:", msg);
+      console.error("[onboarding] save failed:", msg, err);
       toast(`Save failed: ${msg}`);
     } finally {
       setSaving(false);
