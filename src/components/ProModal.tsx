@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
 
 const PERKS = [
-  "Practice Like You Play mode",
+  "Random Practice mode",
   "Range Rat Combine benchmark and history",
   "On-course stats and handicap tracking",
   "Grid Game and Fairway Game",

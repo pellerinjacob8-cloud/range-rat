@@ -9,7 +9,7 @@ export const Route = createFileRoute("/upgrade")({
 });
 
 const PRO_FEATURES = [
-  "Practice Like You Play mode",
+  "Random Practice mode",
   "Range Rat Combine benchmark and history",
   "On-course stats and handicap tracking",
   "Grid Game and Fairway Game",

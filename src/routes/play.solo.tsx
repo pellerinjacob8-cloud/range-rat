@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/play/solo")({
   head: () => ({
     meta: [
-      { title: "Range Rat: Practice Like You Play (Solo)" },
+      { title: "Range Rat: Random Practice (Solo)" },
       {
         name: "description",
         content: "Random clubs, shapes, and distances. Track your make percentage.",
@@ -61,7 +61,7 @@ function SoloPage() {
     saveActiveMarker({
       type: "play-solo",
       route: "/play",
-      label: "Practice Like You Play",
+      label: "Random Practice",
       subtitle: "Session in progress",
     });
   }, []);

@@ -254,8 +254,8 @@ function Home() {
         Games
       </p>
       <div className="mt-3 space-y-2.5">
-        <ProNavCard isPro={isPro} onLock={() => setProReason("Practice Like You Play is a Pro feature. Upgrade to unlock it and the full Range Rat experience.")} to="/play" title="Practice Like You Play" subtitle="Random club, shape, and distance. Commit to every shot." Icon={Shuffle} />
         <NavCard to="/games" title="Range Games" subtitle="Friendly bets and bragging rights." Icon={Flag} />
+        <ProNavCard isPro={isPro} onLock={() => setProReason("Random Practice is a Pro feature. Upgrade to unlock it and the full Range Rat experience.")} to="/play" title="Random Practice" subtitle="Shot roulette: random club, shape, and distance." Icon={Shuffle} />
       </div>
 
       {/* Track section */}
@@ -270,7 +270,7 @@ function Home() {
       {!isPro && (
         <button
           type="button"
-          onClick={() => setProReason("Upgrade to unlock Practice Like You Play, the Combine, stats and handicap tracking, Pro games, and more.")}
+          onClick={() => setProReason("Upgrade to unlock Random Practice, the Combine, stats and handicap tracking, Pro games, and more.")}
           className="mt-5 w-full flex items-center gap-3 rounded-[22px] border border-gold-border bg-gold-bg px-4 py-3.5 text-left transition-opacity active:opacity-80"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-bg border border-gold-border">

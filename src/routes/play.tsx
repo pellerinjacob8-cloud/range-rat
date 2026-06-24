@@ -6,13 +6,13 @@ import { ProGate } from "@/components/ProGate";
 export const Route = createFileRoute("/play")({
   head: () => ({
     meta: [
-      { title: "Range Rat: Practice Like You Play" },
+      { title: "Range Rat: Random Practice" },
       {
         name: "description",
         content:
           "Random clubs, shapes, and distances. Practice every shot like it counts, solo or head to head.",
       },
-      { property: "og:title", content: "Range Rat: Practice Like You Play" },
+      { property: "og:title", content: "Range Rat: Random Practice" },
       {
         property: "og:description",
         content: "Random shot generator for solo practice or two-player games.",
@@ -27,10 +27,10 @@ function PlayPage() {
   if (pathname !== "/play") return <Outlet />;
 
   return (
-    <ProGate feature="Practice Like You Play">
+    <ProGate feature="Random Practice">
     <AppShell showBack>
       <div className="pt-2">
-        <h1 className="font-display text-3xl">Practice Like You Play</h1>
+        <h1 className="font-display text-3xl">Random Practice</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Random shots, real commitment. Pick a mode.
         </p>
