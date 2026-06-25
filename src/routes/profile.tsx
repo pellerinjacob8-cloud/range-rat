@@ -130,7 +130,7 @@ function ProfilePage() {
       if (p.handicap !== undefined) setRoundInputs(prev => ({ ...prev, handicap: String(p.handicap) }));
       try { localStorage.setItem("rangeRat_profile", JSON.stringify(p)); } catch {}
     });
-    fetchSessions().then(setAllTimeSessions);
+    fetchSessions().then(setAllTimeSessions).catch(() => {});
     fetchHandicapHistory().then(setRoundHistory);
     fetchBag().then((b) => setHasBag(b.length > 0));
     fetchYardages().then((y) => setHasYardages(Object.keys(y).length > 0));
@@ -1606,7 +1606,7 @@ function StatsSection() {
   });
 
   useEffect(() => {
-    fetchSessions().then((s) => { if (s.length > 0) setSessions(s); });
+    fetchSessions().then((s) => { if (s.length > 0) setSessions(s); }).catch(() => {});
   }, []);
 
   // Weekly bar chart data

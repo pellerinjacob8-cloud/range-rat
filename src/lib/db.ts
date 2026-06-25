@@ -223,11 +223,15 @@ export async function fetchSessions(): Promise<SavedSession[]> {
   const user = await getLocalUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sessions")
     .select("*")
     .eq("user_id", user.id)
     .order("completed_at", { ascending: false });
+
+  // Surface real query failures so callers can show an error state instead of
+  // silently rendering zero stats to a user who has real history.
+  if (error) throw new Error(error.message);
 
   return (data ?? []).map((r) => ({
     id: r.id,

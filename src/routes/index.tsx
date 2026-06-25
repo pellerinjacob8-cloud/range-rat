@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
-import { ChevronRight, Download, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { ChevronRight, Download, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -122,17 +122,26 @@ function Home() {
   const { isPro } = useAuth();
   const [proReason, setProReason] = useState<string | null>(null);
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
+  const [hasHistory, setHasHistory] = useState(false);
+  const [statsStatus, setStatsStatus] = useState<"loading" | "ready" | "error">("loading");
   const pwa = useInstallPrompt();
 
-  useEffect(() => {
-    fetchSessions().then((sessions) => {
-      const balls = sessions.reduce((sum, s) => sum + s.totalBalls, 0);
-      const streak = calcStreak(sessions);
-      const weekStart = startOfWeek(new Date());
-      const thisWeek = sessions.filter((s) => new Date(s.completedAt) >= weekStart).length;
-      setStats({ sessions: thisWeek, balls, streak });
-    });
+  const loadStats = useCallback(() => {
+    setStatsStatus("loading");
+    fetchSessions()
+      .then((sessions) => {
+        const balls = sessions.reduce((sum, s) => sum + s.totalBalls, 0);
+        const streak = calcStreak(sessions);
+        const weekStart = startOfWeek(new Date());
+        const thisWeek = sessions.filter((s) => new Date(s.completedAt) >= weekStart).length;
+        setStats({ sessions: thisWeek, balls, streak });
+        setHasHistory(sessions.length > 0);
+        setStatsStatus("ready");
+      })
+      .catch(() => setStatsStatus("error"));
   }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const dismissResume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -184,27 +193,73 @@ function Home() {
         </div>
       )}
 
-      {/* Quick stats strip */}
-      <div className="mt-4 grid grid-cols-3 gap-2.5">
-        {[
-          { eyebrow: "This week", value: stats.sessions, sub: "sessions" },
-          { eyebrow: "Balls", value: stats.balls, sub: "hit" },
-          { eyebrow: "Streak", value: stats.streak, sub: "days" },
-        ].map(({ eyebrow, value, sub }) => (
-          <div
-            key={eyebrow}
-            className="rounded-[22px] border border-border bg-card p-3 text-center"
-          >
-            <Eyebrow>{eyebrow}</Eyebrow>
-            <div className="mt-1">
-              <StatNum value={value} size={32} />
-            </div>
-            <p className="mt-0.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-              {sub}
-            </p>
+      {/* Quick stats: loading skeleton, error+retry, first-session CTA, or strip */}
+      {statsStatus === "loading" && (
+        <div className="mt-4 grid grid-cols-3 gap-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-[22px] border border-border bg-card p-3 h-[92px] animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {statsStatus === "error" && (
+        <div className="mt-4 rounded-[22px] border border-border bg-card p-4 flex items-center gap-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive" />
           </div>
-        ))}
-      </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-semibold">Couldn't load your stats</p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">Your data is safe. Check your connection.</p>
+          </div>
+          <button
+            type="button"
+            onClick={loadStats}
+            className="shrink-0 rounded-[10px] bg-primary px-3.5 py-[7px] text-[12px] font-bold text-primary-foreground uppercase tracking-[0.06em]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {statsStatus === "ready" && !hasHistory && (
+        <button
+          onClick={() => navigate({ to: "/practice" })}
+          className="mt-4 w-full rounded-[22px] bg-primary p-4 shadow-[0_12px_30px_-14px_rgba(13,45,90,0.5)] flex items-center gap-3.5 text-left active:opacity-90 transition-opacity"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 border border-white/[0.18]">
+            <Target className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-white/70">Get started</p>
+            <p className="mt-0.5 text-[17px] font-semibold text-white leading-tight">Start your first session</p>
+            <p className="text-[13px] text-white/60 mt-0.5">Generate a plan and start tracking.</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-white/70 shrink-0" />
+        </button>
+      )}
+
+      {statsStatus === "ready" && hasHistory && (
+        <div className="mt-4 grid grid-cols-3 gap-2.5">
+          {[
+            { eyebrow: "This week", value: stats.sessions, sub: "sessions" },
+            { eyebrow: "Balls", value: stats.balls, sub: "hit" },
+            { eyebrow: "Streak", value: stats.streak, sub: "days" },
+          ].map(({ eyebrow, value, sub }) => (
+            <div
+              key={eyebrow}
+              className="rounded-[22px] border border-border bg-card p-3 text-center"
+            >
+              <Eyebrow>{eyebrow}</Eyebrow>
+              <div className="mt-1">
+                <StatNum value={value} size={32} />
+              </div>
+              <p className="mt-0.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                {sub}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* PWA install banner */}
       {pwa.showBanner && (
