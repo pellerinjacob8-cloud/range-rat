@@ -110,7 +110,10 @@ function AuthGate() {
 
     const onboardingComplete = (() => { try { return localStorage.getItem("rangeRat_onboarding_complete") === "true"; } catch { return false; } })();
 
-    if (!isAuthRoute && !hasProfile && !onboardingComplete) {
+    // Push users INTO onboarding from outside it, but never police movement
+    // BETWEEN onboarding steps (hasProfile state lags localStorage after save,
+    // which was bouncing /onboarding/bag back to /onboarding/name).
+    if (!isAuthRoute && !isOnboarding && !hasProfile && !onboardingComplete) {
       navigate({ to: "/onboarding/name" });
     }
 
