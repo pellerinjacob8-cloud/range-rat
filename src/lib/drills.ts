@@ -812,13 +812,20 @@ function sortClubsShortToLong(clubs: string[]): string[] {
   });
 }
 
+// Order bag clubs short to long by loft using the canonical sort order, not
+// the bag's stored display order (the onboarding builder saves it driver-first,
+// which made sessions start with driver instead of warming up from wedges).
+function bagLoftOrder(c: BagClub): number {
+  return canonicalById(c.id)?.sortOrder ?? c.sortOrder ?? 99;
+}
+
 function resolveClubs(groups: ClubGroup[], bag?: BagClub[]): string[] {
   // When the user has a bag, filter from it
   if (bag && bag.length > 0) {
     if (groups.includes("full-bag")) {
       return bag
         .slice()
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .sort((a, b) => bagLoftOrder(a) - bagLoftOrder(b))
         .map(c => c.name);
     }
     const targetGroups = new Set(groups);
@@ -829,7 +836,7 @@ function resolveClubs(groups: ClubGroup[], bag?: BagClub[]): string[] {
     });
     if (matched.length > 0) {
       return matched
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .sort((a, b) => bagLoftOrder(a) - bagLoftOrder(b))
         .map(c => c.name);
     }
   }
@@ -918,8 +925,8 @@ const FLOW_CUES: string[] = [
 ];
 
 function generateSwingFlow(input: GenerateInput): SessionDrill[] {
-  const clubs = resolveClubs(input.clubGroups, input.bag);
-  if (clubs.length === 0) return [];
+  const allClubs = resolveClubs(input.clubGroups, input.bag);
+  if (allClubs.length === 0) return [];
 
   const bag = input.bag ?? [];
   const isUnlimited = input.bucket === "unlimited";
@@ -927,7 +934,16 @@ function generateSwingFlow(input: GenerateInput): SessionDrill[] {
     ? 0
     : Math.max(0, (input.customBalls ?? BUCKET_SIZES.find(b => b.value === input.bucket)!.balls) - (input.warmUpBalls ?? 0));
 
-  const ballsPerClub = isUnlimited ? 10 : Math.max(6, Math.min(12, Math.floor(totalBalls / clubs.length)));
+  // Flow through enough clubs (short to long) that each gets a sensible number
+  // of balls, then split the bucket exactly. allClubs is already loft-ordered.
+  const TARGET_PER_CLUB = 7;
+  const clubCount = isUnlimited
+    ? allClubs.length
+    : Math.max(1, Math.min(allClubs.length, Math.round(totalBalls / TARGET_PER_CLUB) || 1));
+  const clubs = isUnlimited ? allClubs : pickSpread(allClubs, clubCount);
+
+  // Exact even split of the bucket across the flow (sums to totalBalls).
+  const perClub = isUnlimited ? [] : allocateExact(totalBalls, Array(clubs.length).fill(1), 1);
   const cues = shuffle([...FLOW_CUES]);
 
   const flowName = (club: string, i: number, total: number): string => {
@@ -951,25 +967,13 @@ function generateSwingFlow(input: GenerateInput): SessionDrill[] {
       club: subbed,
       drillName: flowName(subbed, i, clubs.length),
       description: cues[i % cues.length],
-      balls: isUnlimited ? 10 : Math.min(ballsPerClub, totalBalls - ballsPerClub * i > ballsPerClub ? ballsPerClub : Math.max(6, totalBalls - ballsPerClub * i)),
+      balls: isUnlimited ? 10 : perClub[i],
       unit: "balls",
       isTarget: isUnlimited,
       type: "drill" as ContentType,
       phase: "Skill" as SessionPhase,
     };
   });
-
-  // Distribute remaining balls across blocks evenly if math doesn't divide clean
-  if (!isUnlimited) {
-    const used = result.reduce((s, d) => s + d.balls, 0);
-    let remaining = totalBalls - used;
-    let idx = 0;
-    while (remaining > 0 && result.length > 0) {
-      result[idx % result.length].balls++;
-      remaining--;
-      idx++;
-    }
-  }
 
   recordSessionFingerprint(result);
   return result;
@@ -1171,6 +1175,9 @@ export function generateSession(input: GenerateInput): SessionDrill[] {
     }
   });
 
+  // Guarantee the session hits the bucket exactly (trimming can drop balls).
+  if (!isUnlimited) reconcileBallTotal(result, T);
+
   recordSessionFingerprint(result);
   return result;
 }
@@ -1241,6 +1248,26 @@ function allocateExact(total: number, weights: number[], min = 3): number[] {
   for (let k = 0; k < rem; k++) floored[order[k].i]++;
 
   return floored.map((f) => baseMin + f);
+}
+
+// Force the ball-hitting blocks to sum to exactly `target`. Phase trimming
+// (time cap) can otherwise drop balls and leave the session short of the
+// bucket. Adjusts real ball blocks only, keeping each block >= 1.
+function reconcileBallTotal(drills: SessionDrill[], target: number): void {
+  const adjustable = drills.filter((d) => d.unit === "balls" && !d.isTarget);
+  if (adjustable.length === 0) return;
+  let diff = target - adjustable.reduce((s, d) => s + d.balls, 0);
+  for (let i = 0; diff > 0; i = (i + 1) % adjustable.length) {
+    adjustable[i].balls++;
+    diff--;
+  }
+  let guard = 0;
+  const maxIters = adjustable.length * 1000;
+  while (diff < 0 && guard < maxIters) {
+    const d = adjustable[guard % adjustable.length];
+    if (d.balls > 1) { d.balls--; diff++; }
+    guard++;
+  }
 }
 
 // ─── Warm-up builder ─────────────────────────────────────────────────────────
