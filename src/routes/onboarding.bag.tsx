@@ -38,6 +38,14 @@ function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
   const tappedIdx = IRON_IDS.indexOf(tappedId as typeof IRON_IDS[number]);
   if (tappedIdx === -1) return next;
 
+  // Tapping a selected iron removes just that one, at any position, so you can
+  // drop a 3i out of a 4-9 set or build a custom gapped set (e.g. 2i + 4-9).
+  if (next.has(tappedId)) {
+    next.delete(tappedId);
+    return next;
+  }
+
+  // Tapping an unselected iron fills the range to the existing selection.
   const selectedIronIdxs = IRON_IDS
     .map((id, i) => (next.has(id) ? i : -1))
     .filter(i => i !== -1);
@@ -47,16 +55,8 @@ function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
     return next;
   }
 
-  const lo = Math.min(...selectedIronIdxs);
-  const hi = Math.max(...selectedIronIdxs);
-
-  if (next.has(tappedId) && (tappedIdx === lo || tappedIdx === hi)) {
-    next.delete(tappedId);
-    return next;
-  }
-
-  const newLo = Math.min(lo, tappedIdx);
-  const newHi = Math.max(hi, tappedIdx);
+  const newLo = Math.min(...selectedIronIdxs, tappedIdx);
+  const newHi = Math.max(...selectedIronIdxs, tappedIdx);
   for (let i = newLo; i <= newHi; i++) next.add(IRON_IDS[i]);
   return next;
 }
@@ -133,7 +133,7 @@ function OnboardingBag() {
             <div className="flex items-baseline justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{group.label}</p>
               {group.label === "Irons" && (
-                <p className="text-[10px] text-muted-foreground">Tap two to fill the range</p>
+                <p className="text-[10px] text-muted-foreground">Tap two to fill · tap one to remove</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2">
