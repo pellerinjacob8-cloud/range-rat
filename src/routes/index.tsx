@@ -7,6 +7,8 @@ import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { fetchSessions } from "@/lib/db";
+import { InstallSheet } from "@/components/InstallSheet";
+import { isStandalone, isIOSDevice, isHomeScreenDone, markHomeScreenInstalled } from "@/lib/pwa";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -81,11 +83,10 @@ function useInstallPrompt() {
   const [dismissed, setDismissed] = useState(() => {
     try { return localStorage.getItem("rr-pwa-dismissed") === "true"; } catch { return false; }
   });
+  const [installed, setInstalled] = useState(() => isHomeScreenDone());
 
   useEffect(() => {
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-      || (navigator as any).standalone === true;
-    if (isStandalone) return;
+    if (isStandalone()) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -100,7 +101,7 @@ function useInstallPrompt() {
     if (!deferredPrompt.current) return;
     await deferredPrompt.current.prompt();
     const { outcome } = await deferredPrompt.current.userChoice;
-    if (outcome === "accepted") setCanInstall(false);
+    if (outcome === "accepted") { setCanInstall(false); markInstalled(); }
     deferredPrompt.current = null;
   };
 
@@ -109,10 +110,17 @@ function useInstallPrompt() {
     try { localStorage.setItem("rr-pwa-dismissed", "true"); } catch {}
   };
 
-  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !(navigator as any).standalone;
-  const showBanner = (!dismissed && (canInstall || isIOS)) && !window.matchMedia("(display-mode: standalone)").matches;
+  // Permanent opt-out: user confirmed they added it (or installed via prompt).
+  const markInstalled = () => {
+    markHomeScreenInstalled();
+    setInstalled(true);
+  };
 
-  return { showBanner, canInstall, isIOS, install, dismiss };
+  // Hidden once installed/standalone, dismissed for the session, or there's no
+  // install path on this platform.
+  const showBanner = !installed && !dismissed && (canInstall || isIOSDevice());
+
+  return { showBanner, canInstall, install, dismiss, markInstalled };
 }
 
 function Home() {
@@ -124,6 +132,7 @@ function Home() {
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
   const [hasHistory, setHasHistory] = useState(false);
   const [statsStatus, setStatsStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [installOpen, setInstallOpen] = useState(false);
   const pwa = useInstallPrompt();
 
   const loadStats = useCallback(() => {
@@ -261,29 +270,23 @@ function Home() {
         </div>
       )}
 
-      {/* PWA install banner */}
+      {/* PWA install banner: tap to open the how-to sheet */}
       {pwa.showBanner && (
-        <div className="mt-4 rounded-[22px] border border-border bg-card p-4 flex items-center gap-3.5 relative">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <Download className="h-5 w-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold">Add to Home Screen</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              {pwa.isIOS
-                ? "Tap the share button, then \"Add to Home Screen.\""
-                : "Install Range Rat for quick access."}
-            </p>
-          </div>
-          {pwa.canInstall && (
-            <button
-              type="button"
-              onClick={pwa.install}
-              className="shrink-0 rounded-[10px] bg-primary px-3.5 py-[7px] text-[12px] font-bold text-primary-foreground uppercase tracking-[0.06em]"
-            >
-              Install
-            </button>
-          )}
+        <div className="mt-4 relative">
+          <button
+            type="button"
+            onClick={() => setInstallOpen(true)}
+            className="w-full rounded-[22px] border border-border bg-card p-4 flex items-center gap-3.5 text-left active:bg-muted transition-colors"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Download className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold">Add to Home Screen</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">Get app-like access. Tap to see how.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
           <button
             type="button"
             onClick={pwa.dismiss}
@@ -343,6 +346,14 @@ function Home() {
         open={proReason !== null}
         onClose={() => setProReason(null)}
         reason={proReason ?? undefined}
+      />
+
+      <InstallSheet
+        open={installOpen}
+        onClose={() => setInstallOpen(false)}
+        canInstall={pwa.canInstall}
+        onInstall={() => { pwa.install(); setInstallOpen(false); }}
+        onMarkInstalled={() => { pwa.markInstalled(); setInstallOpen(false); }}
       />
     </AppShell>
   );

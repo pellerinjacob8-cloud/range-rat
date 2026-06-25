@@ -9,6 +9,8 @@ import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { openCustomerPortal } from "@/lib/stripe";
 import { deleteAccount } from "@/lib/account";
+import { InstallSheet } from "@/components/InstallSheet";
+import { isHomeScreenDone, markHomeScreenInstalled } from "@/lib/pwa";
 import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
@@ -121,6 +123,8 @@ function ProfilePage() {
   const [checklistDismissed, setChecklistDismissed] = useState(() => {
     try { return localStorage.getItem("rr-checklist-dismissed") === "true"; } catch { return false; }
   });
+  const [homeScreenDone, setHomeScreenDone] = useState(() => isHomeScreenDone());
+  const [installOpen, setInstallOpen] = useState(false);
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -423,6 +427,7 @@ function ProfilePage() {
             { label: "Complete a practice session", done: allTimeSessions.length > 0, action: () => navigate({ to: "/practice" }) },
             { label: "Log your handicap", done: roundHistory.length > 0, action: () => openLogRound() },
             { label: "Set your yardages", done: hasYardages, action: () => setSubView("yardage") },
+            { label: "Add to Home Screen", done: homeScreenDone, action: () => setInstallOpen(true) },
           ];
           const completed = steps.filter(s => s.done).length;
           if (completed === steps.length) return null;
@@ -798,6 +803,12 @@ function ProfilePage() {
           </div>
         </div>
       )}
+
+      <InstallSheet
+        open={installOpen}
+        onClose={() => setInstallOpen(false)}
+        onMarkInstalled={() => { markHomeScreenInstalled(); setHomeScreenDone(true); setInstallOpen(false); }}
+      />
 
       <ProModal open={proOpen} onClose={() => setProOpen(false)} />
     </AppShell>

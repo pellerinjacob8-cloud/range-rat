@@ -1,5 +1,5 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
-import { ChevronLeft, Flag, Home, Settings, Target, User } from "lucide-react";
+import { ChevronLeft, Flag, Home, Target, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function RRLogo({ className }: { className?: string }) {
@@ -54,16 +54,6 @@ export function AppShell({ children, showBack = false, onBack, hideTabBar = fals
             )}
           </div>
 
-          {/* Right, settings */}
-          <div className="flex items-center justify-end">
-            <Link
-              to="/profile"
-              aria-label="Settings"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:bg-muted"
-            >
-              <Settings className="h-[18px] w-[18px]" />
-            </Link>
-          </div>
         </div>
       </header>
 
