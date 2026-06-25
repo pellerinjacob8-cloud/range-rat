@@ -422,12 +422,12 @@ function ProfilePage() {
 
         {/* ── Setup checklist ── */}
         {!checklistDismissed && (() => {
-          const steps = [
+          const steps: { label: string; done: boolean; action: () => void; info?: () => void }[] = [
             { label: "Set up your bag", done: hasBag, action: () => setSubView("bag") },
             { label: "Complete a practice session", done: allTimeSessions.length > 0, action: () => navigate({ to: "/practice" }) },
             { label: "Log your handicap", done: roundHistory.length > 0, action: () => openLogRound() },
             { label: "Set your yardages", done: hasYardages, action: () => setSubView("yardage") },
-            { label: "Add to Home Screen", done: homeScreenDone, action: () => setInstallOpen(true) },
+            { label: "Add to Home Screen", done: homeScreenDone, action: () => setInstallOpen(true), info: () => setInstallOpen(true) },
           ];
           const completed = steps.filter(s => s.done).length;
           if (completed === steps.length) return null;
@@ -448,25 +448,39 @@ function ProfilePage() {
               </div>
               <div className="mt-3 space-y-1">
                 {steps.map((step) => (
-                  <button
+                  <div
                     key={step.label}
-                    type="button"
-                    onClick={step.done ? undefined : step.action}
-                    disabled={step.done}
                     className={cn(
-                      "w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors",
-                      step.done ? "opacity-60" : "active:bg-muted"
+                      "w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 transition-colors",
+                      step.done ? "opacity-60" : ""
                     )}
                   >
-                    <div className={cn(
-                      "h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center",
-                      step.done ? "border-primary bg-primary" : "border-border"
-                    )}>
-                      {step.done && <Check className="h-3 w-3 text-primary-foreground" />}
-                    </div>
-                    <span className={cn("text-[14px] font-medium", step.done && "line-through text-muted-foreground")}>{step.label}</span>
-                    {!step.done && <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={step.done ? undefined : step.action}
+                      disabled={step.done}
+                      className="flex flex-1 items-center gap-3 text-left min-w-0"
+                    >
+                      <div className={cn(
+                        "h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center",
+                        step.done ? "border-primary bg-primary" : "border-border"
+                      )}>
+                        {step.done && <Check className="h-3 w-3 text-primary-foreground" />}
+                      </div>
+                      <span className={cn("text-[14px] font-medium", step.done && "line-through text-muted-foreground")}>{step.label}</span>
+                    </button>
+                    {step.info ? (
+                      <button
+                        type="button"
+                        onClick={step.info}
+                        className="shrink-0 rounded-full border border-border px-3 py-1 text-[12px] font-bold text-primary active:bg-muted transition-colors"
+                      >
+                        How?
+                      </button>
+                    ) : (
+                      !step.done && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
