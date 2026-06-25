@@ -72,11 +72,13 @@ export async function fetchProfile(): Promise<Profile | null> {
   const user = await getLocalUser();
   if (!user) return null;
 
+  // maybeSingle: returns null (not a 406 error) when the profile row doesn't
+  // exist yet, e.g. a new user mid-onboarding.
   const { data } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!data) return null;
 

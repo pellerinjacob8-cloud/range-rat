@@ -24,11 +24,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPro, setIsPro] = useState(false);
 
   const fetchProStatus = async (userId: string) => {
+    // maybeSingle: a brand-new user has no profile row yet, and single()
+    // would return a 406 (shows as an API gateway warning).
     const { data } = await supabase
       .from("profiles")
       .select("is_pro")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
     setIsPro(data?.is_pro ?? false);
   };
 
