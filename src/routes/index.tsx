@@ -1,14 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronRight, Download, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { fetchSessions } from "@/lib/db";
-import { InstallSheet } from "@/components/InstallSheet";
-import { isStandalone, isIOSDevice, isHomeScreenDone, markHomeScreenInstalled } from "@/lib/pwa";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -72,57 +70,6 @@ function Eyebrow({ children, className }: { children: React.ReactNode; className
   );
 }
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
-
-function useInstallPrompt() {
-  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
-  const [canInstall, setCanInstall] = useState(false);
-  const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem("rr-pwa-dismissed") === "true"; } catch { return false; }
-  });
-  const [installed, setInstalled] = useState(() => isHomeScreenDone());
-
-  useEffect(() => {
-    if (isStandalone()) return;
-
-    const handler = (e: Event) => {
-      e.preventDefault();
-      deferredPrompt.current = e as BeforeInstallPromptEvent;
-      setCanInstall(true);
-    };
-    window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
-
-  const install = async () => {
-    if (!deferredPrompt.current) return;
-    await deferredPrompt.current.prompt();
-    const { outcome } = await deferredPrompt.current.userChoice;
-    if (outcome === "accepted") { setCanInstall(false); markInstalled(); }
-    deferredPrompt.current = null;
-  };
-
-  const dismiss = () => {
-    setDismissed(true);
-    try { localStorage.setItem("rr-pwa-dismissed", "true"); } catch {}
-  };
-
-  // Permanent opt-out: user confirmed they added it (or installed via prompt).
-  const markInstalled = () => {
-    markHomeScreenInstalled();
-    setInstalled(true);
-  };
-
-  // Hidden once installed/standalone, dismissed for the session, or there's no
-  // install path on this platform.
-  const showBanner = !installed && !dismissed && (canInstall || isIOSDevice());
-
-  return { showBanner, canInstall, install, dismiss, markInstalled };
-}
-
 function Home() {
   const navigate = useNavigate();
   const name = loadProfileName();
@@ -132,8 +79,6 @@ function Home() {
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
   const [hasHistory, setHasHistory] = useState(false);
   const [statsStatus, setStatsStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [installOpen, setInstallOpen] = useState(false);
-  const pwa = useInstallPrompt();
 
   const loadStats = useCallback(() => {
     setStatsStatus("loading");
@@ -270,34 +215,6 @@ function Home() {
         </div>
       )}
 
-      {/* PWA install banner: tap to open the how-to sheet */}
-      {pwa.showBanner && (
-        <div className="mt-4 relative">
-          <button
-            type="button"
-            onClick={() => setInstallOpen(true)}
-            className="w-full rounded-[22px] border border-border bg-card p-4 flex items-center gap-3.5 text-left active:bg-muted transition-colors"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Download className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-semibold">Add to Home Screen</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">Get app-like access. Tap to see how.</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
-          <button
-            type="button"
-            onClick={pwa.dismiss}
-            aria-label="Dismiss"
-            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-foreground text-background flex items-center justify-center shadow-sm"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-
       {/* Train section */}
       <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
         Train
@@ -346,14 +263,6 @@ function Home() {
         open={proReason !== null}
         onClose={() => setProReason(null)}
         reason={proReason ?? undefined}
-      />
-
-      <InstallSheet
-        open={installOpen}
-        onClose={() => setInstallOpen(false)}
-        canInstall={pwa.canInstall}
-        onInstall={() => { pwa.install(); setInstallOpen(false); }}
-        onMarkInstalled={() => { pwa.markInstalled(); setInstallOpen(false); }}
       />
     </AppShell>
   );
