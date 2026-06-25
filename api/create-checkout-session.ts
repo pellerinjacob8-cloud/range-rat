@@ -73,17 +73,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = user.id;
     const userEmail = user.email;
 
+    const appUrl = process.env.VITE_APP_URL || "https://www.rangeratapp.com";
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
+      allow_promotion_codes: true,
       subscription_data: {
         metadata: { userId },
       },
       metadata: { userId },
       customer_email: userEmail,
-      success_url: `${process.env.VITE_APP_URL || "https://rangeratapp.com"}/pro-welcome`,
-      cancel_url: `${process.env.VITE_APP_URL || "https://rangeratapp.com"}/upgrade`,
+      success_url: `${appUrl}/pro-welcome`,
+      cancel_url: `${appUrl}/upgrade`,
     });
 
     res.writeHead(200);
