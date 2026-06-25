@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { openCustomerPortal } from "@/lib/stripe";
+import { deleteAccount } from "@/lib/account";
 import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
@@ -137,6 +138,22 @@ function ProfilePage() {
   }, []);
 
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      await signOut();
+      navigate({ to: "/onboarding/welcome" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not delete account.";
+      toast.error(msg);
+      setDeleting(false);
+      setDeleteOpen(false);
+    }
+  };
 
   const portalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -739,14 +756,48 @@ function ProfilePage() {
           Sign Out
         </button>
 
+        {/* ── Delete account ── */}
+        <button type="button" onClick={() => setDeleteOpen(true)}
+          className="mt-3 w-full text-center text-[13px] font-semibold text-destructive py-2 active:opacity-70 transition-opacity">
+          Delete account
+        </button>
+
         {/* ── Legal ── */}
-        <div className="mt-5 flex items-center justify-center gap-4 text-[12px] text-muted-foreground">
+        <div className="mt-3 flex items-center justify-center gap-4 text-[12px] text-muted-foreground">
           <Link to="/privacy" className="active:opacity-70">Privacy</Link>
           <span aria-hidden>·</span>
           <Link to="/terms" className="active:opacity-70">Terms</Link>
         </div>
 
       </div>
+
+      {/* Delete account confirmation */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-4" onClick={() => !deleting && setDeleteOpen(false)}>
+          <div className="w-full max-w-sm rounded-[22px] bg-background border border-border p-6 mb-4 sm:mb-0" onClick={e => e.stopPropagation()}>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10 mb-4">
+              <Trash2 className="h-6 w-6 text-destructive" />
+            </div>
+            <h2 className="font-display text-[24px] leading-tight mb-2">Delete your account?</h2>
+            <p className="text-[14px] text-muted-foreground leading-relaxed mb-6">
+              This permanently removes your profile, bag, stats, and session history. This cannot be undone.
+            </p>
+            <button type="button" onClick={handleDeleteAccount} disabled={deleting}
+              className="h-13 w-full rounded-[14px] bg-destructive text-white font-bold text-[14px] uppercase tracking-[0.06em] py-3.5 disabled:opacity-50 active:opacity-90 transition-opacity">
+              {deleting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  Deleting…
+                </span>
+              ) : "Delete forever"}
+            </button>
+            <button type="button" onClick={() => setDeleteOpen(false)} disabled={deleting}
+              className="mt-2 h-13 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em] text-foreground py-3.5 disabled:opacity-50 active:opacity-70 transition-opacity">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <ProModal open={proOpen} onClose={() => setProOpen(false)} />
     </AppShell>

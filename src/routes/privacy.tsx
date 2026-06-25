@@ -83,7 +83,7 @@ function PrivacyPage() {
             <BulletList items={[
               "Access and export your data by contacting us.",
               "Correct inaccurate information in your profile at any time.",
-              "Delete your account and associated data by emailing us at the address below.",
+              "Delete your account and all associated data instantly from your profile via Delete account, or by emailing us at the address below.",
               "Cancel your Pro subscription at any time through the Manage Subscription option on your profile, which opens the Stripe customer portal.",
             ]} />
             If you are located in the European Economic Area (EEA), United Kingdom, or California,
