@@ -284,7 +284,8 @@ function ProfilePage() {
           <button type="button" onClick={() => setSubView(null)} className="flex items-center gap-1 text-primary text-[14px] font-semibold mb-4 -ml-1">
             <ChevronLeft className="h-5 w-5" /> Profile
           </button>
-          <h1 className="font-display text-[32px] mb-6">Your Bag</h1>
+          <h1 className="font-display text-[32px] mb-1">Your Bag</h1>
+          <p className="text-[13.5px] text-muted-foreground mb-6">These are the clubs you picked. Tap the pencil on any club to add its brand and model.</p>
           <BagSection />
         </div>
       </AppShell>
@@ -1369,7 +1370,7 @@ function BagSection() {
       {/* Inline add form */}
       {showForm ? (
         <div className="rounded-2xl border border-primary/40 bg-card p-4 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Add Club</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Add a club</p>
 
           {/* Type selector */}
           <div className="flex flex-wrap gap-2">
@@ -1494,7 +1495,7 @@ function BagSection() {
           onClick={() => { setShowForm(true); setRemoving(null); setEditing(null); }}
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-semibold text-muted-foreground transition-colors active:bg-muted">
           <Plus className="h-4 w-4" />
-          Add Club
+          Add a club
         </button>
       )}
     </div>

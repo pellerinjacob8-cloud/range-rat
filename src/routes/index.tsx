@@ -84,11 +84,13 @@ function Home() {
     setStatsStatus("loading");
     fetchSessions()
       .then((sessions) => {
-        const balls = sessions.reduce((sum, s) => sum + s.totalBalls, 0);
         const streak = calcStreak(sessions);
         const weekStart = startOfWeek(new Date());
-        const thisWeek = sessions.filter((s) => new Date(s.completedAt) >= weekStart).length;
-        setStats({ sessions: thisWeek, balls, streak });
+        // Home is a "this week" snapshot; profile holds the all-time totals.
+        const weekSessions = sessions.filter((s) => new Date(s.completedAt) >= weekStart);
+        const thisWeek = weekSessions.length;
+        const weekBalls = weekSessions.reduce((sum, s) => sum + s.totalBalls, 0);
+        setStats({ sessions: thisWeek, balls: weekBalls, streak });
         setHasHistory(sessions.length > 0);
         setStatsStatus("ready");
       })
@@ -195,8 +197,8 @@ function Home() {
       {statsStatus === "ready" && hasHistory && (
         <div className="mt-4 grid grid-cols-3 gap-2.5">
           {[
-            { eyebrow: "This week", value: stats.sessions, sub: "sessions" },
-            { eyebrow: "Balls", value: stats.balls, sub: "hit" },
+            { eyebrow: "Sessions", value: stats.sessions, sub: "this week" },
+            { eyebrow: "Balls", value: stats.balls, sub: "this week" },
             { eyebrow: "Streak", value: stats.streak, sub: "days" },
           ].map(({ eyebrow, value, sub }) => (
             <div
