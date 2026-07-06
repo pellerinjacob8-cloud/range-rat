@@ -41,17 +41,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
+      // supabase-js refreshes expired tokens itself; forcing refreshSession()
+      // here rotates the refresh token on every load and can race with other
+      // tabs doing the same, which signs the user out at random.
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
       if (data.session?.user) fetchProStatus(data.session.user.id);
-
-      // Refresh session to ensure token is valid (handles expired tokens)
-      if (data.session) {
-        const { data: refreshData } = await supabase.auth.refreshSession(data.session);
-        if (refreshData.session) {
-          setSession(refreshData.session);
-        }
-      }
 
       setLoading(false);
     };

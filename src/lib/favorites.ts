@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import type { GenerateInput, SessionDrill } from "./drills";
 import { fetchFavorites, insertFavorite, insertCustomSession, removeFavorite } from "./db";
 
@@ -22,7 +23,7 @@ export function saveFavorite(name: string, sessionInput: GenerateInput, session:
     session,
     createdAt: Date.now(),
   };
-  insertFavorite(fav); // fire and forget
+  insertFavorite(fav).catch(() => toast.error("Couldn't save favorite. Check your connection and try again."));
   return fav;
 }
 
@@ -34,12 +35,12 @@ export function saveCustomSession(name: string, drills: SessionDrill[]): Favorit
     session: drills,
     createdAt: Date.now(),
   };
-  insertCustomSession(fav); // fire and forget
+  insertCustomSession(fav).catch(() => toast.error("Couldn't save session. Check your connection and try again."));
   return fav;
 }
 
 export function deleteFavorite(id: string) {
-  removeFavorite(id); // fire and forget
+  removeFavorite(id).catch(() => toast.error("Couldn't delete favorite. Check your connection and try again."));
 }
 
 export function isAtFreeLimit(favorites: Favorite[]): boolean {

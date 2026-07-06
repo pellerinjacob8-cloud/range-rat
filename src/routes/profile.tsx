@@ -1023,7 +1023,9 @@ function BagSection() {
     // Persist to localStorage for offline/instant reads
     try { localStorage.setItem(BAG_KEY, JSON.stringify(next)); } catch {}
     // Persist to Supabase
-    dbSaveBag(next as DbClub[]);
+    dbSaveBag(next as DbClub[]).catch(() =>
+      toast.error("Couldn't sync your bag. Check your connection and try again.")
+    );
   };
 
   // ── Add ──
@@ -1549,7 +1551,9 @@ function YardageSection() {
       localStorage.setItem(YARDAGE_KEY, JSON.stringify(all));
     } catch {}
     // Persist to Supabase
-    dbSaveYardage(clubId, next);
+    dbSaveYardage(clubId, next).catch(() =>
+      toast.error("Couldn't sync yardages. Check your connection and try again.")
+    );
   };
 
   if (clubs.length === 0) {

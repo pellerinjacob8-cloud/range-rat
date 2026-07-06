@@ -248,7 +248,7 @@ export async function saveSession(session: SavedSession): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  await supabase.from("sessions").upsert({
+  const { error } = await supabase.from("sessions").upsert({
     id: session.id,
     user_id: user.id,
     completed_at: session.completedAt,
@@ -258,6 +258,7 @@ export async function saveSession(session: SavedSession): Promise<void> {
     total_balls: session.totalBalls,
     drill_count: session.drillCount,
   });
+  if (error) throw new Error(error.message);
 }
 
 // ─── Bag ──────────────────────────────────────────────────────────────────────
@@ -288,35 +289,32 @@ export async function saveBag(clubs: Club[]): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  const clubIds = clubs.map(c => c.id);
-
-  // Remove clubs no longer in the bag
-  if (clubIds.length > 0) {
-    await supabase
-      .from("bag")
-      .delete()
-      .eq("user_id", user.id)
-      .not("id", "in", `(${clubIds.join(",")})`);
-  } else {
-    await supabase.from("bag").delete().eq("user_id", user.id);
+  // Upsert first, prune second: if the write fails we keep the old bag
+  // instead of having deleted it and lost the user's clubs.
+  if (clubs.length > 0) {
+    const { error } = await supabase.from("bag").upsert(
+      clubs.map((c, i) => ({
+        id: c.id,
+        user_id: user.id,
+        name: c.name,
+        type: c.type,
+        brand: c.brand ?? null,
+        model: c.model ?? null,
+        parent_set_id: c.parentSetId ?? null,
+        iron_number: c.ironNumber ?? null,
+        sort_order: i,
+      }))
+    );
+    if (error) throw new Error(error.message);
   }
 
-  if (clubs.length === 0) return;
-
-  // Upsert remaining clubs in a single call
-  await supabase.from("bag").upsert(
-    clubs.map((c, i) => ({
-      id: c.id,
-      user_id: user.id,
-      name: c.name,
-      type: c.type,
-      brand: c.brand ?? null,
-      model: c.model ?? null,
-      parent_set_id: c.parentSetId ?? null,
-      iron_number: c.ironNumber ?? null,
-      sort_order: i,
-    }))
-  );
+  // Remove clubs no longer in the bag
+  const clubIds = clubs.map(c => c.id);
+  const prune = supabase.from("bag").delete().eq("user_id", user.id);
+  const { error: pruneError } = clubIds.length > 0
+    ? await prune.not("id", "in", `(${clubIds.join(",")})`)
+    : await prune;
+  if (pruneError) throw new Error(pruneError.message);
 }
 
 // ─── Yardages ─────────────────────────────────────────────────────────────────
@@ -348,13 +346,14 @@ export async function saveYardage(
   const user = await getLocalUser();
   if (!user) return;
 
-  await supabase.from("yardages").upsert({
+  const { error } = await supabase.from("yardages").upsert({
     user_id: user.id,
     club_id: clubId,
     half_swing: yardages.halfSwing,
     three_quarter_swing: yardages.threeQuarterSwing,
     full_swing: yardages.fullSwing,
   });
+  if (error) throw new Error(error.message);
 }
 
 // ─── Favorites ────────────────────────────────────────────────────────────────
@@ -381,7 +380,7 @@ export async function fetchFavorites(): Promise<Favorite[]> {
 export async function insertCustomSession(fav: Favorite): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
-  await supabase.from("favorites").insert({
+  const { error } = await supabase.from("favorites").insert({
     id: fav.id,
     user_id: user.id,
     name: fav.name,
@@ -389,13 +388,14 @@ export async function insertCustomSession(fav: Favorite): Promise<void> {
     session: fav.session,
     created_at: fav.createdAt,
   });
+  if (error) throw new Error(error.message);
 }
 
 export async function insertFavorite(fav: Favorite): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  await supabase.from("favorites").insert({
+  const { error } = await supabase.from("favorites").insert({
     id: fav.id,
     user_id: user.id,
     name: fav.name,
@@ -403,13 +403,15 @@ export async function insertFavorite(fav: Favorite): Promise<void> {
     session: fav.session,
     created_at: fav.createdAt,
   });
+  if (error) throw new Error(error.message);
 }
 
 export async function removeFavorite(id: string): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
+  const { error } = await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
+  if (error) throw new Error(error.message);
 }
 
 // ─── Migration, copy localStorage data to Supabase on first login ────────────

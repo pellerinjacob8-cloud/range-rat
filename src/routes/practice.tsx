@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
@@ -136,20 +137,26 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
       .reduce((sum, d) => sum + d.balls, 0),
     drillCount: session.length,
   };
-  // Save to Supabase (fire and forget)
-  import("@/lib/db").then(({ saveSession: dbSave }) => {
-    dbSave({
-      id: record.id,
-      completedAt: record.completedAt,
-      filters: {
-        goal: (input as { goal?: string }).goal ?? "",
-        bucket: String((input as { bucket?: unknown }).bucket ?? ""),
-        time: Number((input as { time?: unknown }).time ?? 0),
-      },
-      totalBalls: record.totalBalls,
-      drillCount: record.drillCount,
+  // Save to Supabase in the background; retry once, then tell the user so a
+  // finished session never silently disappears from their stats.
+  import("@/lib/db")
+    .then(({ saveSession: dbSave }) => {
+      const payload = {
+        id: record.id,
+        completedAt: record.completedAt,
+        filters: {
+          goal: (input as { goal?: string }).goal ?? "",
+          bucket: String((input as { bucket?: unknown }).bucket ?? ""),
+          time: Number((input as { time?: unknown }).time ?? 0),
+        },
+        totalBalls: record.totalBalls,
+        drillCount: record.drillCount,
+      };
+      return dbSave(payload).catch(() => dbSave(payload));
+    })
+    .catch(() => {
+      toast.error("Session finished, but it couldn't sync to your stats. Check your connection.");
     });
-  });
   return record;
 }
 
