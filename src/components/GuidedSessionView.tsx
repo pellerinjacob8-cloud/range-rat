@@ -7,14 +7,9 @@ import { PHASE_META, phaseOf } from "@/lib/phases";
 
 interface GuidedSessionViewProps {
   session: SessionDrill[];
-  // Open-ended sessions pass the number of sets actually completed; fixed
-  // sessions call it with no argument (everything was done).
-  onComplete: (completedSets?: number) => void;
+  onComplete: () => void;
   onReset: () => void;
   onSwitchView: () => void;
-  // Loop mode: the last drill wraps back to the first (with a round counter)
-  // and a Finish button ends the session whenever the user wants.
-  loop?: boolean;
 }
 
 // Shared Guided/List switch shown at the top of both session views. Tapping
@@ -49,9 +44,8 @@ function formatElapsed(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function GuidedSessionView({ session, onComplete, onReset, onSwitchView, loop = false }: GuidedSessionViewProps) {
+export function GuidedSessionView({ session, onComplete, onReset, onSwitchView }: GuidedSessionViewProps) {
   const [index, setIndex] = useState(0);
-  const [lap, setLap] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(Date.now());
 
@@ -82,17 +76,9 @@ export function GuidedSessionView({ session, onComplete, onReset, onSwitchView, 
     };
   }, [session, phase, drill.id]);
 
-  // Sets fully completed so far (loop mode only)
-  const completedSets = lap * total + index;
-
   const advance = () => {
     if (isLast) {
-      if (loop) {
-        setLap((l) => l + 1);
-        setIndex(0);
-      } else {
-        onComplete();
-      }
+      onComplete();
     } else {
       setIndex((i) => i + 1);
     }
@@ -124,7 +110,7 @@ export function GuidedSessionView({ session, onComplete, onReset, onSwitchView, 
         {/* Top meta row */}
         <div className="flex items-center justify-between">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            Drill {index + 1} of {total}{loop && lap > 0 ? ` · Round ${lap + 1}` : ""}
+            Drill {index + 1} of {total}
           </p>
           <p className="text-[13px] font-semibold tabular-nums text-muted-foreground">
             {formatElapsed(elapsed)}
@@ -190,23 +176,8 @@ export function GuidedSessionView({ session, onComplete, onReset, onSwitchView, 
             onClick={advance}
             className="h-16 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[15px] uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
           >
-            {isLast && !loop ? "Complete Session" : "Complete"}
+            {isLast ? "Complete Session" : "Complete"}
           </button>
-
-          {/* Loop mode: end whenever, saving what's been completed */}
-          {loop && (
-            <button
-              type="button"
-              disabled={completedSets === 0}
-              onClick={() => onComplete(completedSets)}
-              className={cn(
-                "h-12 w-full rounded-[14px] border border-primary/40 bg-primary/5 text-sm font-bold uppercase tracking-[0.06em] text-primary transition active:opacity-80",
-                completedSets === 0 && "opacity-40",
-              )}
-            >
-              Finish Session{completedSets > 0 ? ` · ${completedSets} set${completedSets === 1 ? "" : "s"}` : ""}
-            </button>
-          )}
 
           {/* Back / nav row */}
           <div className="flex gap-2">

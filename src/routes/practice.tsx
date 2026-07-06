@@ -49,16 +49,22 @@ import {
   type TimeAvailable,
   type WarmUpPreset,
 } from "@/lib/drills";
-import { fetchProfile, fetchHandicapHistory, fetchBag, fetchPuttingZones, savePuttingZone } from "@/lib/db";
-import type { Club, PuttingZoneMap } from "@/lib/db";
+import { fetchProfile, fetchHandicapHistory, fetchBag } from "@/lib/db";
+import type { Club } from "@/lib/db";
 import {
-  PUTT_ZONES,
-  ZONE_ORDER,
-  generatePuttingSession,
-  extendPuttingSession,
-  type PuttZone,
-  type PuttingGenerateInput,
+  PUTTING_MODES,
+  planStations,
+  categoryLabel,
+  summarizeSession,
+  summarizeStation,
+  SETS_PER_STATION,
+  type PuttStation,
+  type PuttingMode,
+  type PuttingSessionConfig,
+  type SetResult,
+  type StationResult,
 } from "@/lib/putting";
+import { PuttingSessionView } from "@/components/PuttingSessionView";
 import { loadProfileName } from "@/lib/profile";
 import { PHASE_META, PHASE_ORDER, phaseOf } from "@/lib/phases";
 import { cn } from "@/lib/utils";
@@ -97,8 +103,7 @@ const ACTIVE_KEY   = "range-rat:active-session";
 
 interface ActiveSessionData {
   session: SessionDrill[];
-  sessionInput?: GenerateInput;        // range sessions
-  puttingInput?: PuttingGenerateInput; // putting sessions
+  sessionInput: GenerateInput;
   done: string[];
 }
 
@@ -109,22 +114,16 @@ function loadActiveSession(): ActiveSessionData | null {
   } catch { return null; }
 }
 
-function persistActiveSession(
-  session: SessionDrill[],
-  done: Set<string>,
-  inputs: { sessionInput?: GenerateInput; puttingInput?: PuttingGenerateInput },
-) {
+function persistActiveSession(session: SessionDrill[], sessionInput: GenerateInput, done: Set<string>) {
   try {
     const remaining = session.length - done.size;
-    const isPutting = !!inputs.puttingInput;
     localStorage.setItem(ACTIVE_KEY, JSON.stringify({
-      type: isPutting ? "putting" : "practice",
+      type: "practice",
       route: "/practice",
-      label: isPutting ? "Putting Green" : "Practice",
+      label: "Practice",
       subtitle: `${remaining} drill${remaining === 1 ? "" : "s"} left`,
       session,
-      sessionInput: inputs.sessionInput,
-      puttingInput: inputs.puttingInput,
+      sessionInput,
       done: Array.from(done),
     }));
   } catch {}
@@ -134,10 +133,41 @@ function clearActiveSession() {
   try { localStorage.removeItem(ACTIVE_KEY); } catch {}
 }
 
+// Putting active-session snapshot, kept separate from the range's since the
+// two flows share nothing (no SessionDrill array, no club groups).
+interface ActivePuttingData {
+  config: PuttingSessionConfig;
+  stations: PuttStation[];
+  results: StationResult[];
+  currentSets: SetResult[];
+}
+
+function loadActivePutting(): ActivePuttingData | null {
+  try {
+    const raw = localStorage.getItem(ACTIVE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.puttingRunner ?? null;
+  } catch { return null; }
+}
+
+function persistActivePutting(runner: ActivePuttingData) {
+  try {
+    const totalStations = runner.stations.length;
+    const stationsDone = runner.results.length;
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify({
+      type: "putting",
+      route: "/practice",
+      label: "Putting Green",
+      subtitle: `Station ${Math.min(stationsDone + 1, totalStations)} of ${totalStations}`,
+      puttingRunner: runner,
+    }));
+  } catch {}
+}
+
 interface SavedSession {
   id: string;
   completedAt: string;
-  // GenerateInput for range sessions; a plain summary for putting sessions.
   filters: GenerateInput | { goal: string; bucket: string; time: number };
   totalBalls: number;
   drillCount: number;
@@ -176,32 +206,29 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
   return record;
 }
 
-// Putting session record: totalBalls = every putt struck (ballCount reused per
-// set), counting toward the same Balls stat as range sessions. Open-ended
-// sessions pass the number of sets actually completed; fixed sessions omit it.
-function savePuttingSession(
-  session: SessionDrill[],
-  input: PuttingGenerateInput,
-  completedSets?: number,
-): SavedSession {
-  const sets = completedSets ?? session.length;
-  const timeMinutes = input.time === "unlimited" ? 0 : input.time;
+// Putting session record. totalBalls/makes are the sum across every scored
+// set actually completed (a quit-early session still saves what was done).
+function savePuttingSession(results: StationResult[], config: PuttingSessionConfig): SavedSession {
+  const { attempts, makes } = summarizeSession(results);
+  const timeMinutes = config.time === "unlimited" ? 0 : config.time;
   const record: SavedSession = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     completedAt: new Date().toISOString(),
-    filters: { goal: "putting", bucket: String(input.ballCount), time: timeMinutes },
-    totalBalls: input.ballCount * sets,
-    drillCount: sets,
+    filters: { goal: `putting-${config.mode}`, bucket: String(config.ballCount), time: timeMinutes },
+    totalBalls: attempts,
+    drillCount: results.reduce((s, r) => s + r.sets.length, 0),
   };
   import("@/lib/db")
     .then(({ saveSession: dbSave }) => {
       const payload = {
         id: record.id,
         completedAt: record.completedAt,
-        filters: { goal: "putting", bucket: String(input.ballCount), time: timeMinutes },
+        filters: record.filters,
         totalBalls: record.totalBalls,
         drillCount: record.drillCount,
         area: "putting" as const,
+        makes,
+        attempts,
       };
       return dbSave(payload).catch(() => dbSave(payload));
     })
@@ -264,20 +291,43 @@ function PracticePage() {
 
   const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);
   const [sessionInput, setSessionInput] = useState<GenerateInput | null>(() => loadActiveSession()?.sessionInput ?? null);
-  const [puttingInput, setPuttingInput] = useState<PuttingGenerateInput | null>(() => loadActiveSession()?.puttingInput ?? null);
   const [done, setDone] = useState<Set<string>>(() => new Set(loadActiveSession()?.done ?? []));
+
+  // Putting: a separate state track (no SessionDrill array, no club groups).
+  const [puttingConfig, setPuttingConfig] = useState<PuttingSessionConfig | null>(() => loadActivePutting()?.config ?? null);
+  const [puttingStations, setPuttingStations] = useState<PuttStation[]>(() => loadActivePutting()?.stations ?? []);
+  const [puttingResults, setPuttingResults] = useState<StationResult[]>(() => loadActivePutting()?.results ?? []);
+  const [puttingCurrentSets, setPuttingCurrentSets] = useState<SetResult[]>(() => loadActivePutting()?.currentSets ?? []);
+  const [puttingFinalResults, setPuttingFinalResults] = useState<StationResult[] | null>(null);
+  const [puttingCompletedRecord, setPuttingCompletedRecord] = useState<SavedSession | null>(null);
+
   // Which practice area the builder is showing. A resumed session skips the
   // picker and lands back in its own area.
   const [areaView, setAreaView] = useState<"picker" | "range" | "putting">(() => {
-    const active = loadActiveSession();
-    if (active?.puttingInput) return "putting";
-    if (active?.session) return "range";
+    if (loadActivePutting()) return "putting";
+    if (loadActiveSession()?.session) return "range";
     return "picker";
   });
   const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
   const [sessionMode, setSessionMode] = useState<"pick" | "list" | "guided" | null>(null);
   const [practiceTab, setPracticeTab] = useState<"build" | "saved" | "mine">("build");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+
+  const resetAll = () => {
+    clearActiveSession();
+    setSession(null);
+    setDone(new Set());
+    setSessionInput(null);
+    setCompletedRecord(null);
+    setSessionMode(null);
+    setPuttingConfig(null);
+    setPuttingStations([]);
+    setPuttingResults([]);
+    setPuttingCurrentSets([]);
+    setPuttingFinalResults(null);
+    setPuttingCompletedRecord(null);
+    setAreaView("picker");
+  };
 
   const reloadFavorites = () => loadFavoritesAsync().then(setFavorites);
 
@@ -309,13 +359,15 @@ function PracticePage() {
 
   // Persist active session whenever session/done changes
   useEffect(() => {
-    if (session && (sessionInput || puttingInput)) {
-      persistActiveSession(session, done, {
-        sessionInput: sessionInput ?? undefined,
-        puttingInput: puttingInput ?? undefined,
-      });
+    if (session && sessionInput) persistActiveSession(session, sessionInput, done);
+  }, [session, sessionInput, done]);
+
+  // Persist the putting runner whenever its progress changes
+  useEffect(() => {
+    if (puttingConfig && puttingStations.length > 0) {
+      persistActivePutting({ config: puttingConfig, stations: puttingStations, results: puttingResults, currentSets: puttingCurrentSets });
     }
-  }, [session, sessionInput, puttingInput, done]);
+  }, [puttingConfig, puttingStations, puttingResults, puttingCurrentSets]);
 
   const hasValidBucket = bucket !== null || (showCustomBucket && customBalls !== null);
   const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
@@ -354,7 +406,6 @@ function PracticePage() {
     const drills = generateSession(input);
     const warmUpItems = warmUp ? buildWarmUp(warmUp) : [];
     setSessionInput(input);
-    setPuttingInput(null);
     setSession([...warmUpItems, ...drills]);
     setDone(new Set());
     setCompletedRecord(null);
@@ -366,20 +417,14 @@ function PracticePage() {
     setSession(null);
     setDone(new Set());
     setSessionInput(null);
-    setPuttingInput(null);
     setCompletedRecord(null);
     setSessionMode(null);
     setAreaView("picker");
   };
 
-  const handleComplete = (completedSets?: number) => {
+  const handleComplete = () => {
     if (!session) return;
     clearActiveSession();
-    if (puttingInput) {
-      const record = savePuttingSession(session, puttingInput, completedSets);
-      setCompletedRecord(record);
-      return;
-    }
     if (!sessionInput) {
       // Custom session, no stats to save, just reset
       reset();
@@ -389,13 +434,43 @@ function PracticePage() {
     setCompletedRecord(record);
   };
 
+  // Called by PuttingSessionView when the user finishes (whether all planned
+  // stations were completed, or they ended early with something scored).
+  const handlePuttingFinish = (results: StationResult[]) => {
+    clearActiveSession();
+    const config = puttingConfig!;
+    const record = savePuttingSession(results, config);
+    setPuttingFinalResults(results);
+    setPuttingCompletedRecord(record);
+  };
+
   // ── Completion screen (putting)
-  if (completedRecord && session && puttingInput) {
+  if (puttingCompletedRecord && puttingFinalResults && puttingConfig) {
     return (
       <PuttingCompletionView
-        record={completedRecord}
-        input={puttingInput}
-        onNewSession={reset}
+        record={puttingCompletedRecord}
+        results={puttingFinalResults}
+        config={puttingConfig}
+        onNewSession={resetAll}
+      />
+    );
+  }
+
+  // ── Active putting session (not yet finished)
+  if (puttingConfig && puttingStations.length > 0) {
+    return (
+      <PuttingSessionView
+        config={puttingConfig}
+        stations={puttingStations}
+        results={puttingResults}
+        currentSets={puttingCurrentSets}
+        onProgress={(stations, results, currentSets) => {
+          setPuttingStations(stations);
+          setPuttingResults(results);
+          setPuttingCurrentSets(currentSets);
+        }}
+        onFinish={handlePuttingFinish}
+        onQuit={resetAll}
       />
     );
   }
@@ -498,7 +573,6 @@ function PracticePage() {
         onComplete={handleComplete}
         onReset={reset}
         onSwitchView={() => setSessionMode("list")}
-        loop={puttingInput?.time === "unlimited"}
       />
     );
   }
@@ -519,12 +593,6 @@ function PracticePage() {
         onReset={reset}
         onComplete={handleComplete}
         onSwitchView={() => setSessionMode("guided")}
-        openEnded={puttingInput?.time === "unlimited"}
-        onExtend={
-          puttingInput?.time === "unlimited"
-            ? () => setSession((prev) => prev ? [...prev, ...extendPuttingSession(puttingInput, prev.length)] : prev)
-            : undefined
-        }
       />
     );
   }
@@ -543,13 +611,13 @@ function PracticePage() {
     return (
       <PuttingBuilder
         onBack={() => setAreaView("picker")}
-        onGenerate={(drills, input) => {
-          setPuttingInput(input);
-          setSessionInput(null);
-          setSession(drills);
-          setDone(new Set());
-          setCompletedRecord(null);
-          setSessionMode("pick");
+        onGenerate={(config) => {
+          setPuttingConfig(config);
+          setPuttingStations(planStations(config));
+          setPuttingResults([]);
+          setPuttingCurrentSets([]);
+          setPuttingFinalResults(null);
+          setPuttingCompletedRecord(null);
         }}
       />
     );
@@ -623,7 +691,6 @@ function PracticePage() {
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
             onRun={(fav) => {
               setSessionInput(fav.sessionInput);
-              setPuttingInput(null);
               setSession(fav.session);
               setDone(new Set());
               setCompletedRecord(null);
@@ -639,7 +706,6 @@ function PracticePage() {
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
             onRun={(fav) => {
               setSessionInput(null);
-              setPuttingInput(null);
               setSession(fav.session);
               setDone(new Set());
               setCompletedRecord(null);
@@ -1040,15 +1106,11 @@ interface SessionViewProps {
   done: Set<string>;
   onToggle: (id: string) => void;
   onReset: () => void;
-  // Open-ended sessions pass the number of sets completed; fixed ones don't.
-  onComplete: (completedSets?: number) => void;
+  onComplete: () => void;
   onSwitchView: () => void;
-  // Open-ended (unlimited-time putting): finish anytime, add rounds as needed.
-  openEnded?: boolean;
-  onExtend?: () => void;
 }
 
-function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView, openEnded = false, onExtend }: SessionViewProps) {
+function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView }: SessionViewProps) {
   const completedCount = done.size;
   const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
   const allDone = completedCount === session.length && session.length > 0;
@@ -1180,30 +1242,9 @@ function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchVie
         </div>
 
         <div className="mt-10 space-y-3">
-          {openEnded ? (
-            <>
-              {onExtend && (
-                <button
-                  type="button"
-                  onClick={onExtend}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:bg-muted"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Another Round
-                </button>
-              )}
-              <Button
-                disabled={completedCount === 0}
-                onClick={() => onComplete(completedCount)}
-                className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
-              >
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Finish Session{completedCount > 0 ? ` · ${completedCount} set${completedCount === 1 ? "" : "s"}` : ""}
-              </Button>
-            </>
-          ) : allDone ? (
+          {allDone ? (
             <Button
-              onClick={() => onComplete()}
+              onClick={onComplete}
               className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
             >
               <CheckCircle2 className="mr-2 h-5 w-5" />
@@ -1372,7 +1413,7 @@ function CompletionView({
 function AreaPickerView({ onPick }: { onPick: (area: "range" | "putting") => void }) {
   const areas = [
     { key: "range" as const, icon: Target, label: "Driving Range", sub: "Full-swing session builder", soon: false },
-    { key: "putting" as const, icon: CircleDot, label: "Putting Green", sub: "Short, mid-range, and lag putts", soon: false },
+    { key: "putting" as const, icon: CircleDot, label: "Putting Green", sub: "Stations, sets, and scoring", soon: false },
     { key: "chipping" as const, icon: Flag, label: "Chipping", sub: "Around the green", soon: true },
   ];
   return (
@@ -1422,7 +1463,7 @@ function AreaPickerView({ onPick }: { onPick: (area: "range" | "putting") => voi
   );
 }
 
-// ─── Putting builder ─────────────────────────────────────────────────────────
+// ─── Putting builder: mode, balls per set, time ──────────────────────────────
 
 const PUTT_BALL_PRESETS = [3, 6, 9];
 
@@ -1431,65 +1472,18 @@ function PuttingBuilder({
   onGenerate,
 }: {
   onBack: () => void;
-  onGenerate: (drills: SessionDrill[], input: PuttingGenerateInput) => void;
+  onGenerate: (config: PuttingSessionConfig) => void;
 }) {
-  const [zones, setZones] = useState<PuttZone[]>([]);
-  const [ballsStr, setBallsStr] = useState("");
+  const [mode, setMode] = useState<PuttingMode | null>(null);
+  const [ballsStr, setBallsStr] = useState("6");
   const [time, setTime] = useState<TimeAvailable | "unlimited" | null>(null);
-  const [showDistances, setShowDistances] = useState(false);
-
-  // Committed per-user zone overrides (Supabase-backed), plus the raw strings
-  // driving the inputs so typing isn't fought by the controlled values.
-  const [zoneRanges, setZoneRanges] = useState<PuttingZoneMap>({});
-  const [rangeStrs, setRangeStrs] = useState<Record<PuttZone, { min: string; max: string }>>(() =>
-    Object.fromEntries(PUTT_ZONES.map((z) => [z.zone, { min: String(z.minFeet), max: z.maxFeet === null ? "" : String(z.maxFeet) }])) as Record<PuttZone, { min: string; max: string }>,
-  );
-
-  useEffect(() => {
-    fetchPuttingZones().then((map) => {
-      setZoneRanges(map);
-      setRangeStrs((prev) => {
-        const next = { ...prev };
-        for (const z of PUTT_ZONES) {
-          const o = map[z.zone];
-          if (o) next[z.zone] = { min: String(o.minFeet), max: o.maxFeet === null ? "" : String(o.maxFeet) };
-        }
-        return next;
-      });
-    }).catch(() => {});
-  }, []);
-
-  const effectiveRange = (zone: PuttZone) => {
-    const base = PUTT_ZONES.find((z) => z.zone === zone)!;
-    const o = zoneRanges[zone];
-    return { minFeet: o?.minFeet ?? base.minFeet, maxFeet: o !== undefined ? o.maxFeet : base.maxFeet };
-  };
-
-  const commitRange = (zone: PuttZone) => {
-    const base = PUTT_ZONES.find((z) => z.zone === zone)!;
-    const strs = rangeStrs[zone];
-    const min = parseInt(strs.min);
-    const max = base.maxFeet === null ? null : parseInt(strs.max);
-    const valid = min >= 1 && (max === null || max > min);
-    if (!valid) {
-      // Revert the inputs to the last committed values
-      const r = effectiveRange(zone);
-      setRangeStrs((prev) => ({ ...prev, [zone]: { min: String(r.minFeet), max: r.maxFeet === null ? "" : String(r.maxFeet) } }));
-      return;
-    }
-    const next = { minFeet: min, maxFeet: max };
-    setZoneRanges((prev) => ({ ...prev, [zone]: next }));
-    savePuttingZone(zone, next).catch(() =>
-      toast.error("Couldn't sync putting distances. Check your connection and try again.")
-    );
-  };
 
   const ballCount = (() => { const n = parseInt(ballsStr); return n > 0 ? n : null; })();
-  const canGenerate = zones.length >= 1 && ballCount !== null && time !== null;
+  const canGenerate = mode !== null && ballCount !== null && time !== null;
 
   const missingSteps = [
-    zones.length < 1 && "a putt range",
-    ballCount === null && "ball count",
+    mode === null && "a practice mode",
+    ballCount === null && "balls per set",
     time === null && "time",
   ].filter(Boolean) as string[];
   const missingHint = missingSteps.length > 0
@@ -1497,114 +1491,53 @@ function PuttingBuilder({
     : null;
 
   const generate = () => {
-    if (!canGenerate || ballCount === null || time === null) return;
-    const input: PuttingGenerateInput = {
-      zones,
-      zoneRanges,
-      ballCount,
-      time,
-    };
-    const drills = generatePuttingSession(input);
-    onGenerate(drills, input);
+    if (!canGenerate || !mode || ballCount === null || time === null) return;
+    onGenerate({ mode, ballCount, time });
   };
 
   return (
     <AppShell showBack onBack={onBack}>
       <div className="pb-32 space-y-7">
-        {/* Heading */}
         <div className="pt-2 pb-2">
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Putting Green</p>
-          <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
+          <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your practice.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
-            {zones.length || 0} range{zones.length === 1 ? "" : "s"} · {ballCount ? `${ballCount} balls` : "– balls"} · {time === "unlimited" ? "No limit" : time ? `${time} min` : "– min"}
+            {mode ? PUTTING_MODES.find((m) => m.value === mode)?.label : "– mode"} · {ballCount ? `${ballCount} balls/set` : "– balls"} · {time === "unlimited" ? "No limit" : time ? `${time} min` : "– min"}
           </p>
         </div>
 
-        {/* Putt ranges */}
+        {/* Mode picker */}
         <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            Putt range · Pick 1–3
-          </p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Practice Mode</p>
           <div className="space-y-2">
-            {PUTT_ZONES.map((z) => {
-              const active = zones.includes(z.zone);
-              const r = effectiveRange(z.zone);
-              const rangeText = r.maxFeet === null ? `${r.minFeet}+ ft` : `${r.minFeet}–${r.maxFeet} ft`;
+            {PUTTING_MODES.map((m) => {
+              const active = mode === m.value;
               return (
                 <button
-                  key={z.zone}
+                  key={m.value}
                   type="button"
                   aria-pressed={active}
-                  onClick={() =>
-                    setZones((prev) =>
-                      active ? prev.filter((x) => x !== z.zone) : ZONE_ORDER.filter((x) => [...prev, z.zone].includes(x)),
-                    )
-                  }
+                  onClick={() => setMode(m.value)}
                   className={cn(
-                    "w-full flex items-center justify-between rounded-[14px] border px-4 py-4 text-left transition-colors",
+                    "w-full rounded-[14px] border px-4 py-3.5 text-left transition-colors",
                     active
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-border bg-card active:bg-muted",
                   )}
                 >
-                  <span className="text-[14px] font-bold">{z.label}</span>
-                  <span className={cn("text-[13px] font-semibold tabular-nums", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                    {rangeText}
-                  </span>
+                  <p className="text-[14px] font-bold">{m.label}</p>
+                  <p className={cn("mt-0.5 text-[12.5px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                    {m.blurb}
+                  </p>
                 </button>
               );
             })}
           </div>
-
-          {/* Distance customization */}
-          <button
-            type="button"
-            onClick={() => setShowDistances((v) => !v)}
-            className="text-xs font-semibold text-primary active:opacity-70"
-          >
-            {showDistances ? "Hide distances" : "Adjust distances"}
-          </button>
-          {showDistances && (
-            <div className="rounded-[14px] border border-border bg-card p-4 space-y-3">
-              {PUTT_ZONES.map((z) => (
-                <div key={z.zone} className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 text-[13px] font-semibold">{z.label.replace(" Putts", "")}</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    value={rangeStrs[z.zone].min}
-                    onChange={(e) => setRangeStrs((prev) => ({ ...prev, [z.zone]: { ...prev[z.zone], min: e.target.value } }))}
-                    onBlur={() => commitRange(z.zone)}
-                    className="w-16 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-bold outline-none focus:border-primary"
-                  />
-                  {z.maxFeet === null ? (
-                    <span className="text-sm font-bold text-muted-foreground">+ ft</span>
-                  ) : (
-                    <>
-                      <span className="text-sm text-muted-foreground">–</span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        value={rangeStrs[z.zone].max}
-                        onChange={(e) => setRangeStrs((prev) => ({ ...prev, [z.zone]: { ...prev[z.zone], max: e.target.value } }))}
-                        onBlur={() => commitRange(z.zone)}
-                        className="w-16 rounded-lg border border-border bg-background px-2 py-2 text-center text-sm font-bold outline-none focus:border-primary"
-                      />
-                      <span className="text-sm text-muted-foreground">ft</span>
-                    </>
-                  )}
-                </div>
-              ))}
-              <p className="text-xs text-muted-foreground">Distances save automatically and apply to every putting session.</p>
-            </div>
-          )}
         </div>
 
-        {/* Ball count */}
+        {/* Balls per set */}
         <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">How many balls do you have?</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Balls per set</p>
           <div className="flex flex-wrap gap-2">
             {PUTT_BALL_PRESETS.map((n) => {
               const active = ballsStr === String(n);
@@ -1633,13 +1566,13 @@ function PuttingBuilder({
                 onChange={(e) => setBallsStr(e.target.value)}
                 placeholder="Custom"
                 min={1}
-                max={100}
+                max={30}
                 className="w-16 bg-transparent text-sm font-bold outline-none placeholder:font-semibold placeholder:text-muted-foreground"
               />
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            You'll putt this many balls each set, then collect them and go again.
+            Every set at a station uses this many balls. {SETS_PER_STATION} sets per station, each one scored.
           </p>
         </div>
 
@@ -1680,15 +1613,14 @@ function PuttingBuilder({
               ∞ No limit
             </button>
           </div>
-          {time === "unlimited" && (
-            <p className="text-xs text-muted-foreground">
-              Drills keep cycling through your ranges. Finish whenever you want, and everything you completed counts.
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            {time === "unlimited"
+              ? "Cycles through every station. Finish whenever you want, and everything scored counts."
+              : "Time sets how many stations you'll get through, about 6 minutes each."}
+          </p>
         </div>
       </div>
 
-      {/* Generate CTA */}
       <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
            style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
         <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
@@ -1709,23 +1641,23 @@ function PuttingBuilder({
   );
 }
 
-// ─── Putting completion ──────────────────────────────────────────────────────
+// ─── Putting completion: per-station breakdown + overall ────────────────────
 
 function PuttingCompletionView({
   record,
-  input,
+  results,
+  config,
   onNewSession,
 }: {
   record: SavedSession;
-  input: PuttingGenerateInput;
+  results: StationResult[];
+  config: PuttingSessionConfig;
   onNewSession: () => void;
 }) {
   const navigate = useNavigate();
   const name = loadProfileName();
-  const zoneLabels = ZONE_ORDER
-    .filter((z) => input.zones.includes(z))
-    .map((z) => PUTT_ZONES.find((p) => p.zone === z)!.label.replace(" Putts", ""))
-    .join(" · ");
+  const overall = summarizeSession(results);
+  const modeLabel = PUTTING_MODES.find((m) => m.value === config.mode)?.label ?? "Putting";
 
   return (
     <AppShell>
@@ -1735,21 +1667,41 @@ function PuttingCompletionView({
         </div>
 
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Session Complete
+          {modeLabel} Complete
         </p>
         <h1 className="mt-2 font-display text-[54px] leading-[0.95] tracking-[-0.015em]">
           Rolled It,<br /><em className="italic">{name ? `${name}.` : "champ."}</em>
         </h1>
 
-        <div className="mt-8 w-full rounded-2xl border border-border bg-card p-5 text-left">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Summary
-          </p>
+        {/* Per-station breakdown */}
+        <div className="mt-8 w-full space-y-2">
+          {results.map((r, i) => {
+            const s = summarizeStation(r.sets);
+            return (
+              <div key={i} className="rounded-[16px] border border-border bg-card px-4 py-3 flex items-center gap-3">
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    {categoryLabel(r.category)}
+                  </p>
+                  <p className="font-display text-[22px] leading-tight">{r.distanceFt} ft</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-stats text-[22px] tabular-nums text-primary">{s.makes}/{s.attempts}</p>
+                  <p className="text-[12px] font-bold text-muted-foreground">{s.pct}%</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Overall */}
+        <div className="mt-4 w-full rounded-2xl border border-border bg-card p-5 text-left">
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Overall</p>
           <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-            <Stat label="Putts Hit" value={String(record.totalBalls)} />
-            <Stat label="Sets Done" value={String(record.drillCount)} />
-            <Stat label="Ranges" value={zoneLabels} serif />
-            <Stat label="Time" value={input.time === "unlimited" ? "No limit" : `${input.time} min`} serif />
+            <Stat label="Made" value={`${overall.makes}/${overall.attempts}`} />
+            <Stat label="Percentage" value={`${overall.pct}%`} />
+            <Stat label="Stations" value={String(results.length)} serif />
+            <Stat label="Balls Hit" value={String(record.totalBalls)} serif />
           </div>
         </div>
 

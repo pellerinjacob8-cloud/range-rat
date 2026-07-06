@@ -1684,6 +1684,16 @@ function formatSessionDate(iso: string): string {
   return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).replace(",", " ·");
 }
 
+// Putting sessions store their mode as "putting-{mode}" (e.g. "putting-short")
+// so the recent-sessions row reads "Putting: Short" instead of the raw slug.
+function sessionGoalLabel(goal: string): string {
+  if (goal.startsWith("putting-")) {
+    const mode = goal.slice("putting-".length);
+    return `Putting: ${mode.charAt(0).toUpperCase()}${mode.slice(1)}`;
+  }
+  return goal;
+}
+
 function StatsSection() {
   const [sessions, setSessions] = useState<SavedSession[]>(() => {
     try { return JSON.parse(localStorage.getItem("range-rat:sessions") ?? "[]") as SavedSession[]; }
@@ -1794,11 +1804,17 @@ function StatsSection() {
           <div key={s.id} className="rounded-[22px] border border-border bg-card px-3.5 py-3 flex items-center gap-3 mb-1.5">
             <div className="flex-1 min-w-0">
               <p className="text-[13.5px] font-semibold">{formatSessionDate(s.completedAt)}</p>
-              <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{s.filters.goal}</p>
+              <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-muted-foreground mt-0.5">{sessionGoalLabel(s.filters.goal)}</p>
             </div>
-            <span className="font-stats text-[22px] text-primary tabular-nums">
-              {s.totalBalls}<span className="text-[12px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>
-            </span>
+            {s.makes !== undefined && s.attempts ? (
+              <span className="font-stats text-[22px] text-primary tabular-nums">
+                {Math.round((s.makes / s.attempts) * 100)}<span className="text-[12px] font-bold tracking-[0.14em] ml-0.5">%</span>
+              </span>
+            ) : (
+              <span className="font-stats text-[22px] text-primary tabular-nums">
+                {s.totalBalls}<span className="text-[12px] font-bold tracking-[0.14em] ml-0.5">BALLS</span>
+              </span>
+            )}
           </div>
         ))}
       </div>

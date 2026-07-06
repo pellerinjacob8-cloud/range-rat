@@ -1,113 +1,110 @@
-import type { SessionDrill, TimeAvailable } from "./drills";
+import type { TimeAvailable } from "./drills";
 
-export type PuttZone = "short" | "mid" | "lag";
+// Train -> Measure -> Move. Fixed distance ladders (same for every user, so
+// sessions are comparable week to week and player to player), grouped into
+// stations. Each station is always SETS_PER_STATION scored sets of the same
+// exact putt, repeated, before moving to the next distance.
 
-export interface PuttZoneRange {
-  zone: PuttZone;
-  label: string;
-  minFeet: number;
-  maxFeet: number | null; // null = open-ended (lag)
+export type PuttCategory = "short" | "medium" | "long";
+export type PuttingMode = "short" | "medium" | "long" | "mixed" | "complete";
+
+export interface PuttStation {
+  distanceFt: number;
+  category: PuttCategory;
 }
 
-// Shipped defaults, confirmed with Jacob 2026-07-06.
-export const PUTT_ZONES: PuttZoneRange[] = [
-  { zone: "short", label: "Short Putts",     minFeet: 3,  maxFeet: 5    },
-  { zone: "mid",   label: "Mid-Range Putts", minFeet: 5,  maxFeet: 15   },
-  { zone: "lag",   label: "Lag Putts",       minFeet: 15, maxFeet: null },
-];
+const SHORT_LADDER = [4, 5, 6];
+const MEDIUM_LADDER = [8, 10, 12, 15];
+const LONG_LADDER = [20, 30, 40, 50];
 
-// Progression order for a session. Change this one line to flip direction.
-export const ZONE_ORDER: PuttZone[] = ["short", "mid", "lag"];
+// Long putts aren't judged by makes; judged by finishing inside this radius.
+export const LONG_TARGET_FT = 3;
 
-// Same block-length assumption as the range generator (drills.ts), since a
-// putting rep + walk-and-retrieve takes roughly the same time.
-const MINUTES_PER_BLOCK = 3.5;
+export const SETS_PER_STATION = 3;
+const MINUTES_PER_SET = 2; // hit the set, retrieve, reset
 
-const ZONE_CUES: Record<PuttZone, string[]> = {
-  short: [
-    "Same hole, same distance. Focus on a repeatable stroke.",
-    "Pick a line and commit before every putt.",
-    "Square the putter face at address, hold your finish.",
-  ],
-  mid: [
-    "Read the line, commit, roll it.",
-    "Pick your entry point on the cup before every putt.",
-    "Focus on start line first, speed second.",
-  ],
-  lag: [
-    "Putt to different holes. Focus on leaving it inside 3 feet.",
-    "Speed control only, don't worry about the line.",
-    "Match your practice swing feel to the actual putt.",
-  ],
-};
-
-function zoneLabel(range: PuttZoneRange): string {
-  return range.maxFeet === null
-    ? `${range.label} — ${range.minFeet}+ ft`
-    : `${range.label} — ${range.minFeet}-${range.maxFeet} ft`;
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
-function pickSpread<T>(items: T[], n: number): T[] {
-  if (n <= 0 || items.length === 0) return [];
-  if (n >= items.length) return Array.from({ length: n }, (_, i) => items[i % items.length]);
-  return Array.from({ length: n }, (_, i) =>
-    items[Math.round((i * (items.length - 1)) / (n - 1 || 1))],
-  );
+// The full ladder for a mode. Called again (not memoized) so "mixed" can
+// reshuffle on every lap of an unlimited session for game-like variability.
+export function buildLadder(mode: PuttingMode): PuttStation[] {
+  const short = SHORT_LADDER.map((d) => ({ distanceFt: d, category: "short" as const }));
+  const medium = MEDIUM_LADDER.map((d) => ({ distanceFt: d, category: "medium" as const }));
+  const long = LONG_LADDER.map((d) => ({ distanceFt: d, category: "long" as const }));
+  switch (mode) {
+    case "short": return short;
+    case "medium": return medium;
+    case "long": return long;
+    case "complete": return [...short, ...medium, ...long];
+    case "mixed": return shuffle([...short, ...medium, ...long]);
+  }
 }
 
-// An open-ended session starts with this many sets per selected zone. Guided
-// mode loops through them endlessly; list mode can append more rounds.
-export const UNLIMITED_SETS_PER_ZONE = 3;
-
-export interface PuttingGenerateInput {
-  zones: PuttZone[]; // 1-3, any combination
-  zoneRanges?: Partial<Record<PuttZone, { minFeet: number; maxFeet: number | null }>>;
-  ballCount: number; // fixed balls the user owns for this session, e.g. 3, 6, 9
+export interface PuttingSessionConfig {
+  mode: PuttingMode;
+  ballCount: number;
   time: TimeAvailable | "unlimited";
 }
 
-function resolveRanges(input: PuttingGenerateInput): PuttZoneRange[] {
-  const zones = ZONE_ORDER.filter((z) => input.zones.includes(z));
-  return zones.map((zone) => {
-    const base = PUTT_ZONES.find((z) => z.zone === zone)!;
-    const override = input.zoneRanges?.[zone];
-    return override ? { ...base, ...override } : base;
-  });
+// Initial station queue. Fixed time gets a soft target (time / minutes-per-
+// station, minutes-per-station = SETS_PER_STATION * MINUTES_PER_SET) capped
+// to the ladder length. Unlimited gets the full ladder; the runner extends it
+// with another buildLadder() call once it's exhausted (see the UI layer).
+export function planStations(config: PuttingSessionConfig): PuttStation[] {
+  const ladder = buildLadder(config.mode);
+  if (config.time === "unlimited") return ladder;
+  const minutesPerStation = SETS_PER_STATION * MINUTES_PER_SET;
+  const target = Math.max(1, Math.round(config.time / minutesPerStation));
+  return target >= ladder.length ? ladder : ladder.slice(0, target);
 }
 
-function buildBlock(range: PuttZoneRange, index: number, ballCount: number): SessionDrill {
-  const cues = ZONE_CUES[range.zone];
-  return {
-    id: `putt-${index}-${range.zone}`,
-    club: zoneLabel(range),
-    drillName: range.label,
-    description: cues[index % cues.length],
-    balls: ballCount,
-    unit: "balls",
-    type: "drill",
-    phase: "Skill",
-  };
+export interface SetResult {
+  distanceFt: number;
+  category: PuttCategory;
+  setNumber: number; // 1..SETS_PER_STATION
+  ballCount: number;
+  makes: number; // long category: count that finished inside LONG_TARGET_FT
 }
 
-export function generatePuttingSession(input: PuttingGenerateInput): SessionDrill[] {
-  const ranges = resolveRanges(input);
-  if (ranges.length === 0 || input.ballCount <= 0) return [];
-
-  const totalBlocks = input.time === "unlimited"
-    ? ranges.length * UNLIMITED_SETS_PER_ZONE
-    : Math.max(1, Math.round(input.time / MINUTES_PER_BLOCK));
-  const blockZones = pickSpread(ranges, totalBlocks);
-
-  return blockZones.map((range, i) => buildBlock(range, i, input.ballCount));
+export interface StationResult {
+  distanceFt: number;
+  category: PuttCategory;
+  sets: SetResult[];
 }
 
-// One more round for an open-ended session: a single extra set per selected
-// zone, with ids continuing past the existing block count so nothing collides.
-export function extendPuttingSession(
-  input: PuttingGenerateInput,
-  existingCount: number,
-): SessionDrill[] {
-  const ranges = resolveRanges(input);
-  if (ranges.length === 0 || input.ballCount <= 0) return [];
-  return ranges.map((range, i) => buildBlock(range, existingCount + i, input.ballCount));
+export interface Summary {
+  attempts: number;
+  makes: number;
+  pct: number;
+}
+
+export function summarizeStation(sets: SetResult[]): Summary {
+  const attempts = sets.reduce((s, x) => s + x.ballCount, 0);
+  const makes = sets.reduce((s, x) => s + x.makes, 0);
+  return { attempts, makes, pct: attempts > 0 ? Math.round((makes / attempts) * 100) : 0 };
+}
+
+export function summarizeSession(results: StationResult[]): Summary {
+  const attempts = results.reduce((s, r) => s + r.sets.reduce((a, x) => a + x.ballCount, 0), 0);
+  const makes = results.reduce((s, r) => s + r.sets.reduce((a, x) => a + x.makes, 0), 0);
+  return { attempts, makes, pct: attempts > 0 ? Math.round((makes / attempts) * 100) : 0 };
+}
+
+export const PUTTING_MODES: { value: PuttingMode; label: string; blurb: string }[] = [
+  { value: "short",    label: "Short Putting",     blurb: "4-6 ft · Build consistency on knee-knockers" },
+  { value: "medium",   label: "Medium Putting",    blurb: "8-15 ft · The scoring zone" },
+  { value: "long",     label: "Long Putting",      blurb: "20-50 ft · Distance control" },
+  { value: "mixed",    label: "Mixed Putting",     blurb: "All distances, randomized order" },
+  { value: "complete", label: "Complete Practice", blurb: "Full ladder, short to long" },
+];
+
+export function categoryLabel(category: PuttCategory): string {
+  return category === "short" ? "Short Putt" : category === "medium" ? "Medium Putt" : "Long Putt";
 }

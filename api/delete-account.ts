@@ -5,7 +5,7 @@ import { getSupabaseAdmin, missingEnv } from "./_config.js";
 // Tables keyed by user_id that hold this user's data. profiles is keyed by id
 // and handled separately. Deleting rows explicitly (rather than relying on a
 // cascade) keeps cleanup correct regardless of the FK setup.
-const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages", "putting_zones"] as const;
+const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages"] as const;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   ensureSentry();

@@ -1,25 +1,18 @@
 -- Putting Green practice area migration
 -- Run in Supabase SQL Editor (Dashboard -> SQL Editor -> New query -> paste -> Run).
 -- Safe to run before or after the code deploys; the app falls back gracefully
--- if the column/table don't exist yet.
+-- if these columns don't exist yet.
 
--- 1. Track which practice area a session belongs to
+-- Track which practice area a session belongs to, and the scored
+-- makes/attempts for putting sessions (used for the session-level
+-- make percentage; the design allows a per-distance confidence/trend
+-- view to be added later without another schema change).
 alter table sessions add column if not exists area text not null default 'range';
+alter table sessions add column if not exists makes integer;
+alter table sessions add column if not exists attempts integer;
 
--- 2. Per-user custom putting zone distances
-create table if not exists putting_zones (
-  user_id uuid not null references auth.users(id) on delete cascade,
-  zone text not null check (zone in ('short', 'mid', 'lag')),
-  min_feet integer not null,
-  max_feet integer, -- null = open-ended (lag)
-  updated_at timestamptz not null default now(),
-  primary key (user_id, zone)
-);
-
-alter table putting_zones enable row level security;
-
-drop policy if exists "users manage their own putting zones" on putting_zones;
-create policy "users manage their own putting zones"
-  on putting_zones for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+-- If you previously ran an earlier version of this migration that created a
+-- `putting_zones` table (for user-adjustable distance ranges): that feature
+-- was replaced by a fixed distance ladder shared by every user, so the table
+-- is no longer used by the app. Safe to leave in place or drop manually:
+--   drop table if exists putting_zones;
