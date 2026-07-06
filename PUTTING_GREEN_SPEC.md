@@ -12,8 +12,13 @@ this spec extends that architecture, it does not replace it.
   badge and is not clickable yet — putting is the only new area to build now.
 - Putting has no "bucket of balls" like the range. The user has a **fixed,
   small number of real putting balls** (they physically walk out, hit them,
-  and walk back to collect). Default suggestions: **10** or **35**, but it's a
-  free-entry number, not a preset list.
+  and walk back to collect). Quick-pick presets: **3, 6, 9** plus free-entry
+  custom (updated from 10/35 per Jacob 2026-07-06).
+- Time has an **"∞ No limit"** option alongside 15/30/45/60 (added per Jacob
+  2026-07-06): the session cycles through the chosen ranges indefinitely.
+  Guided mode loops with a round counter and a finish-anytime button; list
+  mode gets "Add Another Round" and a Finish button enabled after >= 1 set.
+  Stats save only what was completed (sets x ballCount).
 - Because the ball count is small and reused, sessions are **not** built by
   allocating a big ball total across drills (that's the range model). Instead
   the session is a **sequence of reps/sets**, each using the user's fixed ball

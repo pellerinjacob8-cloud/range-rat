@@ -55,6 +55,7 @@ import {
   PUTT_ZONES,
   ZONE_ORDER,
   generatePuttingSession,
+  extendPuttingSession,
   type PuttZone,
   type PuttingGenerateInput,
 } from "@/lib/putting";
@@ -176,21 +177,28 @@ function saveSession(session: SessionDrill[], input: GenerateInput): SavedSessio
 }
 
 // Putting session record: totalBalls = every putt struck (ballCount reused per
-// set), counting toward the same Balls stat as range sessions.
-function savePuttingSession(session: SessionDrill[], input: PuttingGenerateInput): SavedSession {
+// set), counting toward the same Balls stat as range sessions. Open-ended
+// sessions pass the number of sets actually completed; fixed sessions omit it.
+function savePuttingSession(
+  session: SessionDrill[],
+  input: PuttingGenerateInput,
+  completedSets?: number,
+): SavedSession {
+  const sets = completedSets ?? session.length;
+  const timeMinutes = input.time === "unlimited" ? 0 : input.time;
   const record: SavedSession = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     completedAt: new Date().toISOString(),
-    filters: { goal: "putting", bucket: String(input.ballCount), time: input.time },
-    totalBalls: session.reduce((sum, d) => sum + d.balls, 0),
-    drillCount: session.length,
+    filters: { goal: "putting", bucket: String(input.ballCount), time: timeMinutes },
+    totalBalls: input.ballCount * sets,
+    drillCount: sets,
   };
   import("@/lib/db")
     .then(({ saveSession: dbSave }) => {
       const payload = {
         id: record.id,
         completedAt: record.completedAt,
-        filters: { goal: "putting", bucket: String(input.ballCount), time: input.time },
+        filters: { goal: "putting", bucket: String(input.ballCount), time: timeMinutes },
         totalBalls: record.totalBalls,
         drillCount: record.drillCount,
         area: "putting" as const,
@@ -364,11 +372,11 @@ function PracticePage() {
     setAreaView("picker");
   };
 
-  const handleComplete = () => {
+  const handleComplete = (completedSets?: number) => {
     if (!session) return;
     clearActiveSession();
     if (puttingInput) {
-      const record = savePuttingSession(session, puttingInput);
+      const record = savePuttingSession(session, puttingInput, completedSets);
       setCompletedRecord(record);
       return;
     }
@@ -490,6 +498,7 @@ function PracticePage() {
         onComplete={handleComplete}
         onReset={reset}
         onSwitchView={() => setSessionMode("list")}
+        loop={puttingInput?.time === "unlimited"}
       />
     );
   }
@@ -510,6 +519,12 @@ function PracticePage() {
         onReset={reset}
         onComplete={handleComplete}
         onSwitchView={() => setSessionMode("guided")}
+        openEnded={puttingInput?.time === "unlimited"}
+        onExtend={
+          puttingInput?.time === "unlimited"
+            ? () => setSession((prev) => prev ? [...prev, ...extendPuttingSession(puttingInput, prev.length)] : prev)
+            : undefined
+        }
       />
     );
   }
@@ -1025,11 +1040,15 @@ interface SessionViewProps {
   done: Set<string>;
   onToggle: (id: string) => void;
   onReset: () => void;
-  onComplete: () => void;
+  // Open-ended sessions pass the number of sets completed; fixed ones don't.
+  onComplete: (completedSets?: number) => void;
   onSwitchView: () => void;
+  // Open-ended (unlimited-time putting): finish anytime, add rounds as needed.
+  openEnded?: boolean;
+  onExtend?: () => void;
 }
 
-function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView }: SessionViewProps) {
+function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView, openEnded = false, onExtend }: SessionViewProps) {
   const completedCount = done.size;
   const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
   const allDone = completedCount === session.length && session.length > 0;
@@ -1161,9 +1180,30 @@ function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchVie
         </div>
 
         <div className="mt-10 space-y-3">
-          {allDone ? (
+          {openEnded ? (
+            <>
+              {onExtend && (
+                <button
+                  type="button"
+                  onClick={onExtend}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:bg-muted"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Another Round
+                </button>
+              )}
+              <Button
+                disabled={completedCount === 0}
+                onClick={() => onComplete(completedCount)}
+                className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
+              >
+                <CheckCircle2 className="mr-2 h-5 w-5" />
+                Finish Session{completedCount > 0 ? ` · ${completedCount} set${completedCount === 1 ? "" : "s"}` : ""}
+              </Button>
+            </>
+          ) : allDone ? (
             <Button
-              onClick={onComplete}
+              onClick={() => onComplete()}
               className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
             >
               <CheckCircle2 className="mr-2 h-5 w-5" />
@@ -1384,7 +1424,7 @@ function AreaPickerView({ onPick }: { onPick: (area: "range" | "putting") => voi
 
 // ─── Putting builder ─────────────────────────────────────────────────────────
 
-const PUTT_BALL_PRESETS = [10, 35];
+const PUTT_BALL_PRESETS = [3, 6, 9];
 
 function PuttingBuilder({
   onBack,
@@ -1395,7 +1435,7 @@ function PuttingBuilder({
 }) {
   const [zones, setZones] = useState<PuttZone[]>([]);
   const [ballsStr, setBallsStr] = useState("");
-  const [time, setTime] = useState<TimeAvailable | null>(null);
+  const [time, setTime] = useState<TimeAvailable | "unlimited" | null>(null);
   const [showDistances, setShowDistances] = useState(false);
 
   // Committed per-user zone overrides (Supabase-backed), plus the raw strings
@@ -1476,7 +1516,7 @@ function PuttingBuilder({
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Putting Green</p>
           <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
           <p className="mt-2.5 text-[15px] text-muted-foreground">
-            {zones.length || 0} range{zones.length === 1 ? "" : "s"} · {ballCount ? `${ballCount} balls` : "– balls"} · {time ? `${time} min` : "– min"}
+            {zones.length || 0} range{zones.length === 1 ? "" : "s"} · {ballCount ? `${ballCount} balls` : "– balls"} · {time === "unlimited" ? "No limit" : time ? `${time} min` : "– min"}
           </p>
         </div>
 
@@ -1626,7 +1666,25 @@ function PuttingBuilder({
                 </button>
               );
             })}
+            <button
+              type="button"
+              aria-pressed={time === "unlimited"}
+              onClick={() => setTime("unlimited")}
+              className={cn(
+                "min-h-[52px] rounded-full border px-4 text-sm font-semibold transition-colors",
+                time === "unlimited"
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-muted/60 text-foreground active:bg-muted",
+              )}
+            >
+              ∞ No limit
+            </button>
           </div>
+          {time === "unlimited" && (
+            <p className="text-xs text-muted-foreground">
+              Drills keep cycling through your ranges. Finish whenever you want, and everything you completed counts.
+            </p>
+          )}
         </div>
       </div>
 
@@ -1691,7 +1749,7 @@ function PuttingCompletionView({
             <Stat label="Putts Hit" value={String(record.totalBalls)} />
             <Stat label="Sets Done" value={String(record.drillCount)} />
             <Stat label="Ranges" value={zoneLabels} serif />
-            <Stat label="Time" value={`${input.time} min`} serif />
+            <Stat label="Time" value={input.time === "unlimited" ? "No limit" : `${input.time} min`} serif />
           </div>
         </div>
 
