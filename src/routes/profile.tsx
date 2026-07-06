@@ -767,7 +767,7 @@ function ProfilePage() {
           />
           <div className="h-px bg-border mx-4" />
           {/* chevron=false: this row toggles in place, it doesn't navigate */}
-          <SetupRow icon={theme === "dark" ? Moon : Sun} label="Appearance" detail={theme === "dark" ? "Dark" : "Light"} onPress={toggleTheme} chevron={false} />
+          <SetupRow icon={theme === "dark" ? Moon : Sun} label="Appearance" subtitle="Tap to change" detail={theme === "dark" ? "Dark" : "Light"} onPress={toggleTheme} chevron={false} />
         </div>
 
         {/* ── Sign out ── */}
@@ -830,9 +830,10 @@ function ProfilePage() {
   );
 }
 
-function SetupRow({ icon: Icon, label, detail, onPress, proLocked, chevron = true }: {
+function SetupRow({ icon: Icon, label, subtitle, detail, onPress, proLocked, chevron = true }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
+  subtitle?: string;
   detail?: string;
   onPress: () => void;
   proLocked?: boolean;
@@ -841,7 +842,10 @@ function SetupRow({ icon: Icon, label, detail, onPress, proLocked, chevron = tru
   return (
     <button type="button" onClick={onPress} className="w-full flex items-center gap-3.5 px-4 py-4 text-left active:bg-muted transition-colors">
       <Icon className="h-[19px] w-[19px] text-primary shrink-0" />
-      <span className="flex-1 text-[15.5px] font-medium text-foreground">{label}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15.5px] font-medium text-foreground">{label}</span>
+        {subtitle && <span className="block text-[12px] text-muted-foreground mt-0.5">{subtitle}</span>}
+      </span>
       {proLocked && <Zap className="h-3.5 w-3.5 text-gold shrink-0" />}
       {detail && <span className="text-[14px] text-muted-foreground">{detail}</span>}
       {chevron && <ChevronRight className="h-[17px] w-[17px] text-muted-foreground shrink-0" />}

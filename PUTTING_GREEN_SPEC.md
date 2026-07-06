@@ -24,12 +24,12 @@ this spec extends that architecture, it does not replace it.
   alignment sticks) in the first version. That's a fast-follow. Descriptions
   should read fine with just a ball and a putter.
 - Three distance zones, each a **user-adjustable feet range**:
-  - **Short putts** (default ~3–5 ft)
-  - **Mid-range putts** (default ~5–10 ft, i.e. roughly "6-footers to 10 feet")
-  - **Lag putts** (default ~10+ ft, long approach putts)
-  - Jacob's exact words gave slightly garbled numbers ("3 to 55 to 10:10") —
-    treat the defaults above as the intended reading (short 3-5, mid 5-10,
-    lag 10+) and confirm with him before shipping, don't guess further.
+  - **Short putts**: 3–5 ft
+  - **Mid-range putts**: 5–15 ft
+  - **Lag putts**: 15 ft and beyond
+  - CONFIRMED with Jacob 2026-07-06: lag starts at 15 ft. Mid-range's upper
+    bound is set to 15 ft to close the gap cleanly (no dead zone between mid
+    and lag). These are the shipped defaults, not placeholders.
 - Like the range's club-group multi-select, the user can pick **any
   combination of 1, 2, or all 3 zones**. The session builds only drills for
   the zones picked.
@@ -95,8 +95,8 @@ export interface PuttZoneRange {
 // Defaults; the user can override min/max per zone (see 2.4).
 export const PUTT_ZONES: PuttZoneRange[] = [
   { zone: "short", label: "Short Putts",     minFeet: 3,  maxFeet: 5    },
-  { zone: "mid",   label: "Mid-Range Putts", minFeet: 5,  maxFeet: 10   },
-  { zone: "lag",   label: "Lag Putts",       minFeet: 10, maxFeet: null },
+  { zone: "mid",   label: "Mid-Range Putts", minFeet: 5,  maxFeet: 15   },
+  { zone: "lag",   label: "Lag Putts",       minFeet: 15, maxFeet: null },
 ];
 
 // Progression order. Change this one line to flip direction later.
@@ -157,20 +157,11 @@ This is the core logic difference from the range and the part to get right:
 6. `unit: "balls"`, `type: "drill"`.
 
 Total balls **hit** in a session is `ballCount * totalBlocks` (they reuse the
-same balls each block) — this number is fine to show in a completion summary
-("You hit 10 balls × 6 sets = 60 putts") but it is **not** the number to
-persist as `totalBalls` in `SavedSession` the way the range does, because
-that field currently drives the Home/Profile "Balls" stat and comparing
-"63 range balls" to "60 putts across 6 sets with 10 balls" is apples to
-oranges. Decide with Jacob whether putting sessions should:
-   (a) contribute to the same "Balls" stat (total putts struck), or
-   (b) contribute to a separate stat, or
-   (c) not affect the Balls stat, only the Sessions count / streak.
-Default recommendation: **(a)**, total putts struck counts as balls — it's
-still "balls hit," and this avoids a second stat card. Flag this as a
-one-question confirmation before shipping, don't ship point (b) without
-sign-off since it touches Home/Profile stat cards recently reworked in
-commit `f0ebc5c`.
+same balls each block). CONFIRMED with Jacob 2026-07-06: this total counts
+toward the same Home/Profile "Balls" stat as range sessions (total putts
+struck = balls hit). No second stat card, no schema change beyond `totalBalls`
+already being generic. Persist it in `SavedSession.totalBalls` exactly like
+the range does; `saveSession` in `db.ts` needs no changes for this.
 
 ### 2.4 Zone range customization (user-adjustable feet)
 
@@ -302,9 +293,9 @@ don't forget it, it's the easiest thing to miss).
    works via Home's active-session card, confirm completion saves and shows
    up in Profile's session history with the right area/label.
 
-## 7. One open question to resolve with Jacob before/while building
+## 7. Open questions
 
-Re-confirm the exact zone distance defaults (his dictated numbers were
-garbled: "3 to 5", "5 to 10", "10+" is the best-guess reading used above) and
-the Balls-stat attribution decision in 2.3. Everything else in this spec is
-decidable without him.
+None outstanding. Zone distances (2.1) and Balls-stat attribution (2.3) were
+both confirmed with Jacob on 2026-07-06 and are locked in as shipped defaults
+above, not placeholders. Fable 5 can build straight through without pausing
+for design sign-off.
