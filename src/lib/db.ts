@@ -4,6 +4,8 @@
  */
 import { supabase } from "./supabase";
 import type { GenerateInput, SessionDrill } from "./drills";
+import type { PracticeArea } from "./areas";
+import type { PuttZone } from "./putting";
 
 async function getLocalUser() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -37,6 +39,7 @@ export interface SavedSession {
   filters: { goal: string; bucket: string; time: number };
   totalBalls: number;
   drillCount: number;
+  area?: PracticeArea; // absent on legacy rows = "range"
 }
 
 export interface Club {
@@ -241,6 +244,7 @@ export async function fetchSessions(): Promise<SavedSession[]> {
     filters: { goal: r.goal, bucket: r.bucket, time: r.time_minutes },
     totalBalls: r.total_balls,
     drillCount: r.drill_count,
+    area: (r.area as PracticeArea) ?? "range",
   }));
 }
 
@@ -248,7 +252,7 @@ export async function saveSession(session: SavedSession): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
 
-  const { error } = await supabase.from("sessions").upsert({
+  const row = {
     id: session.id,
     user_id: user.id,
     completed_at: session.completedAt,
@@ -257,8 +261,17 @@ export async function saveSession(session: SavedSession): Promise<void> {
     time_minutes: session.filters.time,
     total_balls: session.totalBalls,
     drill_count: session.drillCount,
-  });
-  if (error) throw new Error(error.message);
+  };
+
+  // Try with the area column first; fall back without it if the migration
+  // hasn't run yet (same pattern as the handicap-history stats columns).
+  const { error } = await supabase
+    .from("sessions")
+    .upsert({ ...row, area: session.area ?? "range" });
+  if (!error) return;
+
+  const { error: fallbackError } = await supabase.from("sessions").upsert(row);
+  if (fallbackError) throw new Error(fallbackError.message);
 }
 
 // ─── Bag ──────────────────────────────────────────────────────────────────────
@@ -352,6 +365,47 @@ export async function saveYardage(
     half_swing: yardages.halfSwing,
     three_quarter_swing: yardages.threeQuarterSwing,
     full_swing: yardages.fullSwing,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// ─── Putting zones ────────────────────────────────────────────────────────────
+// Per-user overrides of the default putt distance zones (short/mid/lag).
+
+export type PuttingZoneMap = Partial<Record<PuttZone, { minFeet: number; maxFeet: number | null }>>;
+
+export async function fetchPuttingZones(): Promise<PuttingZoneMap> {
+  const user = await getLocalUser();
+  if (!user) return {};
+
+  const { data } = await supabase
+    .from("putting_zones")
+    .select("*")
+    .eq("user_id", user.id);
+
+  const map: PuttingZoneMap = {};
+  for (const r of data ?? []) {
+    map[r.zone as PuttZone] = {
+      minFeet: r.min_feet,
+      maxFeet: r.max_feet ?? null,
+    };
+  }
+  return map;
+}
+
+export async function savePuttingZone(
+  zone: PuttZone,
+  range: { minFeet: number; maxFeet: number | null }
+): Promise<void> {
+  const user = await getLocalUser();
+  if (!user) return;
+
+  const { error } = await supabase.from("putting_zones").upsert({
+    user_id: user.id,
+    zone,
+    min_feet: range.minFeet,
+    max_feet: range.maxFeet,
+    updated_at: new Date().toISOString(),
   });
   if (error) throw new Error(error.message);
 }

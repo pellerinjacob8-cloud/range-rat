@@ -5,7 +5,7 @@ import { getSupabaseAdmin, missingEnv } from "./_config.js";
 // Tables keyed by user_id that hold this user's data. profiles is keyed by id
 // and handled separately. Deleting rows explicitly (rather than relying on a
 // cascade) keeps cleanup correct regardless of the FK setup.
-const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages"] as const;
+const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages", "putting_zones"] as const;
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   ensureSentry();
@@ -49,7 +49,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     // 1. Remove the user's data rows.
     for (const table of USER_TABLES) {
       const { error } = await supabase.from(table).delete().eq("user_id", userId);
-      if (error) throw new Error(`Failed to clear ${table}: ${error.message}`);
+      // Tolerate tables whose migration hasn't run yet (undefined_table);
+      // any other failure must still block the auth-user deletion below.
+      if (error && error.code !== "42P01" && !/does not exist/i.test(error.message)) {
+        throw new Error(`Failed to clear ${table}: ${error.message}`);
+      }
     }
     const { error: profileError } = await supabase.from("profiles").delete().eq("id", userId);
     if (profileError) throw new Error(`Failed to clear profile: ${profileError.message}`);
