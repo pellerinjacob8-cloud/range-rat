@@ -1506,11 +1506,11 @@ function PuttingBuilder({
           </p>
         </div>
 
-        {/* Mode picker */}
+        {/* Mode picker: isolated focus modes vs full structured workouts */}
         <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Practice Mode</p>
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Focus on One Range</p>
           <div className="space-y-2">
-            {PUTTING_MODES.map((m) => {
+            {PUTTING_MODES.filter((m) => ["short", "medium", "long"].includes(m.value)).map((m) => {
               const active = mode === m.value;
               return (
                 <button
@@ -1526,6 +1526,35 @@ function PuttingBuilder({
                   )}
                 >
                   <p className="text-[14px] font-bold">{m.label}</p>
+                  <p className={cn("mt-0.5 text-[12.5px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                    {m.blurb}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="pt-3 text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Full Workout</p>
+          <div className="space-y-2">
+            {PUTTING_MODES.filter((m) => ["mixed", "complete"].includes(m.value)).map((m) => {
+              const active = mode === m.value;
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setMode(m.value)}
+                  className={cn(
+                    "w-full rounded-[14px] border-2 px-4 py-3.5 text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-primary/25 bg-primary/5 active:bg-primary/10",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Trophy className={cn("h-4 w-4 shrink-0", active ? "text-primary-foreground" : "text-primary")} />
+                    <p className="text-[14px] font-bold">{m.label}</p>
+                  </div>
                   <p className={cn("mt-0.5 text-[12.5px]", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
                     {m.blurb}
                   </p>
@@ -1631,9 +1660,9 @@ function PuttingBuilder({
             size="lg"
             disabled={!canGenerate}
             onClick={generate}
-            className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em]"
+            className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em] active:opacity-90 transition-opacity"
           >
-            Generate Session
+            Start Putting Practice
           </Button>
         </div>
       </div>

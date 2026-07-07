@@ -66,22 +66,56 @@ export function stationLabel(station: PuttStation): string {
 // Light, optional guidance so a new player knows what to go find without the
 // app feeling like it's issuing orders. Difficulty ramps with the station's
 // position in its own category: first station in a category is the easiest
-// ask, later ones nudge toward more texture. Nothing here is enforced.
+// ask, later ones nudge toward more texture. Nothing here is enforced, and
+// the pick is deterministic (no randomness) so the same mode shows the same
+// tips every run — repeatability is the product's core promise.
 // (Down the line: could key off the player's handicap instead of a flat
 // per-slot ramp, so a low handicap sees harder prompts sooner. Not built.)
-const STAGE_TIPS = [
+const TIPS_EASY = [
   "Find a flat, straight putt. This one's about tempo, not the line.",
+  "Pick a dead-straight putt on flat ground. Groove the stroke first.",
+];
+const TIPS_MID = [
   "Look for a putt with a touch of break, if you can find one.",
+  "Find a putt that moves a little. Read it, commit, roll it.",
+];
+const TIPS_HARD = [
   "Bonus challenge: a putt with some slope or break really tests it.",
+  "Go find the hardest putt nearby. Uphill, downhill, or breaking.",
+];
+const TIPS_LONG_FIRST = [
+  "Find a clear, mostly flat line to start. Focus on getting it close, not in.",
+  "Start with an open, flat lag. Distance first, line second.",
+];
+const TIPS_LONG_LATER = [
+  "Try one with a bit of slope. Speed control is the whole game here.",
+  "Put a slope between you and the hole. Die it in soft.",
+  "Pick a line across a ridge if you can. Feel the pace change.",
 ];
 
-export function stationTip(station: PuttStation, indexInCategory: number): string {
+// Deterministic pick: keyed by the station's absolute index so a given mode
+// always shows the identical tip sequence, run after run, player to player.
+function pick(pool: string[], stationIndex: number): string {
+  return pool[stationIndex % pool.length];
+}
+
+export function stationTip(station: PuttStation, indexInCategory: number, stationIndex = 0): string {
   if (station.category === "long") {
     return indexInCategory === 0
-      ? "Find a clear, mostly flat line to start. Focus on getting it close, not in."
-      : "Try one with a bit of slope. Speed control is the whole game here.";
+      ? pick(TIPS_LONG_FIRST, stationIndex)
+      : pick(TIPS_LONG_LATER, stationIndex);
   }
-  return STAGE_TIPS[Math.min(indexInCategory, STAGE_TIPS.length - 1)];
+  const tier = indexInCategory === 0 ? TIPS_EASY : indexInCategory === 1 ? TIPS_MID : TIPS_HARD;
+  return pick(tier, stationIndex);
+}
+
+// Set-level framing. Every set is scored identically; this is copy only —
+// the final set gets a light pressure callout (Jacob's original brief liked
+// the "last one counts" feel) without changing what's measured.
+export function setPrompt(setNumber: number, isFinalSet: boolean): string | null {
+  if (setNumber === 1) return "Feel it out. Find your pace.";
+  if (isFinalSet) return "Last set. Make these count.";
+  return "Same putt. Groove the stroke.";
 }
 
 export interface PuttingSessionConfig {
