@@ -1683,7 +1683,7 @@ function PuttingCompletionView({
                   <p className="text-[13px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                     {categoryLabel(r.category)}
                   </p>
-                  <p className="font-display text-[22px] leading-tight">{r.distanceFt} ft</p>
+                  <p className="font-display text-[22px] leading-tight">{r.minFt}-{r.maxFt} ft</p>
                 </div>
                 <div className="text-right">
                   <p className="font-stats text-[22px] tabular-nums text-primary">{s.makes}/{s.attempts}</p>

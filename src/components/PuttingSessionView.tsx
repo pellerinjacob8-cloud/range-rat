@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   buildLadder,
   categoryLabel,
+  stationLabel,
+  stationTip,
   summarizeSession,
   summarizeStation,
   LONG_TARGET_FT,
@@ -37,12 +39,27 @@ export function PuttingSessionView({
   // Show the just-finished station's line score before moving on.
   const [showStationSummary, setShowStationSummary] = useState(false);
   const [lastStation, setLastStation] = useState<StationResult | null>(null);
+  // Each station opens on a "go find this putt" screen; tapping Start drops
+  // into the tap-to-score sets. Resets whenever a new station begins.
+  const [stationStarted, setStationStarted] = useState(false);
 
   const stationIdx = results.length;
   const station = stations[stationIdx];
   const setNumber = currentSets.length + 1;
   const isUnlimited = config.time === "unlimited";
   const isFinalPlannedStation = !isUnlimited && stationIdx === stations.length - 1;
+
+  // Position of this station within its own category, for the tip ramp
+  // (first short station is easier than the third, etc).
+  const indexInCategory = useMemo(() => {
+    if (!station) return 0;
+    return stations.slice(0, stationIdx).filter((s) => s.category === station.category).length;
+  }, [stations, stationIdx, station]);
+
+  // New station: reset back to the intro screen.
+  useEffect(() => {
+    setStationStarted(false);
+  }, [stationIdx]);
 
   // Fixed-time sessions end automatically once the planned ladder is done.
   useEffect(() => {
@@ -55,7 +72,8 @@ export function PuttingSessionView({
   const recordMakes = (makes: number) => {
     if (!station) return;
     const set: SetResult = {
-      distanceFt: station.distanceFt,
+      minFt: station.minFt,
+      maxFt: station.maxFt,
       category: station.category,
       setNumber,
       ballCount: config.ballCount,
@@ -63,7 +81,7 @@ export function PuttingSessionView({
     };
     const updatedSets = [...currentSets, set];
     if (updatedSets.length >= SETS_PER_STATION) {
-      const stationResult: StationResult = { distanceFt: station.distanceFt, category: station.category, sets: updatedSets };
+      const stationResult: StationResult = { minFt: station.minFt, maxFt: station.maxFt, category: station.category, sets: updatedSets };
       const nextResults = [...results, stationResult];
       setLastStation(stationResult);
       setShowStationSummary(true);
@@ -86,7 +104,7 @@ export function PuttingSessionView({
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-primary">
             {categoryLabel(lastStation.category)}
           </p>
-          <h1 className="mt-2 font-display text-[48px] leading-none">{lastStation.distanceFt} ft</h1>
+          <h1 className="mt-2 font-display text-[48px] leading-none">{lastStation.minFt}-{lastStation.maxFt} ft</h1>
 
           <div className="mt-6 flex gap-3">
             {lastStation.sets.map((s, i) => (
@@ -148,6 +166,47 @@ export function PuttingSessionView({
   // nothing while that transition happens.
   if (!station) return null;
 
+  // ── Station intro: "go find this putt" before any scoring starts
+  if (!stationStarted) {
+    return (
+      <AppShell showBack onBack={onQuit}>
+        <div className="flex flex-col min-h-[calc(100vh-10rem)] pt-6">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Station {stationIdx + 1} of {stations.length}
+          </p>
+
+          <div className="flex flex-1 flex-col items-center justify-center text-center px-2">
+            <p className="text-[15px] font-bold uppercase tracking-[0.2em] text-primary">
+              {categoryLabel(station.category)}
+            </p>
+            <h1 className="mt-3 font-display text-[80px] leading-none tracking-[-0.01em]">
+              {stationLabel(station)}
+            </h1>
+
+            <div className="mt-8 w-full max-w-[320px] rounded-2xl border border-primary/25 bg-primary/5 px-5 py-4">
+              <p className="text-[15px] leading-relaxed text-foreground">
+                {stationTip(station, indexInCategory)}
+              </p>
+            </div>
+
+            <p className="mt-6 text-[14px] font-semibold text-muted-foreground">
+              {SETS_PER_STATION} sets · {config.ballCount} balls each
+            </p>
+          </div>
+
+          <div className="pb-10">
+            <Button
+              onClick={() => setStationStarted(true)}
+              className="h-16 w-full rounded-[14px] text-[15px] font-bold uppercase tracking-[0.06em]"
+            >
+              Start Station
+            </Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   // ── Active set: distance + instruction + tap-a-number score entry
   const isLong = station.category === "long";
   return (
@@ -163,8 +222,25 @@ export function PuttingSessionView({
           <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-primary">
             {categoryLabel(station.category)}
           </p>
-          <h1 className="mt-2 font-display text-[64px] leading-none">{station.distanceFt} ft</h1>
-          <p className="mt-3 text-[15px] font-semibold text-muted-foreground">Set {setNumber} of {SETS_PER_STATION}</p>
+          <h1 className="mt-2 font-display text-[64px] leading-none">{stationLabel(station)}</h1>
+
+          {/* Set progress: big, unmissable, with a dot tracker underneath. */}
+          <div className="mt-5 flex flex-col items-center gap-2">
+            <p className="font-stats text-[32px] leading-none tabular-nums text-primary">
+              Set {setNumber} <span className="text-muted-foreground">of {SETS_PER_STATION}</span>
+            </p>
+            <div className="flex gap-1.5">
+              {Array.from({ length: SETS_PER_STATION }, (_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    i < currentSets.length ? "bg-primary" : i === currentSets.length ? "bg-primary/50" : "bg-muted",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
 
           <p className="mt-6 text-[15px] text-muted-foreground max-w-[300px] leading-relaxed">
             {isLong
