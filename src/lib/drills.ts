@@ -102,6 +102,12 @@ function canonicalById(id: string): CanonicalClub | undefined {
   return CANONICAL_CLUBS.find(c => c.id === id);
 }
 
+// Clubs from onboarding carry canonical ids ("7i"); clubs added in the profile
+// editor get random ids, so fall back to matching on the club name.
+function canonicalForBag(b: BagClub): CanonicalClub | undefined {
+  return canonicalById(b.id) ?? canonicalByName(b.name);
+}
+
 // Given a club name, find the closest match in the user's bag.
 // Falls back to the original name when the bag is empty or no match found.
 function substituteClub(clubName: string, bag: BagClub[]): string {
@@ -111,7 +117,7 @@ function substituteClub(clubName: string, bag: BagClub[]): string {
   const inBag = bag.find(b => b.name === clubName || b.id === canonical.id);
   if (inBag) return inBag.name;
   const sameGroup = bag
-    .map(b => ({ bag: b, canon: canonicalById(b.id) }))
+    .map(b => ({ bag: b, canon: canonicalForBag(b) }))
     .filter(x => x.canon && x.canon.group === canonical.group)
     .sort((a, b) =>
       Math.abs((a.canon!.sortOrder) - canonical.sortOrder) -
@@ -816,7 +822,7 @@ function sortClubsShortToLong(clubs: string[]): string[] {
 // the bag's stored display order (the onboarding builder saves it driver-first,
 // which made sessions start with driver instead of warming up from wedges).
 function bagLoftOrder(c: BagClub): number {
-  return canonicalById(c.id)?.sortOrder ?? c.sortOrder ?? 99;
+  return canonicalForBag(c)?.sortOrder ?? c.sortOrder ?? 99;
 }
 
 function resolveClubs(groups: ClubGroup[], bag?: BagClub[]): string[] {
@@ -830,7 +836,7 @@ function resolveClubs(groups: ClubGroup[], bag?: BagClub[]): string[] {
     }
     const targetGroups = new Set(groups);
     const matched = bag.filter(b => {
-      const canonical = canonicalById(b.id);
+      const canonical = canonicalForBag(b);
       if (!canonical) return false;
       return targetGroups.has(canonical.group);
     });

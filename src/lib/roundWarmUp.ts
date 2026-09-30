@@ -56,7 +56,9 @@ function hasSectionClub(section: RoundSection, bag?: BagClub[]): boolean {
   };
   const types = groupMap[section];
   if (!types) return true;
-  if (section === "Driver") return bag.some(b => b.id === "driver");
+  // Onboarding saves the driver as id "driver"; the profile editor saves it
+  // with a random id and type "driver".
+  if (section === "Driver") return bag.some(b => b.id === "driver" || b.type === "driver");
   return bag.some(b => types.includes(b.type));
 }
 
