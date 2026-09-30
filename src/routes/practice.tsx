@@ -49,7 +49,7 @@ import {
   type TimeAvailable,
   type WarmUpPreset,
 } from "@/lib/drills";
-import { fetchProfile, fetchHandicapHistory, fetchBag } from "@/lib/db";
+import { fetchProfile, fetchHandicapHistory, fetchPlayableBag } from "@/lib/db";
 import type { Club } from "@/lib/db";
 import {
   PUTTING_MODES,
@@ -286,7 +286,7 @@ function PracticePage() {
       const latest = h[h.length - 1];
       if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
     });
-    fetchBag().then(setUserBag);
+    fetchPlayableBag().then(setUserBag);
   }, []);
 
   const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);

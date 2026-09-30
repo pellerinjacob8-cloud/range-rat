@@ -61,6 +61,35 @@ function fillIronRange(prev: Set<string>, tappedId: string): Set<string> {
   return next;
 }
 
+// Two or more irons are saved as an iron set (header row + child irons), the
+// same shape the profile editor builds, so the user can add the brand and
+// model once for the whole set. Children keep canonical ids ("7i") so drills
+// still recognize them.
+const ONBOARDING_SET_ID = "irons";
+
+function buildBag(selected: Set<string>): Club[] {
+  const picked = CLUBS.filter(c => selected.has(c.id));
+  const irons = picked.filter(c => c.type === "iron");
+  const asSet = irons.length >= 2;
+  const toClub = (c: typeof CLUBS[number]): Club => ({
+    id: c.id,
+    name: c.name,
+    // The profile editor has a dedicated Driver type; keep them consistent.
+    type: c.id === "driver" ? "driver" : c.type,
+  });
+
+  const clubs: Club[] = [];
+  for (const c of picked) {
+    if (c.type === "iron" && asSet) {
+      if (c.id === irons[0].id) clubs.push({ id: ONBOARDING_SET_ID, name: "Iron Set", type: "iron-set" });
+      clubs.push({ ...toClub(c), parentSetId: ONBOARDING_SET_ID, ironNumber: parseInt(c.id, 10) });
+    } else {
+      clubs.push(toClub(c));
+    }
+  }
+  return clubs;
+}
+
 function OnboardingBag() {
   const navigate = useNavigate();
   useForceLightMode();
@@ -80,10 +109,7 @@ function OnboardingBag() {
     setSaving(true);
     try {
       if (!skip && selected.size > 0) {
-        const clubs: Club[] = CLUBS
-          .filter(c => selected.has(c.id))
-          .map((c, i) => ({ id: c.id, name: c.name, type: c.type, sortOrder: i }));
-        await saveBag(clubs);
+        await saveBag(buildBag(selected));
       }
       try {
         localStorage.setItem("rangeRat_onboarding_complete", "true");
@@ -124,7 +150,7 @@ function OnboardingBag() {
         <h1 className="mt-2 font-display text-[38px] leading-[1.0] tracking-[-0.01em]">
           What's in<br />your bag?
         </h1>
-        <p className="mt-3 text-[13.5px] text-muted-foreground">Select the clubs you carry. You can update this anytime.</p>
+        <p className="mt-3 text-[13.5px] text-muted-foreground">Select the clubs you carry. Add brands and models anytime in Profile, then Your Bag.</p>
       </div>
 
       <div className="mt-6 space-y-5 overflow-y-auto pb-4">

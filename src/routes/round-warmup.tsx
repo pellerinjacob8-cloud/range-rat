@@ -8,7 +8,7 @@ import {
   type RoundDuration,
   type RoundWarmUpItem,
 } from "@/lib/roundWarmUp";
-import { fetchBag } from "@/lib/db";
+import { fetchPlayableBag } from "@/lib/db";
 import type { Club } from "@/lib/db";
 import { cn } from "@/lib/utils";
 import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -91,7 +91,7 @@ function RoundWarmUpPage() {
   const [done, setDone] = useState<Set<string>>(new Set());
   const [teeTime, setTeeTime] = useState("");
 
-  useEffect(() => { fetchBag().then(setUserBag); }, []);
+  useEffect(() => { fetchPlayableBag().then(setUserBag); }, []);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerHour, setPickerHour] = useState("7");
   const [pickerMinute, setPickerMinute] = useState("00");

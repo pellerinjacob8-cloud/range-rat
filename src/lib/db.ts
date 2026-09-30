@@ -305,6 +305,13 @@ export async function fetchBag(): Promise<Club[]> {
   }));
 }
 
+// The bag minus iron-set header rows, which group irons for display but aren't
+// clubs you can hit. Use this anywhere clubs are picked for practice.
+export async function fetchPlayableBag(): Promise<Club[]> {
+  const bag = await fetchBag();
+  return bag.filter(c => c.type !== "iron-set");
+}
+
 export async function saveBag(clubs: Club[]): Promise<void> {
   const user = await getLocalUser();
   if (!user) return;
