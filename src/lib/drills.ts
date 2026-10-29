@@ -282,8 +282,15 @@ export function recommendGoal(stats?: {
     candidates.push({ goal: "accuracy", severity: 60 - stats.fairways, reason: `you're hitting ${stats.fairways}% of fairways` });
   if (stats.putts !== undefined)
     candidates.push({ goal: "consistency", severity: (stats.putts - 32) * 1.5, reason: `averaging ${stats.putts} putts per round` });
-  if (stats.upAndDowns !== undefined)
-    candidates.push({ goal: "consistency", severity: (50 - stats.upAndDowns) * 0.6, reason: `your up-and-down rate is ${stats.upAndDowns}%` });
+  // upAndDowns is a count (0-18) in the log form, so turn it into a rate using
+  // the greens missed that round. Needs GIR; without it there is no rate to judge.
+  if (stats.upAndDowns !== undefined && stats.gir !== undefined) {
+    const missedGreens = Math.round((1 - stats.gir / 100) * 18);
+    if (missedGreens > 0) {
+      const rate = Math.round((Math.min(stats.upAndDowns, missedGreens) / missedGreens) * 100);
+      candidates.push({ goal: "consistency", severity: (50 - rate) * 0.6, reason: `your up-and-down rate is ${rate}%` });
+    }
+  }
   const worst = candidates.filter(c => c.severity > 0).sort((a, b) => b.severity - a.severity)[0];
   return worst ? { goal: worst.goal, reason: worst.reason } : null;
 }
