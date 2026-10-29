@@ -24,7 +24,7 @@ export const Route = createFileRoute("/play")({
 
 function PlayPage() {
   const { pathname } = useLocation();
-  if (pathname !== "/play") return <Outlet />;
+  if (pathname !== "/play") return <ProGate feature="Random Practice"><Outlet /></ProGate>;
 
   return (
     <ProGate feature="Random Practice">

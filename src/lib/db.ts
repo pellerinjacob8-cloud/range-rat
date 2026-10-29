@@ -5,6 +5,7 @@
 import { supabase } from "./supabase";
 import type { GenerateInput, SessionDrill } from "./drills";
 import type { PracticeArea } from "./areas";
+import type { CombineAttempt } from "./combine";
 
 async function getLocalUser() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -107,7 +108,9 @@ export async function saveProfile(profile: Partial<Profile>): Promise<void> {
     handedness: profile.handedness ?? null,
     created_date: profile.createdDate ?? Date.now(),
     theme: profile.theme ?? null,
-    handicap: profile.handicap ?? null,
+    // Only write handicap when the caller includes the key. Passing it as
+    // undefined still clears it (removing the last round does that).
+    ...("handicap" in profile ? { handicap: profile.handicap ?? null } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw new Error(error.message);
@@ -438,6 +441,47 @@ export async function removeFavorite(id: string): Promise<void> {
   if (!user) return;
 
   const { error } = await supabase.from("favorites").delete().eq("id", id).eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+}
+
+// ─── Combine ──────────────────────────────────────────────────────────────────
+
+// Throws if the query fails (e.g. the combine_attempts migration hasn't run),
+// so callers can keep using the local copy.
+export async function fetchCombineAttempts(): Promise<CombineAttempt[]> {
+  const user = await getLocalUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("combine_attempts")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("completed_at", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    completedAt: r.completed_at,
+    shots: r.shots,
+    categoryScores: r.category_scores,
+    overallScore: r.overall_score,
+  }));
+}
+
+export async function insertCombineAttempts(attempts: CombineAttempt[]): Promise<void> {
+  const user = await getLocalUser();
+  if (!user || attempts.length === 0) return;
+
+  const { error } = await supabase.from("combine_attempts").upsert(
+    attempts.map((a) => ({
+      id: a.id,
+      user_id: user.id,
+      completed_at: a.completedAt,
+      shots: a.shots,
+      category_scores: a.categoryScores,
+      overall_score: a.overallScore,
+    }))
+  );
   if (error) throw new Error(error.message);
 }
 

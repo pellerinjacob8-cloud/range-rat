@@ -239,10 +239,16 @@ function ProfilePage() {
     // Optimistic update, UI reflects the save immediately
     const tempId = `temp-${Date.now()}`;
     const optimistic: HandicapSnapshot = { id: tempId, handicap: hdx, ...stats, recordedAt };
-    setProfile(prev => ({ ...prev, handicap: hdx }));
+    // A back-dated round goes into history but doesn't replace a newer index.
+    // Compare calendar days: a round logged today counts as the newest.
+    const dayOf = (iso: string) => { const d = new Date(iso); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+    const newest = roundHistory[roundHistory.length - 1];
+    const currentHdx = !newest || dayOf(recordedAt) >= dayOf(newest.recordedAt) ? hdx : newest.handicap;
+    setProfile(prev => ({ ...prev, handicap: currentHdx }));
     setRoundHistory(prev => [...prev, optimistic].sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime()));
     setLogOpen(false);
-    dbSaveProfile({ ...profile, handicap: hdx });
+    dbSaveProfile({ ...profile, handicap: currentHdx }).catch(() =>
+      toast.error("Couldn't update your handicap. Check your connection and try again."));
     const snapshot = await saveHandicapSnapshot(hdx, stats, recordedAt);
     if (snapshot) setRoundHistory(prev => prev.map(h => h.id === tempId ? snapshot : h));
   };
