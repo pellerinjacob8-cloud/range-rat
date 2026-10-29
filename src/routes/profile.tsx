@@ -1859,7 +1859,7 @@ function EmptyState({
   );
 }
 
-// ─── Handicap history chart (Pro) ─────────────────────────────────────────────
+// ─── Handicap history chart (free) ────────────────────────────────────────────
 
 function HandicapChart({ history }: { history: HandicapSnapshot[] }) {
   const W = 300, H = 68, P = 8;
