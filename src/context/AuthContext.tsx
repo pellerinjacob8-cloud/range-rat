@@ -46,7 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // tabs doing the same, which signs the user out at random.
       const { data } = await supabase.auth.getSession();
       setSession(data.session);
-      if (data.session?.user) fetchProStatus(data.session.user.id);
+      // Wait for Pro status so ProGate doesn't flash the upgrade modal at Pro users
+      if (data.session?.user) await fetchProStatus(data.session.user.id).catch(() => {});
 
       setLoading(false);
     };
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.removeItem("rangeRat_profile");
       localStorage.removeItem("rangeRat_onboarding_complete");
+      localStorage.removeItem("rangeRat_handicap");
     } catch {}
     await supabase.auth.signOut();
   };

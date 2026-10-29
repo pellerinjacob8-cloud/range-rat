@@ -23,7 +23,7 @@ export const Route = createFileRoute("/games")({
 function GamesPage() {
   const { pathname } = useLocation();
   const { isPro } = useAuth();
-  const [proOpen, setProOpen] = useState(false);
+  const [proFeature, setProFeature] = useState<string | null>(null);
 
   if (pathname !== "/games") {
     return <Outlet />;
@@ -81,7 +81,7 @@ function GamesPage() {
         ) : (
           <button
             type="button"
-            onClick={() => setProOpen(true)}
+            onClick={() => setProFeature("Grid Game")}
             className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm text-left active:scale-[0.99] transition relative overflow-hidden"
           >
             <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5">
@@ -127,7 +127,7 @@ function GamesPage() {
         ) : (
           <button
             type="button"
-            onClick={() => setProOpen(true)}
+            onClick={() => setProFeature("Fairway Game")}
             className="w-full rounded-2xl border border-border bg-card p-5 shadow-sm text-left active:scale-[0.99] transition relative overflow-hidden"
           >
             <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-gold-bg border border-gold-border px-2 py-0.5">
@@ -154,9 +154,9 @@ function GamesPage() {
       <p className="mt-6 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">More coming soon</p>
 
       <ProModal
-        open={proOpen}
-        onClose={() => setProOpen(false)}
-        reason="Fairway Game is a Pro feature. Upgrade to unlock it and the full Range Rat experience."
+        open={proFeature !== null}
+        onClose={() => setProFeature(null)}
+        reason={`${proFeature} is a Pro feature. Upgrade to unlock it and the full Range Rat experience.`}
       />
     </AppShell>
   );

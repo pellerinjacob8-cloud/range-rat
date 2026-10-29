@@ -144,18 +144,59 @@ export function skillLabel(score: number): string {
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "range-rat:combine-attempts";
+// Attempts live in the database (combine_attempts) with a per-user copy in
+// localStorage so the lobby renders instantly and works offline.
+const LEGACY_STORAGE_KEY = "range-rat:combine-attempts";
 
-export function loadCombineAttempts(): CombineAttempt[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as CombineAttempt[]; }
+function storageKey(): string {
+  let uid = "";
+  try { uid = localStorage.getItem("rangeRat_profile_uid") ?? ""; } catch {}
+  return `${LEGACY_STORAGE_KEY}:${uid}`;
+}
+
+function readLocal(key: string): CombineAttempt[] {
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]") as CombineAttempt[]; }
   catch { return []; }
 }
 
+function writeLocal(attempts: CombineAttempt[]): void {
+  try { localStorage.setItem(storageKey(), JSON.stringify(attempts)); } catch {}
+}
+
+// Includes attempts saved before per-user keys until a sync uploads them
+export function loadCombineAttempts(): CombineAttempt[] {
+  const all = [...readLocal(storageKey()), ...readLocal(LEGACY_STORAGE_KEY)];
+  return all.filter((a, i) => all.findIndex((b) => b.id === a.id) === i);
+}
+
 export function saveCombineAttempt(attempt: CombineAttempt): void {
+  writeLocal([...loadCombineAttempts(), attempt]);
+  import("./db")
+    .then(({ insertCombineAttempts }) => insertCombineAttempts([attempt]))
+    .catch(() => {}); // stays local; syncCombineAttempts uploads it later
+}
+
+/**
+ * Merge the database copy with this browser's copy, upload anything only
+ * stored locally (including attempts saved before database sync existed),
+ * and return the merged list. Falls back to the local copy on any failure.
+ */
+export async function syncCombineAttempts(): Promise<CombineAttempt[]> {
+  // Attempts from before per-user keys belong to whoever signs in first here
+  const local = loadCombineAttempts();
   try {
-    const existing = loadCombineAttempts();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...existing, attempt]));
-  } catch {}
+    const { fetchCombineAttempts, insertCombineAttempts } = await import("./db");
+    const remote = await fetchCombineAttempts();
+    const remoteIds = new Set(remote.map((a) => a.id));
+    const localOnly = local.filter((a) => !remoteIds.has(a.id));
+    await insertCombineAttempts(localOnly);
+    const merged = [...remote, ...localOnly].sort((a, b) => a.completedAt.localeCompare(b.completedAt));
+    writeLocal(merged);
+    try { localStorage.removeItem(LEGACY_STORAGE_KEY); } catch {}
+    return merged;
+  } catch {
+    return loadCombineAttempts();
+  }
 }
 
 export const CATEGORY_LABELS: Record<CombineCategory, string> = {

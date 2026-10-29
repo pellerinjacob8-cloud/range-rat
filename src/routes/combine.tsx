@@ -11,6 +11,7 @@ import {
   calcAttemptScores,
   loadCombineAttempts,
   saveCombineAttempt,
+  syncCombineAttempts,
   skillLabel,
   CATEGORY_LABELS,
   type CombineAttempt,
@@ -115,7 +116,8 @@ function CombinePageInner() {
 
 function CombineLobby({ onStart }: { onStart: () => void }) {
   const navigate = useNavigate();
-  const attempts = loadCombineAttempts();
+  const [attempts, setAttempts] = useState<CombineAttempt[]>(loadCombineAttempts);
+  useEffect(() => { syncCombineAttempts().then(setAttempts); }, []);
   const last     = attempts[attempts.length - 1];
   const pb       = attempts.length > 0
     ? Math.max(...attempts.map(a => a.overallScore))

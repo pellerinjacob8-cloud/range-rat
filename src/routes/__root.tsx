@@ -53,6 +53,7 @@ function AuthGate() {
         localStorage.removeItem("rangeRat_profile");
         localStorage.removeItem("rangeRat_onboarding_complete");
         localStorage.removeItem("rangeRat_profile_uid");
+        localStorage.removeItem("rangeRat_handicap");
       }
       const cached = localStorage.getItem("rangeRat_profile");
       if (cached) {

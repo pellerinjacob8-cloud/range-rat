@@ -277,10 +277,12 @@ function PracticePage() {
 
   useEffect(() => {
     fetchProfile().then((p) => {
-      if (p?.handicap !== undefined) {
-        setHandicap(p.handicap);
-        try { localStorage.setItem("rangeRat_handicap", String(p.handicap)); } catch {}
-      }
+      if (!p) return;
+      setHandicap(p.handicap);
+      try {
+        if (p.handicap !== undefined) localStorage.setItem("rangeRat_handicap", String(p.handicap));
+        else localStorage.removeItem("rangeRat_handicap");
+      } catch {}
     });
     fetchHandicapHistory().then((h) => {
       const latest = h[h.length - 1];
@@ -676,7 +678,7 @@ function PracticePage() {
                     "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
                     active ? "bg-white/20 text-white" : "bg-muted text-muted-foreground",
                   )}>
-                    {autoFavorites.length}/{FREE_LIMIT}
+                    {isPro ? autoFavorites.length : `${autoFavorites.length}/${FREE_LIMIT}`}
                   </span>
                 )}
               </button>
@@ -1275,6 +1277,7 @@ function CompletionView({
   onFavoriteSaved: () => void;
 }) {
   const navigate = useNavigate();
+  const { isPro } = useAuth();
   const name = loadProfileName();
   const drillBalls = session
     .filter((d) => d.club !== "Warm Up")
@@ -1293,7 +1296,7 @@ function CompletionView({
   useEffect(() => { loadFavoritesAsync().then(setExistingFavs); }, []);
 
   const handleSaveClick = () => {
-    if (isAtFreeLimit(existingFavs)) { setProOpen(true); return; }
+    if (!isPro && isAtFreeLimit(existingFavs)) { setProOpen(true); return; }
     setSaveOpen(true);
   };
 
