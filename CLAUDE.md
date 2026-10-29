@@ -25,6 +25,17 @@ Pro is checked with `isPro` from `src/context/AuthContext.tsx` (reads `profiles.
 - Handicap lives in two places: `profiles.handicap` (current index) and `handicap_history` (each logged round). The Practice tab caches it in localStorage `rangeRat_handicap`.
 - Combine history saves to the `combine_attempts` table with a per-account localStorage copy (`src/lib/combine.ts`).
 
+## Planned: miss direction tracking (not built yet)
+
+Goal: like GHIN, let golfers record which way they missed, then use it to pick what to practice.
+
+- **Log Round form (Pro):** add counts for fairway misses (left, right) and green misses (left, right, short, long), next to the existing GIR and Fairways fields in `src/routes/profile.tsx`.
+- **Storage:** new nullable columns on `handicap_history` via a new `supabase-migration-*.sql` file, with the same fallback pattern `saveHandicapSnapshot` in `src/lib/db.ts` already uses. Keep existing rounds valid when these are empty.
+- **Display:** show the miss split in the stat detail sheet on Profile.
+- **Recommendation:** extend `recommendGoal` in `src/lib/drills.ts` so a lopsided miss pattern can win, with a reason like "7 of 9 fairway misses went right". Map to existing categories: left/right misses to Accuracy or Shot Shaping (driver misses to Driver), short/long green misses to Distance Control.
+- **Working on it:** when a miss pattern drives the recommendation, the generated session should include drills aimed at that miss (e.g. a right miss gets alignment, path and draw-feel drills).
+- **Decide before building:** exact fields, whether to also accept a single "usual miss" instead of counts, whether free users can log misses, and how many rounds to look at (latest round vs last few).
+
 ## Open items
 
 - Run `supabase-migration-combine.sql` in the Supabase SQL Editor if it hasn't been run yet. Until then Combine history stays browser-only.
