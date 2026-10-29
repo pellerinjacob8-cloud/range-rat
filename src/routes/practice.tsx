@@ -1095,7 +1095,7 @@ function PracticePage() {
       <ProModal
         open={proOpen}
         onClose={() => setProOpen(false)}
-        reason="Pro reads your logged round stats and recommends what to practice, plus trends, history, and more."
+        reason="Pro reads your logged round stats and recommends what to practice, plus Combine, Pro games, and more."
       />
     </AppShell>
   );

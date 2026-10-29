@@ -76,7 +76,7 @@ function durationName(d: RoundDuration): string {
     case 15: return "Quick Warm Up";
     case 30: return "Standard";
     case 45: return "Full Routine";
-    case 60: return "Pro Session";
+    case 60: return "Extended Session";
   }
 }
 
@@ -379,7 +379,7 @@ function descriptionFor(d: RoundDuration): string {
     case 15: return "Quick loosen-up. Wedges, mid iron, driver. No putting.";
     case 30: return "Wedges through driver, plus short putting.";
     case 45: return "Full bag build-up with a solid putting set.";
-    case 60: return "Pro-style. Every club group + 15 min on the green.";
+    case 60: return "Every club group + 15 min on the green.";
   }
 }
 

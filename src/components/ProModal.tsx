@@ -6,7 +6,7 @@ import { useNavigate } from "@tanstack/react-router";
 const PERKS = [
   "Random Practice mode",
   "Range Rat Combine benchmark and history",
-  "On-course stats and handicap tracking",
+  "Round stats: GIR, fairways, putts, up and downs",
   "Grid Game and Fairway Game",
   "Custom sessions and unlimited saves",
 ];

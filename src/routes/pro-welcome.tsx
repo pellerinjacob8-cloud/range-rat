@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Flag, LineChart, Ruler, Shuffle, Sparkles, Trophy, Zap } from "lucide-react";
+import { Flag, LineChart, Shuffle, Sparkles, Trophy, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pro-welcome")({
@@ -36,8 +36,8 @@ const SLIDES = [
     icon: LineChart,
     color: "bg-rose-500/10",
     iconColor: "text-rose-500",
-    title: "Stats &\nHandicap.",
-    body: "Log every round and track GIR, fairways, putts, and up and downs. Watch your handicap trend over time.",
+    title: "Round\nStats.",
+    body: "Log GIR, fairways, putts, and up and downs every round. See how each stat moves over time and get a practice focus picked from your numbers.",
     cta: "Stats",
   },
   {
@@ -49,19 +49,11 @@ const SLIDES = [
     cta: "Games",
   },
   {
-    icon: Ruler,
-    color: "bg-blue-500/10",
-    iconColor: "text-blue-500",
-    title: "Know Your\nNumbers.",
-    body: "Log carry distances for every club at half, three-quarter, and full swing. Stop guessing on approach.",
-    cta: "Yardages",
-  },
-  {
     icon: Sparkles,
     color: "bg-purple-500/10",
     iconColor: "text-purple-500",
     title: "Build\nAnything.",
-    body: "Build your own drills, shape any session to your goals, and save as many as you want. Your full history stays with you.",
+    body: "Build your own drills, shape any session to your goals, and save as many as you want.",
     cta: null,
   },
 ];
@@ -69,9 +61,8 @@ const SLIDES = [
 const CTA_ROUTES: Record<string, { to: string; search?: Record<string, string> }> = {
   "Play": { to: "/play" },
   "Combine": { to: "/combine" },
-  "Stats": { to: "/profile", search: { view: "stats" } },
+  "Stats": { to: "/profile" },
   "Games": { to: "/games" },
-  "Yardages": { to: "/profile", search: { view: "yardage" } },
 };
 
 function ProWelcomePage() {
