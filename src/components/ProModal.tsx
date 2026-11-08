@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "@tanstack/react-router";
 
 const PERKS = [
+  "Practice sessions built from your last round",
   "Random Practice mode",
   "Range Rat Combine benchmark and history",
   "Round stats: GIR, fairways, putts, up and downs",

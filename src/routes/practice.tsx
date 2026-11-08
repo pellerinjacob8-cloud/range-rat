@@ -3,10 +3,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
-import { GuidedSessionView, ViewToggle } from "@/components/GuidedSessionView";
-import { Bookmark, BookmarkCheck, CheckCircle2, ChevronRight, CircleDot, Flag, Flame, Plus, Sparkles, Star, Target, Trash2, Trophy, X, Zap } from "lucide-react";
+import { BlockSessionView } from "@/components/BlockSessionView";
+import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Plus, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { QuitGameButton } from "@/components/QuitGameButton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,37 +18,27 @@ import {
   saveFavorite,
   deleteFavorite,
   isAtFreeLimit,
-  defaultFavoriteName,
   FREE_LIMIT,
   type Favorite,
 } from "@/lib/favorites";
+import { TIMES, type GenerateInput, type TimeAvailable } from "@/lib/drills";
 import {
-  BASE_CLUB_GROUPS,
-  BUCKET_SIZES,
-  CATEGORIES,
-  FULL_BAG_GROUP,
-  GOALS,
-  PLAYER_LEVELS,
-  STYLE_PROFILES,
-  TIMES,
-  WARM_UP_PRESETS,
-  buildWarmUp,
-  deriveStyle,
-  generateSession,
-  recommendGoal,
-  warmUpBallCount,
-  type BucketSize,
-  type ClubGroup,
-  type GenerateInput,
-  type Goal,
-  type PlayerLevel,
-  type PracticeCategory,
-  type SessionDrill,
-  type SessionPhase,
-  type TimeAvailable,
-  type WarmUpPreset,
-} from "@/lib/drills";
-import { fetchProfile, fetchHandicapHistory, fetchPlayableBag } from "@/lib/db";
+  buildPlan,
+  blocksToDrills,
+  drillsToBlocks,
+  estimateMinutes,
+  levelFrom,
+  pickFocus,
+  totalBalls,
+  type AddOn,
+  type PlanFocus,
+  type PlanLength,
+  type PlanLevel,
+  type PracticeBlock,
+  type RoundStats,
+  type SwingYards,
+} from "@/lib/practicePlan";
+import { fetchProfile, fetchHandicapHistory, fetchPlayableBag, fetchYardages } from "@/lib/db";
 import type { Club } from "@/lib/db";
 import {
   PUTTING_MODES,
@@ -66,18 +55,7 @@ import {
 } from "@/lib/putting";
 import { PuttingSessionView } from "@/components/PuttingSessionView";
 import { loadProfileName } from "@/lib/profile";
-import { PHASE_META, PHASE_ORDER, phaseOf } from "@/lib/phases";
 import { cn } from "@/lib/utils";
-
-// Golf convention: a handicap better than scratch reads "+2.1", not "-2.1".
-const fmtHandicap = (h: number) => (h < 0 ? `+${Math.abs(h)}` : String(h));
-
-const GOAL_TO_CATEGORY: Record<Goal, PracticeCategory> = {
-  accuracy: "accuracy",
-  consistency: "ball-striking",
-  distance: "distance-control",
-  "shot-shaping": "shot-shaping",
-};
 
 export const Route = createFileRoute("/practice")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -89,7 +67,7 @@ export const Route = createFileRoute("/practice")({
       {
         name: "description",
         content:
-          "Pick your club groups, bucket size, time, and goal. Range Rat builds a focused drill checklist with an optional warm-up.",
+          "A simple range session built from your bag: one club, a ball count, and one thing to focus on at a time.",
       },
     ],
   }),
@@ -98,33 +76,72 @@ export const Route = createFileRoute("/practice")({
 
 // ─── LocalStorage ────────────────────────────────────────────────────────────
 
-const SESSIONS_KEY = "range-rat:sessions";
-const ACTIVE_KEY   = "range-rat:active-session";
+const ACTIVE_KEY = "range-rat:active-session";
+const PREFS_KEY  = "range-rat:plan-prefs";
 
-interface ActiveSessionData {
-  session: SessionDrill[];
-  sessionInput: GenerateInput;
-  done: string[];
+type RunSource = "plan" | "saved" | "custom";
+
+interface RunState {
+  blocks: PracticeBlock[];
+  index: number;
+  label: string;
+  source: RunSource;
+  focus?: PlanFocus | null;
 }
 
-function loadActiveSession(): ActiveSessionData | null {
+interface DoneState {
+  blocks: PracticeBlock[];
+  blocksDone: number;
+  balls: number;
+  label: string;
+  source: RunSource;
+  focus?: PlanFocus | null;
+}
+
+interface PlanPrefs {
+  length: PlanLength;
+  addOns: AddOn[];
+  forYou: boolean;
+  level?: PlanLevel;
+}
+
+function loadPrefs(): PlanPrefs {
+  const fallback: PlanPrefs = { length: "quick", addOns: [], forYou: true };
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? { ...fallback, ...(JSON.parse(raw) as Partial<PlanPrefs>) } : fallback;
+  } catch { return fallback; }
+}
+
+function savePrefs(p: PlanPrefs) {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch {}
+}
+
+function loadActiveRun(): RunState | null {
   try {
     const raw = localStorage.getItem(ACTIVE_KEY);
-    return raw ? (JSON.parse(raw) as ActiveSessionData) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.run?.blocks?.length) return parsed.run as RunState;
+    // Session started before the block redesign: resume it in the block view.
+    if (Array.isArray(parsed?.session) && parsed.session.length > 0) {
+      const done = new Set<string>(parsed.done ?? []);
+      const blocks = drillsToBlocks(parsed.session);
+      const firstOpen = blocks.findIndex((b) => !done.has(b.id));
+      return { blocks, index: firstOpen === -1 ? blocks.length - 1 : firstOpen, label: "Practice", source: "saved" };
+    }
+    return null;
   } catch { return null; }
 }
 
-function persistActiveSession(session: SessionDrill[], sessionInput: GenerateInput, done: Set<string>) {
+function persistActiveRun(run: RunState) {
   try {
-    const remaining = session.length - done.size;
     localStorage.setItem(ACTIVE_KEY, JSON.stringify({
       type: "practice",
       route: "/practice",
-      label: "Practice",
-      subtitle: `${remaining} drill${remaining === 1 ? "" : "s"} left`,
-      session,
-      sessionInput,
-      done: Array.from(done),
+      label: run.label,
+      subtitle: `Block ${run.index + 1} of ${run.blocks.length}`,
+      run,
     }));
   } catch {}
 }
@@ -134,7 +151,7 @@ function clearActiveSession() {
 }
 
 // Putting active-session snapshot, kept separate from the range's since the
-// two flows share nothing (no SessionDrill array, no club groups).
+// two flows share nothing (no block list, no clubs).
 interface ActivePuttingData {
   config: PuttingSessionConfig;
   stations: PuttStation[];
@@ -168,38 +185,23 @@ function persistActivePutting(runner: ActivePuttingData) {
 interface SavedSession {
   id: string;
   completedAt: string;
-  filters: GenerateInput | { goal: string; bucket: string; time: number };
+  filters: { goal: string; bucket: string; time: number };
   totalBalls: number;
   drillCount: number;
 }
 
-function saveSession(session: SessionDrill[], input: GenerateInput): SavedSession {
+// Records balls hit and blocks done so Home's weekly count keeps working.
+// This is activity only: no scores or results are tracked in practice.
+function saveRangeSession(blocksDone: PracticeBlock[], label: string): SavedSession {
   const record: SavedSession = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     completedAt: new Date().toISOString(),
-    filters: input,
-    totalBalls: session
-      .filter((d) => d.club !== "Warm Up")
-      .reduce((sum, d) => sum + d.balls, 0),
-    drillCount: session.length,
+    filters: { goal: label, bucket: "plan", time: estimateMinutes(blocksDone) },
+    totalBalls: totalBalls(blocksDone),
+    drillCount: blocksDone.length,
   };
-  // Save to Supabase in the background; retry once, then tell the user so a
-  // finished session never silently disappears from their stats.
   import("@/lib/db")
-    .then(({ saveSession: dbSave }) => {
-      const payload = {
-        id: record.id,
-        completedAt: record.completedAt,
-        filters: {
-          goal: (input as { goal?: string }).goal ?? "",
-          bucket: String((input as { bucket?: unknown }).bucket ?? ""),
-          time: Number((input as { time?: unknown }).time ?? 0),
-        },
-        totalBalls: record.totalBalls,
-        drillCount: record.drillCount,
-      };
-      return dbSave(payload).catch(() => dbSave(payload));
-    })
+    .then(({ saveSession: dbSave }) => dbSave(record).catch(() => dbSave(record)))
     .catch(() => {
       toast.error("Session finished, but it couldn't sync to your stats. Check your connection.");
     });
@@ -238,6 +240,17 @@ function savePuttingSession(results: StationResult[], config: PuttingSessionConf
   return record;
 }
 
+// Favorites need a GenerateInput to count as a saved generated session (vs a
+// Pro custom session). Plan sessions store this neutral placeholder.
+const PLAN_INPUT: GenerateInput = { clubGroups: ["full-bag"], bucket: "medium", time: 30, goal: "consistency" };
+
+const FOCUS_LABEL: Record<PlanFocus, string> = {
+  "tee-shots": "tee shots",
+  "approach": "approach shots",
+  "short-game": "wedge work",
+  "putting": "putting",
+};
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function PracticePage() {
@@ -246,34 +259,35 @@ function PracticePage() {
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
   const [proOpen, setProOpen] = useState(false);
-  const [warmUp, setWarmUp] = useState<WarmUpPreset | null>(null);
-  const [clubGroups, setClubGroups] = useState<ClubGroup[]>([]);
-  const [bucket, setBucket] = useState<BucketSize | null>(null);
-  const [time, setTime] = useState<TimeAvailable | null>(null);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [categories, setCategories] = useState<PracticeCategory[]>([]);
 
-  // Practice style inputs: handicap drives it; level is the fallback when none.
-  // Handicap is cached in localStorage so the style card doesn't flash.
+  // Builder choices, remembered between visits
+  const [prefs] = useState(loadPrefs);
+  const [length, setLength] = useState<PlanLength>(prefs.length);
+  const [addOns, setAddOns] = useState<AddOn[]>(prefs.addOns);
+  const [forYouOn, setForYouOn] = useState(prefs.forYou);
+  const [levelOverride, setLevelOverride] = useState<PlanLevel | null>(prefs.level ?? null);
+
+  useEffect(() => {
+    savePrefs({ length, addOns, forYou: forYouOn, level: levelOverride ?? undefined });
+  }, [length, addOns, forYouOn, levelOverride]);
+
+  // Level comes from handicap (cached so it doesn't flash), then the old
+  // self-rated level, unless the golfer picked one here.
   const [handicap, setHandicap] = useState<number | undefined>(() => {
     try {
       const cached = localStorage.getItem("rangeRat_handicap");
       return cached !== null ? Number(cached) : undefined;
     } catch { return undefined; }
   });
-  const [level, setLevel] = useState<PlayerLevel | null>(() => {
-    try { return (localStorage.getItem("rangeRat_level") as PlayerLevel) || null; } catch { return null; }
+  const [selfLevel] = useState<string | null>(() => {
+    try { return localStorage.getItem("rangeRat_level"); } catch { return null; }
   });
-  const [latestStats, setLatestStats] = useState<{ gir?: number; fairways?: number; putts?: number; upAndDowns?: number } | undefined>(undefined);
+  const level: PlanLevel = levelOverride ?? levelFrom(handicap, selfLevel);
+
+  const [latestStats, setLatestStats] = useState<RoundStats | undefined>(undefined);
   const [userBag, setUserBag] = useState<Club[]>([]);
-
-  const style = useMemo(() => deriveStyle(handicap, level ?? undefined), [handicap, level]);
-  const recommendation = useMemo(() => recommendGoal(latestStats), [latestStats]);
-
-  const chooseLevel = (l: PlayerLevel) => {
-    setLevel(l);
-    try { localStorage.setItem("rangeRat_level", l); } catch {}
-  };
+  const [bagLoaded, setBagLoaded] = useState(false);
+  const [yardages, setYardages] = useState<Record<string, SwingYards>>({});
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -288,14 +302,30 @@ function PracticePage() {
       const latest = h[h.length - 1];
       if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
     });
-    fetchPlayableBag().then(setUserBag);
+    fetchPlayableBag().then((b) => { setUserBag(b); setBagLoaded(true); }).catch(() => setBagLoaded(true));
+    fetchYardages().then(setYardages).catch(() => {});
   }, []);
 
-  const [session, setSession] = useState<SessionDrill[] | null>(() => loadActiveSession()?.session ?? null);
-  const [sessionInput, setSessionInput] = useState<GenerateInput | null>(() => loadActiveSession()?.sessionInput ?? null);
-  const [done, setDone] = useState<Set<string>>(() => new Set(loadActiveSession()?.done ?? []));
+  const focusPick = useMemo(() => pickFocus(latestStats), [latestStats]);
+  const activeFocus: PlanFocus | null = isPro && forYouOn && focusPick ? focusPick.focus : null;
 
-  // Putting: a separate state track (no SessionDrill array, no club groups).
+  const plan = useMemo(
+    () => buildPlan({ length, addOns, level, focus: activeFocus }, userBag, yardages),
+    [length, addOns, level, activeFocus, userBag, yardages],
+  );
+  const quickMinutes = useMemo(
+    () => estimateMinutes(buildPlan({ length: "quick", addOns, level, focus: activeFocus }, userBag, yardages)),
+    [addOns, level, activeFocus, userBag, yardages],
+  );
+  const fullMinutes = useMemo(
+    () => estimateMinutes(buildPlan({ length: "full", addOns: [], level, focus: activeFocus }, userBag, yardages)),
+    [level, activeFocus, userBag, yardages],
+  );
+
+  const [run, setRun] = useState<RunState | null>(() => loadActiveRun());
+  const [done, setDone] = useState<DoneState | null>(null);
+
+  // Putting: a separate state track (no block list, no clubs).
   const [puttingConfig, setPuttingConfig] = useState<PuttingSessionConfig | null>(() => loadActivePutting()?.config ?? null);
   const [puttingStations, setPuttingStations] = useState<PuttStation[]>(() => loadActivePutting()?.stations ?? []);
   const [puttingResults, setPuttingResults] = useState<StationResult[]>(() => loadActivePutting()?.results ?? []);
@@ -307,21 +337,16 @@ function PracticePage() {
   // picker and lands back in its own area.
   const [areaView, setAreaView] = useState<"picker" | "range" | "putting">(() => {
     if (loadActivePutting()) return "putting";
-    if (loadActiveSession()?.session) return "range";
+    if (loadActiveRun()) return "range";
     return "picker";
   });
-  const [completedRecord, setCompletedRecord] = useState<SavedSession | null>(null);
-  const [sessionMode, setSessionMode] = useState<"pick" | "list" | "guided" | null>(null);
   const [practiceTab, setPracticeTab] = useState<"build" | "saved" | "mine">("build");
   const [favorites, setFavorites] = useState<Favorite[]>([]);
 
   const resetAll = () => {
     clearActiveSession();
-    setSession(null);
-    setDone(new Set());
-    setSessionInput(null);
-    setCompletedRecord(null);
-    setSessionMode(null);
+    setRun(null);
+    setDone(null);
     setPuttingConfig(null);
     setPuttingStations([]);
     setPuttingResults([]);
@@ -342,27 +367,10 @@ function PracticePage() {
   const autoFavorites = favorites.filter((f) => f.sessionInput !== null);
   const customSessions = favorites.filter((f) => f.sessionInput === null);
 
-  // Custom input state, optional overrides for bucket and time
-  const [showCustomBucket, setShowCustomBucket] = useState(false);
-  const [customBallsStr, setCustomBallsStr] = useState("");
-  const [showCustomTime, setShowCustomTime] = useState(false);
-  const [customMinsStr, setCustomMinsStr] = useState("");
-
-  const customBalls = (() => { const n = parseInt(customBallsStr); return n > 0 ? n : null; })();
-  const customMins  = (() => { const n = parseInt(customMinsStr);  return n > 0 ? n : null; })();
-
-  const isFullBag = clubGroups.length === 1 && clubGroups[0] === "full-bag";
-
-  const handleClubGroupsChange = (next: ClubGroup[]) => {
-    if (isFullBag && next.length === 0) { setClubGroups([]); return; }
-    const base = next.filter((g) => g !== "full-bag");
-    setClubGroups(base.length === BASE_CLUB_GROUPS.length ? ["full-bag"] : base);
-  };
-
-  // Persist active session whenever session/done changes
+  // Persist the active range run whenever it moves
   useEffect(() => {
-    if (session && sessionInput) persistActiveSession(session, sessionInput, done);
-  }, [session, sessionInput, done]);
+    if (run) persistActiveRun(run);
+  }, [run]);
 
   // Persist the putting runner whenever its progress changes
   useEffect(() => {
@@ -371,69 +379,36 @@ function PracticePage() {
     }
   }, [puttingConfig, puttingStations, puttingResults, puttingCurrentSets]);
 
-  const hasValidBucket = bucket !== null || (showCustomBucket && customBalls !== null);
-  const hasValidTime   = time !== null   || (showCustomTime  && customMins  !== null);
-  const canGenerate = clubGroups.length >= 1 && hasValidBucket && hasValidTime && categories.length >= 1;
-
-  // Tells the user why Generate is still disabled instead of a silent grey button
-  const missingSteps = [
-    clubGroups.length < 1 && "clubs",
-    !hasValidBucket && "bucket size",
-    !hasValidTime && "time",
-    categories.length < 1 && "a category",
-  ].filter(Boolean) as string[];
-  const missingHint = missingSteps.length > 0
-    ? `Pick ${missingSteps.length === 1 ? missingSteps[0] : `${missingSteps.slice(0, -1).join(", ")} and ${missingSteps[missingSteps.length - 1]}`} to continue`
-    : null;
-
-  const generate = () => {
-    if (!canGenerate) return;
-    const wuBalls = warmUp ? warmUpBallCount(warmUp) : 0;
-    const input: GenerateInput = {
-      clubGroups,
-      bucket: bucket ?? "medium",  // placeholder when custom overrides
-      time:   time   ?? 30,        // placeholder when custom overrides
-      goal: goals[0] ?? "accuracy",  // back-compat fallback
-      goals: goals.length > 0 ? goals : undefined,
-      category: categories[0],
-      categories,
-      handicap,
-      level: level ?? undefined,
-      style,
-      warmUpBalls: wuBalls,
-      bag: userBag.length > 0 ? userBag : undefined,
-      ...(showCustomBucket && customBalls !== null ? { customBalls }          : {}),
-      ...(showCustomTime   && customMins  !== null ? { customMinutes: customMins } : {}),
-    };
-    const drills = generateSession(input);
-    const warmUpItems = warmUp ? buildWarmUp(warmUp) : [];
-    setSessionInput(input);
-    setSession([...warmUpItems, ...drills]);
-    setDone(new Set());
-    setCompletedRecord(null);
-    setSessionMode("pick");
+  const startPlan = () => {
+    if (plan.length === 0) return;
+    setDone(null);
+    setRun({
+      blocks: plan,
+      index: 0,
+      label: length === "quick" ? "Quick session" : "Full session",
+      source: "plan",
+      focus: activeFocus,
+    });
   };
 
-  const reset = () => {
-    clearActiveSession();
-    setSession(null);
-    setDone(new Set());
-    setSessionInput(null);
-    setCompletedRecord(null);
-    setSessionMode(null);
-    setAreaView("picker");
+  const startFavorite = (fav: Favorite, source: RunSource) => {
+    setDone(null);
+    setRun({ blocks: drillsToBlocks(fav.session), index: 0, label: fav.name, source });
   };
 
-  const handleComplete = () => {
-    if (!session) return;
+  const finishRun = (blocksDone: number) => {
+    if (!run) return;
     clearActiveSession();
-    if (!sessionInput) {
-      // Custom session, no stats to save, just reset
-      reset();
-      return;
-    }
-    const record = saveSession(session, sessionInput);
-    setCompletedRecord(record);
+    const finished = run.blocks.slice(0, blocksDone);
+    const balls = totalBalls(finished);
+    if (finished.length > 0) saveRangeSession(finished, run.label);
+    setDone({ blocks: run.blocks, blocksDone: finished.length, balls, label: run.label, source: run.source, focus: run.focus });
+    setRun(null);
+  };
+
+  const discardRun = () => {
+    clearActiveSession();
+    setRun(null);
   };
 
   // Called by PuttingSessionView when the user finishes (whether all planned
@@ -478,123 +453,25 @@ function PracticePage() {
   }
 
   // ── Completion screen (range)
-  if (completedRecord && session && sessionInput) {
+  if (done) {
     return (
-      <CompletionView
-        record={completedRecord}
-        session={session}
-        sessionInput={sessionInput}
-        onNewSession={reset}
-        onFavoriteSaved={() => loadFavoritesAsync().then(setFavorites)}
-      />
-    );
-  }
-
-  // ── Mode picker
-  if (session && sessionMode === "pick") {
-    const sessionPhases = PHASE_ORDER.filter((p) => session.some((d) => phaseOf(d) === p));
-    return (
-      <AppShell showBack onBack={reset}>
-        <div className="flex flex-col items-center pt-10 text-center px-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Session Ready</p>
-          <h1 className="mt-2 font-display text-[42px] leading-[0.98] tracking-[-0.01em]">
-            Choose your<br />view.
-          </h1>
-          <p className="mt-3 text-[15px] text-muted-foreground max-w-[280px]">
-            {session.length} drill{session.length !== 1 ? "s" : ""} · How do you want to work through them?
-          </p>
-
-          {/* Session arc: the phases this session moves through, in order, so the
-              structure is clear before the first ball is hit. */}
-          {sessionPhases.length > 1 && (
-            <div className="mt-8 w-full text-left">
-              <p className="mb-3 text-center text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Your session arc
-              </p>
-              <div className="space-y-2">
-                {sessionPhases.map((p) => {
-                  const meta = PHASE_META[p];
-                  const PhaseIcon = meta.icon;
-                  const count = session.filter((d) => phaseOf(d) === p).length;
-                  return (
-                    <div key={p} className="flex items-center gap-3 rounded-xl border border-border bg-card px-3.5 py-2.5">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                        <PhaseIcon className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-bold uppercase tracking-[0.12em] leading-none">{p}</p>
-                        <p className="mt-1 text-[12px] leading-snug text-muted-foreground">{meta.blurb}</p>
-                      </div>
-                      <span className="shrink-0 text-[12px] font-semibold tabular-nums text-muted-foreground">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-8 w-full space-y-3">
-            {/* Guided */}
-            <button
-              type="button"
-              onClick={() => setSessionMode("guided")}
-              className="w-full rounded-2xl border-2 border-primary bg-primary/5 px-5 py-5 text-left transition active:scale-[0.99]"
-            >
-              <p className="font-bold text-[16px] text-primary uppercase tracking-[0.06em]">Guided Mode</p>
-              <p className="mt-1 text-[14px] text-muted-foreground">One drill at a time. No distractions.</p>
-            </button>
-
-            {/* List */}
-            <button
-              type="button"
-              onClick={() => setSessionMode("list")}
-              className="w-full rounded-2xl border border-border bg-card px-5 py-5 text-left transition active:scale-[0.99]"
-            >
-              <p className="font-bold text-[16px] uppercase tracking-[0.06em]">List View</p>
-              <p className="mt-1 text-[14px] text-muted-foreground">See all drills, check them off as you go.</p>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={reset}
-            className="mt-6 text-sm font-semibold text-muted-foreground active:opacity-70"
-          >
-            Cancel
-          </button>
-        </div>
-      </AppShell>
-    );
-  }
-
-  // ── Guided mode
-  if (session && sessionMode === "guided") {
-    return (
-      <GuidedSessionView
-        session={session}
-        onComplete={handleComplete}
-        onReset={reset}
-        onSwitchView={() => setSessionMode("list")}
-      />
-    );
-  }
-
-  // ── Active session checklist (list view)
-  if (session && sessionMode === "list") {
-    return (
-      <SessionView
-        session={session}
+      <RangeCompletionView
         done={done}
-        onToggle={(id) => {
-          setDone((prev) => {
-            const next = new Set(prev);
-            if (next.has(id)) next.delete(id); else next.add(id);
-            return next;
-          });
-        }}
-        onReset={reset}
-        onComplete={handleComplete}
-        onSwitchView={() => setSessionMode("guided")}
+        onNewSession={() => { setDone(null); setAreaView("range"); setPracticeTab("build"); }}
+        onFavoriteSaved={reloadFavorites}
+      />
+    );
+  }
+
+  // ── Active range session
+  if (run) {
+    return (
+      <BlockSessionView
+        blocks={run.blocks}
+        index={run.index}
+        onIndexChange={(i) => setRun((r) => (r ? { ...r, index: i } : r))}
+        onFinish={finishRun}
+        onDiscard={discardRun}
       />
     );
   }
@@ -625,7 +502,25 @@ function PracticePage() {
     );
   }
 
-  // ── Filter / builder screen (driving range)
+  const planBalls = totalBalls(plan);
+  const planMinutes = estimateMinutes(plan);
+  const toggleAddOn = (a: AddOn) =>
+    setAddOns((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+
+  // Preview rows grouped by section, in session order
+  const sections: { name: string; blocks: PracticeBlock[] }[] = [];
+  for (const b of plan) {
+    const last = sections[sections.length - 1];
+    if (last && last.name === b.section) last.blocks.push(b);
+    else sections.push({ name: b.section, blocks: [b] });
+  }
+
+  const ADD_ONS: { value: AddOn; label: string; sub: string }[] = [
+    { value: "control",   label: "Control",   sub: level === "learning" ? "Aim at new targets" : "Shape and height" },
+    { value: "tee-shots", label: "Tee shots", sub: level === "learning" ? "Hybrid and driver" : "Driving iron and driver" },
+  ];
+
+  // ── Builder screen (driving range)
   return (
     <AppShell showBack onBack={() => setAreaView("picker")}>
       {/* ── Upgraded success modal ── */}
@@ -653,7 +548,7 @@ function PracticePage() {
         </div>
       )}
 
-      <div className="pb-32 space-y-7">
+      <div className="pb-32 space-y-6">
         {/* Build / Saved / My Sessions tab switcher */}
         <div className="pt-2 grid grid-cols-3 gap-2">
           {(["build", "saved", "mine"] as const).map((tab) => {
@@ -686,407 +581,242 @@ function PracticePage() {
           })}
         </div>
 
-        {/* Saved tab content */}
         {practiceTab === "saved" && (
           <SavedTab
             favorites={autoFavorites}
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
-            onRun={(fav) => {
-              setSessionInput(fav.sessionInput);
-              setSession(fav.session);
-              setDone(new Set());
-              setCompletedRecord(null);
-              setSessionMode("pick");
-            }}
+            onRun={(fav) => startFavorite(fav, "saved")}
           />
         )}
 
-        {/* My Sessions tab content */}
         {practiceTab === "mine" && (
           <CustomSessionsTab
             sessions={customSessions}
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
-            onRun={(fav) => {
-              setSessionInput(null);
-              setSession(fav.session);
-              setDone(new Set());
-              setCompletedRecord(null);
-              setSessionMode("pick");
-            }}
+            onRun={(fav) => startFavorite(fav, "custom")}
           />
         )}
 
-        {/* Builder, hidden when on Saved tab */}
         {practiceTab === "build" && (
-        <div className="space-y-7">
-        {/* Heading block */}
-        <div className="pb-2">
-          {/* "Step 1 of 1" was noise, there's only one step */}
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Practice</p>
-          <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Build your session.</h1>
-          <p className="mt-2.5 text-[15px] text-muted-foreground">
-            {clubGroups.length || 0} group{clubGroups.length === 1 ? "" : "s"} · {
-              bucket === "unlimited" ? "Unlimited" :
-              showCustomBucket && customBalls ? `${customBalls} balls` :
-              bucket === "small" ? "30 balls" : bucket === "medium" ? "60 balls" : bucket === "large" ? "100 balls" : "– balls"
-            } · {
-              showCustomTime && customMins ? `${customMins} min` : time ? `${time} min` : "– min"
-            }
-          </p>
-        </div>
-
-        {/* Today's plan, practice style, level, and Pro recommendation */}
-        <div className="rounded-[20px] border border-border bg-card p-4 space-y-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Practice style</p>
-              <p className="mt-1 font-display text-[24px] leading-none">{STYLE_PROFILES[style].label}</p>
-              <p className="mt-1.5 text-[13px] text-muted-foreground">{STYLE_PROFILES[style].blurb}</p>
-              <p className="mt-1.5 text-[11px] text-muted-foreground/80">
-                {handicap !== undefined
-                  ? `Based on your ${fmtHandicap(handicap)} handicap`
-                  : level
-                  ? "Based on your selected level"
-                  : "Pick your level to personalize your plan"}
+          <div className="space-y-6">
+            {/* Heading */}
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Driving Range</p>
+              <h1 className="mt-1.5 font-display text-[38px] leading-[0.98] tracking-[-0.01em]">Today's session.</h1>
+              <p className="mt-2 text-[15px] text-muted-foreground tabular-nums">
+                {plan.length} blocks · {planBalls} balls · about {planMinutes} min
               </p>
             </div>
-          </div>
 
-          {/* Level chips, only when no handicap is logged */}
-          {handicap === undefined && (
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
-              {PLAYER_LEVELS.map((l) => (
+            {/* Built for you (Pro), or the one Pro prompt for free users */}
+            {isPro ? (
+              focusPick ? (
+                focusPick.focus === "putting" ? (
+                  <div className="rounded-[18px] border border-gold-border bg-gold-bg p-4">
+                    <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-gold">
+                      <Sparkles className="h-3.5 w-3.5" /> Built for you
+                    </p>
+                    <p className="mt-1.5 text-[14px] leading-snug text-foreground">{focusPick.reason}</p>
+                    <button
+                      type="button"
+                      onClick={() => setAreaView("putting")}
+                      className="mt-3 inline-flex h-10 items-center gap-1 rounded-full bg-primary px-4 text-[13px] font-bold text-primary-foreground active:opacity-90"
+                    >
+                      Go to Putting Green <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setForYouOn((v) => !v)}
+                    aria-pressed={forYouOn}
+                    className={cn(
+                      "flex w-full items-start gap-3 rounded-[18px] border p-4 text-left transition-colors",
+                      forYouOn ? "border-gold-border bg-gold-bg" : "border-border bg-card",
+                    )}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-gold">
+                        <Sparkles className="h-3.5 w-3.5" /> Built for you
+                      </p>
+                      <p className="mt-1.5 text-[14px] leading-snug text-foreground">{focusPick.reason}</p>
+                    </div>
+                    <span
+                      className={cn(
+                        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
+                        forYouOn ? "border-gold bg-gold text-white" : "border-muted-foreground/40",
+                      )}
+                      aria-hidden
+                    >
+                      {forYouOn && <Check className="h-3.5 w-3.5" />}
+                    </span>
+                  </button>
+                )
+              ) : (
                 <button
-                  key={l.value}
                   type="button"
-                  onClick={() => chooseLevel(l.value)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
-                    level === l.value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-muted/60 text-foreground active:bg-muted",
-                  )}
+                  onClick={() => navigate({ to: "/profile" })}
+                  className="flex w-full items-center gap-2.5 rounded-[18px] border border-border bg-card p-4 text-left active:bg-muted"
                 >
-                  {l.label}
+                  <Sparkles className="h-4 w-4 shrink-0 text-gold" />
+                  <span className="flex-1 text-[13.5px] leading-snug text-muted-foreground">
+                    Log a round on Profile and today's session gets built around it.
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
                 </button>
-              ))}
-            </div>
-          )}
-
-          {/* Pro recommendation from logged stats */}
-          {recommendation && (
-            isPro ? (
-              <button
-                type="button"
-                onClick={() => setCategories([GOAL_TO_CATEGORY[recommendation.goal]])}
-                className="w-full flex items-center gap-2.5 rounded-[14px] border border-gold-border bg-gold-bg p-3 text-left active:opacity-90 transition-opacity"
-              >
-                <Sparkles className="h-4 w-4 text-gold shrink-0" />
-                <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-foreground">
-                  <span className="font-bold">Recommended: {CATEGORIES.find((c) => c.value === GOAL_TO_CATEGORY[recommendation.goal])?.label}</span>
-                  {", "}{recommendation.reason}. Tap to focus here.
-                </span>
-              </button>
+              )
             ) : (
               <button
                 type="button"
                 onClick={() => setProOpen(true)}
-                className="w-full flex items-center gap-2.5 rounded-[14px] border border-border bg-muted/60 p-3 text-left active:bg-muted transition-colors"
+                className="flex w-full items-center gap-2.5 rounded-[18px] border border-gold-border bg-gold-bg p-4 text-left active:opacity-90"
               >
-                <Zap className="h-4 w-4 text-gold shrink-0" />
-                <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-muted-foreground">
-                  <span className="font-bold text-foreground">Pro:</span> a personalized focus picked from your round stats.
+                <Sparkles className="h-4 w-4 shrink-0 text-gold" />
+                <span className="flex-1 text-[13.5px] leading-snug text-foreground">
+                  {focusPick && focusPick.focus !== "putting"
+                    ? <>Your last round points to <span className="font-bold">{FOCUS_LABEL[focusPick.focus]}</span>. Pro builds today's session around it.</>
+                    : <><span className="font-bold">Pro</span> builds today's session around your last round.</>}
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-gold" />
               </button>
-            )
-          )}
-        </div>
+            )}
 
-        {/* Warm Up */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Flame className="h-4 w-4 text-primary" />
-            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-primary">
-              Warm Up · Optional
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {WARM_UP_PRESETS.map((p) => {
-              const active = warmUp === p.value;
-              return (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => setWarmUp((curr) => (curr === p.value ? null : p.value))}
-                  aria-pressed={active}
-                  className={cn(
-                    "min-h-[52px] rounded-full px-4 text-sm font-semibold transition-colors border",
-                    active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/60 text-foreground border-border active:bg-muted",
-                  )}
-                >
-                  {p.label} · {p.minutes} min
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {warmUp
-              ? "A warm-up checklist will be added to the top of your session."
-              : "Tap a preset to add a warm-up, or skip it."}
-          </p>
-        </div>
+            {/* Length */}
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { value: "quick" as const, label: "Quick", sub: `About ${quickMinutes} min` },
+                { value: "full" as const,  label: "Full session", sub: `About ${fullMinutes} min` },
+              ]).map((opt) => {
+                const active = length === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setLength(opt.value)}
+                    aria-pressed={active}
+                    className={cn(
+                      "rounded-[16px] border px-4 py-4 text-left transition-colors",
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card active:bg-muted",
+                    )}
+                  >
+                    <p className="text-[15px] font-bold">{opt.label}</p>
+                    <p className={cn("mt-0.5 text-[12.5px]", active ? "text-primary-foreground/75" : "text-muted-foreground")}>{opt.sub}</p>
+                  </button>
+                );
+              })}
+            </div>
 
-        {/* Club group picker, custom layout so Full Bag can be wider */}
-        <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            {isFullBag ? "Club group" : "Club group · Pick 1–5"}
-          </p>
+            {/* Add-ons (Full already includes both) */}
+            {length === "quick" && (
+              <div className="space-y-2">
+                <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Add on</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ADD_ONS.map((a) => {
+                    const active = addOns.includes(a.value);
+                    return (
+                      <button
+                        key={a.value}
+                        type="button"
+                        onClick={() => toggleAddOn(a.value)}
+                        aria-pressed={active}
+                        className={cn(
+                          "flex items-start gap-2 rounded-[16px] border px-3.5 py-3 text-left transition-colors",
+                          active ? "border-primary bg-primary/5" : "border-border bg-card active:bg-muted",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2",
+                            active ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40",
+                          )}
+                          aria-hidden
+                        >
+                          {active ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3 text-muted-foreground" />}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[14px] font-bold leading-tight">{a.label}</span>
+                          <span className="mt-0.5 block text-[12px] leading-snug text-muted-foreground">{a.sub}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-          <div className="flex flex-wrap gap-2">
-            {isFullBag ? (
-              // Full Bag active, single full-width pill, tap to clear
-              <button
-                type="button"
-                onClick={() => setClubGroups([])}
-                aria-pressed
-                className="w-full min-h-[52px] rounded-full border border-primary bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors active:opacity-90"
-              >
-                Full Bag
-              </button>
-            ) : (
-              <>
-                {BASE_CLUB_GROUPS.map((opt) => {
-                  const active = clubGroups.includes(opt.value);
+            {/* Level: changes the cues and tips, not the screen */}
+            <div className="space-y-2">
+              <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Your level</p>
+              <div className="inline-flex rounded-full border border-border bg-card p-0.5">
+                {(["learning", "experienced"] as const).map((l) => {
+                  const active = level === l;
                   return (
                     <button
-                      key={opt.value}
+                      key={l}
                       type="button"
-                      onClick={() =>
-                        handleClubGroupsChange(
-                          active
-                            ? clubGroups.filter((g) => g !== opt.value)
-                            : [...clubGroups, opt.value],
-                        )
-                      }
+                      onClick={() => setLevelOverride(l)}
                       aria-pressed={active}
                       className={cn(
-                        "min-h-[52px] rounded-full border px-4 text-sm font-semibold transition-colors",
-                        active
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-muted/60 text-foreground active:bg-muted",
+                        "h-10 rounded-full px-5 text-[13px] font-bold transition-colors",
+                        active ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-muted",
                       )}
                     >
-                      {opt.label}
+                      {l === "learning" ? "Learning" : "Experienced"}
                     </button>
                   );
                 })}
-
-                {/* Full Bag shortcut, flex-1 makes it fill remaining row space next to Driver */}
-                <button
-                  type="button"
-                  onClick={() => setClubGroups(["full-bag"])}
-                  aria-pressed={false}
-                  className="flex-1 min-w-[8rem] min-h-[52px] rounded-full border border-border bg-muted/60 px-4 text-sm font-semibold text-foreground transition-colors active:bg-muted"
-                >
-                  Full Bag
-                </button>
-              </>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            {isFullBag
-              ? "All five groups selected → Full Bag. Tap to clear."
-              : "Select individual groups or tap Full Bag directly."}
-          </p>
-        </div>
-
-        {/* Bucket size */}
-        <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Bucket Size</p>
-          <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(4, 1fr) auto" }}>
-            {BUCKET_SIZES.map((b) => {
-              const active = !showCustomBucket && bucket === b.value;
-              const isUnlimited = b.value === "unlimited";
-              return (
-                <button
-                  key={b.value}
-                  type="button"
-                  onClick={() => { setBucket(b.value); setShowCustomBucket(false); setCustomBallsStr(""); }}
-                  aria-pressed={active}
-                  className={cn(
-                    "h-[76px] rounded-[14px] border flex flex-col items-center justify-center gap-0.5 transition-colors",
-                    active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-foreground border-border active:bg-muted"
-                  )}
-                >
-                  <span className="font-display text-[28px] leading-none tracking-[-0.01em]">
-                    {isUnlimited ? "∞" : b.label.charAt(0)}
-                  </span>
-                  <span className={cn("text-[11px] font-bold uppercase tracking-[0.1em]", active ? "opacity-80" : "opacity-60")}>
-                    {isUnlimited ? "NO LIMIT" : `${b.balls} BALLS`}
-                  </span>
-                </button>
-              );
-            })}
-            {/* Custom tile */}
-            {showCustomBucket ? (
-              <div className="h-[76px] w-[76px] rounded-[14px] border border-primary/50 bg-primary/5 flex flex-col items-center justify-center gap-1 px-2">
-                <input
-                  type="number"
-                  value={customBallsStr}
-                  onChange={(e) => setCustomBallsStr(e.target.value)}
-                  placeholder="0"
-                  min={1}
-                  max={500}
-                  autoFocus
-                  className="w-full bg-transparent text-sm font-bold text-primary outline-none text-center"
-                />
-                <button
-                  type="button"
-                  onClick={() => { setShowCustomBucket(false); setCustomBallsStr(""); setBucket(null); }}
-                  className="text-muted-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setShowCustomBucket(true); setBucket(null); }}
-                className="h-[76px] w-[76px] rounded-[14px] border border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground text-[14px] font-semibold tracking-[0.06em] transition-colors active:bg-muted"
-              >
-                <Plus className="h-4 w-4" />
-                Custom
-              </button>
-            )}
-          </div>
-        </div>
+              <p className="text-[12px] text-muted-foreground">
+                {level === "learning" ? "Simple cues in plain words." : "Targets and shot work for a steady swing."}
+              </p>
+            </div>
 
-        {/* Time available */}
-        <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            Time available
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {TIMES.map((t) => {
-              const active = !showCustomTime && time === t;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => { setTime(t); setShowCustomTime(false); setCustomMinsStr(""); }}
-                  aria-pressed={active}
-                  className={cn(
-                    "min-h-[52px] rounded-full border px-4 text-sm font-semibold transition-colors",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-muted/60 text-foreground active:bg-muted",
-                  )}
-                >
-                  {t} min
-                </button>
-              );
-            })}
-
-            {showCustomTime ? (
-              <div className="flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/5 px-3 py-2">
-                <input
-                  type="number"
-                  value={customMinsStr}
-                  onChange={(e) => setCustomMinsStr(e.target.value)}
-                  placeholder="0"
-                  min={1}
-                  max={180}
-                  autoFocus
-                  className="w-12 bg-transparent text-sm font-bold text-primary outline-none"
-                />
-                <span className="shrink-0 text-xs text-muted-foreground">min</span>
+            {/* Preview */}
+            <div className="rounded-[18px] border border-border bg-card px-4 py-3">
+              {bagLoaded && userBag.length === 0 && (
                 <button
                   type="button"
-                  onClick={() => { setShowCustomTime(false); setCustomMinsStr(""); setTime(null); }}
-                  className="ml-0.5 text-muted-foreground transition active:text-foreground"
+                  onClick={() => navigate({ to: "/profile" })}
+                  className="mb-2 w-full rounded-xl bg-muted px-3 py-2 text-left text-[12.5px] text-muted-foreground active:opacity-80"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  Add your clubs in Profile so sessions use your bag.
                 </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => { setShowCustomTime(true); setTime(null); }}
-                className="min-h-[52px] rounded-full border border-dashed border-border px-4 text-sm font-semibold text-muted-foreground transition-colors active:bg-muted"
-              >
-                Custom
-              </button>
-            )}
+              )}
+              {sections.map((s, si) => (
+                <div key={`${s.name}-${si}`} className={cn(si > 0 && "mt-3")}>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-gold">{s.name}</p>
+                  <ul className="mt-1">
+                    {s.blocks.map((b) => (
+                      <li key={b.id} className="flex items-center justify-between gap-3 py-1.5">
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-1.5 text-[14px] font-semibold">
+                            <span className="truncate">{b.club}</span>
+                            {b.forYou && <Sparkles className="h-3 w-3 shrink-0 text-gold" aria-label="Built for you" />}
+                          </span>
+                          <span className="block truncate text-[12.5px] text-muted-foreground">{b.cue}</span>
+                        </span>
+                        <span className="shrink-0 font-stats text-[18px] tabular-nums text-muted-foreground">{b.balls}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        {/* Category picker */}
-        <div className="space-y-2">
-          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            Category{categories.length === 2 ? " (2 selected)" : " · Pick 1-2"}
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {CATEGORIES.map((cat) => {
-              const active = categories.includes(cat.value);
-              return (
-                <button
-                  key={cat.value}
-                  type="button"
-                  onClick={() => {
-                    setCategories((prev) => {
-                      if (active) return prev.filter((c) => c !== cat.value);
-                      return [...prev, cat.value].slice(-2);
-                    });
-                  }}
-                  aria-pressed={active}
-                  className={cn(
-                    "rounded-[14px] border px-3.5 py-3 text-left transition-colors",
-                    active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card active:bg-muted",
-                  )}
-                >
-                  <p className={cn("text-[13px] font-bold leading-tight", !active && "text-foreground")}>{cat.label}</p>
-                  <p className={cn("mt-0.5 text-[11px] leading-snug", active ? "text-primary-foreground/70" : "text-muted-foreground")}>{cat.description}</p>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {categories.length === 1 && categories[0] === "swing-flow"
-              ? "Use full bag for best results."
-              : categories.length === 2
-              ? "Two categories selected, your session blends both."
-              : categories.length === 1
-              ? "Tap another to blend two categories, or generate with one."
-              : "Pick a focus for your session."}
-          </p>
-        </div>
-
-        </div>
         )}
-
       </div>
 
       {practiceTab === "build" && (
         <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
              style={{ bottom: "calc(68px + env(safe-area-inset-bottom))", backdropFilter: "blur(8px)" }}>
           <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
-            {!canGenerate && missingHint && (
-              <p className="mb-2 text-center text-[12px] font-medium text-muted-foreground">{missingHint}</p>
-            )}
             <Button
               size="lg"
-              disabled={!canGenerate}
-              onClick={generate}
+              disabled={plan.length === 0}
+              onClick={startPlan}
               className="h-14 w-full rounded-[14px] text-[14px] font-bold uppercase tracking-[0.06em]"
             >
-              Generate Session
+              Start · {planBalls} balls
             </Button>
           </div>
         </div>
@@ -1095,213 +825,48 @@ function PracticePage() {
       <ProModal
         open={proOpen}
         onClose={() => setProOpen(false)}
-        reason="Pro reads your logged round stats and recommends what to practice, plus Combine, Pro games, and more."
+        reason="Pro reads your last round and builds today's practice around it, plus Combine, Pro games, and more."
       />
     </AppShell>
   );
 }
 
-// ─── Session checklist ────────────────────────────────────────────────────────
+// ─── Completion screen (range) ───────────────────────────────────────────────
 
-interface SessionViewProps {
-  session: SessionDrill[];
-  done: Set<string>;
-  onToggle: (id: string) => void;
-  onReset: () => void;
-  onComplete: () => void;
-  onSwitchView: () => void;
-}
-
-function SessionView({ session, done, onToggle, onReset, onComplete, onSwitchView }: SessionViewProps) {
-  const completedCount = done.size;
-  const progress = session.length > 0 ? (completedCount / session.length) * 100 : 0;
-  const allDone = completedCount === session.length && session.length > 0;
-
-  // Group by session phase (Warm Up > Skill > Transfer > Challenge > Test).
-  // Falls back to the block's club for any legacy session without a phase.
-  const byPhase = useMemo(() => {
-    const map = new Map<SessionPhase, SessionDrill[]>();
-    session.forEach((d) => {
-      const phase = phaseOf(d);
-      const arr = map.get(phase) ?? [];
-      arr.push(d);
-      map.set(phase, arr);
-    });
-    return PHASE_ORDER.filter((p) => map.has(p)).map((p) => [p, map.get(p)!] as const);
-  }, [session]);
-
-  return (
-    <AppShell showBack onBack={onReset}>
-      <div className="pb-12">
-        {/* Guided/List view switch */}
-        <div className="flex justify-center pb-4">
-          <ViewToggle mode="list" onSwitch={onSwitchView} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div>
-            <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your Session</p>
-            <h1 className="mt-1 font-display text-[36px] leading-[1.0] tracking-[-0.01em]">In progress.</h1>
-          </div>
-          <div className="text-right leading-none pb-1">
-            <span className="font-stats text-[48px] leading-none tabular-nums text-primary">{completedCount}</span>
-            <span className="font-stats text-[22px] leading-none tabular-nums text-muted-foreground">/{session.length}</span>
-          </div>
-        </div>
-
-        <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full bg-primary transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        <div className="mt-6 space-y-6">
-          {byPhase.map(([phase, drills]) => {
-            const meta = PHASE_META[phase];
-            const PhaseIcon = meta.icon;
-            const isWarmUp = phase === "Warm Up";
-            // A block's club is only meaningful in Skill/Warm Up; the back-half
-            // phases use pseudo-clubs ("Transfer", "Challenge", "Performance Test").
-            const showClub = (d: SessionDrill) =>
-              !!d.club && !["Transfer", "Challenge", "Performance Test", "Warm Up"].includes(d.club);
-            return (
-              <section key={phase}>
-                <div className="flex items-center gap-2 pb-2 border-b border-border">
-                  <PhaseIcon className={cn("h-4 w-4", isWarmUp ? "text-primary" : "text-muted-foreground")} />
-                  <h2 className={cn("font-ui text-[14px] font-bold uppercase tracking-[0.2em]", isWarmUp && "text-primary")}>
-                    {phase}
-                  </h2>
-                  <span className="ml-auto font-stats text-[18px] text-muted-foreground tabular-nums">
-                    {drills.filter(d => done.has(d.id)).length}/{drills.length}
-                  </span>
-                </div>
-                <p className="mt-1.5 text-[12px] text-muted-foreground">{meta.blurb}</p>
-                <ul className="mt-3 space-y-2">
-                  {drills.map((d) => {
-                    const isDone = done.has(d.id);
-                    return (
-                      <li key={d.id}>
-                        <button
-                          type="button"
-                          onClick={() => onToggle(d.id)}
-                          className={cn(
-                            "w-full rounded-2xl border p-4 text-left transition active:scale-[0.99]",
-                            isDone ? "border-border bg-muted" : "border-border bg-card",
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className={cn(
-                                "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2",
-                                isDone
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-muted-foreground/40",
-                              )}
-                              aria-hidden
-                            >
-                              {isDone ? (
-                                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.7 5.3a1 1 0 010 1.4l-7.4 7.4a1 1 0 01-1.4 0L3.3 9.5a1 1 0 011.4-1.4l3.9 3.9 6.7-6.7a1 1 0 011.4 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              ) : null}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  {showClub(d) && (
-                                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">{d.club}</p>
-                                  )}
-                                  <p className={cn("font-semibold", isDone && "line-through text-muted-foreground")}>
-                                    {d.drillName}
-                                  </p>
-                                </div>
-                                <span className={cn("font-stats text-[22px] leading-none tabular-nums shrink-0", isDone ? "text-muted-foreground" : "text-foreground")}>
-                                  {d.balls > 0 ? d.balls : d.unit ?? "–"}
-                                  {d.balls > 0 && (
-                                    <span className="text-[13px] font-bold tracking-[0.14em] ml-0.5">
-                                      {d.isTarget ? "TARGET" : "BALLS"}
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
-                              <p className={cn("mt-1 text-sm text-muted-foreground", isDone && "line-through")}>
-                                {d.description}
-                              </p>
-                            </div>
-                          </div>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
-
-        <div className="mt-10 space-y-3">
-          {allDone ? (
-            <Button
-              onClick={onComplete}
-              className="h-14 w-full rounded-xl text-base font-bold uppercase tracking-wide"
-            >
-              <CheckCircle2 className="mr-2 h-5 w-5" />
-              Complete Session
-            </Button>
-          ) : (
-            <QuitGameButton label="Quit Session" />
-          )}
-        </div>
-      </div>
-    </AppShell>
-  );
-}
-
-// ─── Completion screen ────────────────────────────────────────────────────────
-
-function CompletionView({
-  record,
-  session,
-  sessionInput,
+function RangeCompletionView({
+  done,
   onNewSession,
   onFavoriteSaved,
 }: {
-  record: SavedSession;
-  session: SessionDrill[];
-  sessionInput: GenerateInput;
+  done: DoneState;
   onNewSession: () => void;
   onFavoriteSaved: () => void;
 }) {
   const navigate = useNavigate();
   const { isPro } = useAuth();
   const name = loadProfileName();
-  const drillBalls = session
-    .filter((d) => d.club !== "Warm Up")
-    .reduce((sum, d) => sum + d.balls, 0);
-  const categoryLabel = sessionInput.category
-    ? CATEGORIES.find((c) => c.value === sessionInput.category)?.label
-    : GOALS.find((g) => g.value === record.filters.goal)?.label ?? "";
-  const goalLabel = categoryLabel ?? "";
-  const bucketLabel = BUCKET_SIZES.find((b) => b.value === record.filters.bucket)?.label ?? "";
+  const finishedAll = done.blocksDone === done.blocks.length;
 
   const [saveOpen, setSaveOpen] = useState(false);
-  const [proOpen, setProOpen] = useState(false);
-  const [favName, setFavName] = useState(() => defaultFavoriteName(sessionInput));
+  const [proReason, setProReason] = useState<string | null>(null);
+  const [favName, setFavName] = useState(() => {
+    const date = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric" });
+    return `${done.label} · ${date}`;
+  });
   const [saved, setSaved] = useState(false);
   const [existingFavs, setExistingFavs] = useState<Favorite[]>([]);
   useEffect(() => { loadFavoritesAsync().then(setExistingFavs); }, []);
 
   const handleSaveClick = () => {
-    if (!isPro && isAtFreeLimit(existingFavs)) { setProOpen(true); return; }
+    if (!isPro && isAtFreeLimit(existingFavs)) {
+      setProReason(`Free accounts can save up to ${FREE_LIMIT} session${FREE_LIMIT !== 1 ? "s" : ""}. Go Pro for unlimited saves and sessions built from your rounds.`);
+      return;
+    }
     setSaveOpen(true);
   };
 
   const confirmSave = () => {
-    saveFavorite(favName, sessionInput, session);
+    saveFavorite(favName, PLAN_INPUT, blocksToDrills(done.blocks));
     setSaveOpen(false);
     setSaved(true);
     onFavoriteSaved();
@@ -1310,28 +875,28 @@ function CompletionView({
   return (
     <AppShell>
       <div className="flex flex-col items-center pt-10 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
-          <Trophy className="h-12 w-12" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+          <Trophy className="h-10 w-10" />
         </div>
 
         <p className="mt-6 text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
-          Session Complete
+          {finishedAll ? "Session complete" : "Session saved"}
         </p>
-        <h1 className="mt-2 font-display text-[54px] leading-[0.95] tracking-[-0.015em]">
-          Locked In,<br/><em className="italic">{name ? `${name}.` : "champ."}</em>
+        <h1 className="mt-2 font-display text-[48px] leading-[0.95] tracking-[-0.015em]">
+          Nice work,<br /><em className="italic">{name ? `${name}.` : "champ."}</em>
         </h1>
 
-        <div className="mt-8 w-full rounded-2xl border border-border bg-card p-5 text-left">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Summary
+        <p className="mt-8 font-stats text-[88px] leading-none tabular-nums text-primary">{done.balls}</p>
+        <p className="mt-1 text-[14px] font-bold uppercase tracking-[0.16em] text-muted-foreground">balls hit</p>
+        <p className="mt-3 text-[14px] text-muted-foreground tabular-nums">
+          {done.blocksDone} of {done.blocks.length} blocks
+        </p>
+
+        {isPro && done.focus && done.blocks.slice(0, done.blocksDone).some((b) => b.forYou) && (
+          <p className="mt-5 inline-flex items-center gap-1.5 rounded-full border border-gold-border bg-gold-bg px-3 py-1.5 text-[12.5px] font-semibold text-gold">
+            <Sparkles className="h-3.5 w-3.5" /> Built for you: extra {FOCUS_LABEL[done.focus]}
           </p>
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-            <Stat label="Balls Hit" value={String(drillBalls)} />
-            <Stat label="Drills Done" value={String(record.drillCount)} />
-            <Stat label="Focus" value={goalLabel} serif />
-            <Stat label="Bucket" value={bucketLabel} serif />
-          </div>
-        </div>
+        )}
 
         <div className="mt-8 w-full space-y-3">
           <Button
@@ -1341,11 +906,10 @@ function CompletionView({
             New Session
           </Button>
 
-          {/* Save favorite */}
-          {saved ? (
+          {done.source === "plan" && (saved ? (
             <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-primary">
               <BookmarkCheck className="h-4 w-4" />
-              Saved to Favorites
+              Saved
             </div>
           ) : (
             <button
@@ -1356,7 +920,7 @@ function CompletionView({
               <Bookmark className="h-4 w-4" />
               Save Session
             </button>
-          )}
+          ))}
 
           <button
             type="button"
@@ -1366,6 +930,16 @@ function CompletionView({
             Back to Home
           </button>
         </div>
+
+        {!isPro && (
+          <button
+            type="button"
+            onClick={() => setProReason("Pro reads your last round and builds your next practice session around it.")}
+            className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-semibold text-gold active:opacity-80"
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Pro builds your next session from your last round
+          </button>
+        )}
       </div>
 
       {/* Save dialog */}
@@ -1403,9 +977,9 @@ function CompletionView({
       </Dialog>
 
       <ProModal
-        open={proOpen}
-        onClose={() => setProOpen(false)}
-        reason={`Free accounts can save up to ${FREE_LIMIT} session${FREE_LIMIT !== 1 ? "s" : ""}. Go Pro for unlimited saves and every feature.`}
+        open={proReason !== null}
+        onClose={() => setProReason(null)}
+        reason={proReason ?? undefined}
       />
     </AppShell>
   );
@@ -1837,7 +1411,7 @@ function CustomSessionsTab({
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                      {fav.session.length} drill{fav.session.length !== 1 ? "s" : ""}
+                      {fav.session.length} block{fav.session.length !== 1 ? "s" : ""}
                     </span>
                     <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                       {totalBalls} balls
@@ -1926,18 +1500,12 @@ function SavedTab({
                 {new Date(fav.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {fav.sessionInput?.clubGroups.map((g) => (
-                  <span key={g} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    {g === "full-bag" ? "Full Bag" : g.replace(/-/g, " ")}
-                  </span>
-                ))}
-                {fav.sessionInput && (
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    {fav.sessionInput.category
-                      ? CATEGORIES.find((c) => c.value === fav.sessionInput!.category)?.label ?? fav.sessionInput.category
-                      : GOALS.find((g) => g.value === fav.sessionInput!.goal)?.label ?? fav.sessionInput.goal}
-                  </span>
-                )}
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {fav.session.length} block{fav.session.length !== 1 ? "s" : ""}
+                </span>
+                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {fav.session.filter((d) => (d.unit ?? "balls") === "balls").reduce((n, d) => n + d.balls, 0)} balls
+                </span>
               </div>
             </div>
             <div className="flex items-center gap-1 shrink-0">

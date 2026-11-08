@@ -8,13 +8,20 @@ export const Route = createFileRoute("/upgrade")({
   component: UpgradePage,
 });
 
+// How Pro works, in three steps. This is the pitch: practice that follows
+// your rounds, not a pile of extra features.
+const PRO_LOOP = [
+  { title: "Log your round", body: "GIR, fairways, putts, and up and downs." },
+  { title: "Get a session built for it", body: "Range Rat finds your weak spot and builds today's practice around it." },
+  { title: "Practice with a purpose", body: "Every ball goes toward what costs you the most strokes." },
+];
+
 const PRO_FEATURES = [
-  "Random Practice mode",
-  "Range Rat Combine benchmark and history",
+  "Practice sessions built from your last round",
   "Round stats: GIR, fairways, putts, up and downs",
-  "Grid Game and Fairway Game",
+  "Range Rat Combine benchmark and history",
+  "Random Practice, Grid Game, and Fairway Game",
   "Custom sessions and unlimited saves",
-  "Priority support",
 ];
 
 function UpgradePage() {
@@ -77,12 +84,27 @@ function UpgradePage() {
           Range Rat Pro
         </div>
         <h1 className="font-display text-[42px] leading-[0.95] tracking-[-0.015em]">
-          Take your game<br />to the next level.
+          Practice what<br />your rounds need.
         </h1>
         <div className="mx-auto mt-4 h-[2px] w-11 rounded-full bg-gold-line opacity-80" />
         <p className="mt-4 text-[15px] text-muted-foreground leading-relaxed max-w-xs mx-auto">
-          Unlock every feature, track your progress, and train like a serious golfer.
+          Stop guessing at the range. Pro turns your last round into today's practice plan.
         </p>
+      </div>
+
+      {/* How it works */}
+      <div className="mt-8 space-y-3">
+        {PRO_LOOP.map((step, i) => (
+          <div key={step.title} className="flex gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gold-bg border border-gold-border font-stats text-[15px] text-gold">
+              {i + 1}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[14.5px] font-bold leading-tight">{step.title}</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">{step.body}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Plan toggle */}
@@ -118,7 +140,7 @@ function UpgradePage() {
       </div>
 
       {/* Features */}
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 space-y-3 border-t border-border pt-6">
         {PRO_FEATURES.map(f => (
           <div key={f} className="flex items-center gap-3">
             <div className="h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

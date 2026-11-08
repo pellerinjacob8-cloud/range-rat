@@ -223,7 +223,7 @@ function Home() {
       </p>
       <div className="mt-3 space-y-2.5">
         <NavCard to="/round-warmup" title="Round Warm Up" subtitle="A timed pre-round checklist." Icon={Flame} />
-        <NavCard to="/practice" title="Practice" subtitle="Generate a drill session tailored to your bucket and goal." Icon={Target} />
+        <NavCard to="/practice" title="Practice" subtitle="A simple range session built from your bag." Icon={Target} />
       </div>
 
       {/* Games section */}

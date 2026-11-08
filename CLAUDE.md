@@ -14,10 +14,18 @@ Golf practice web app (rangeratapp.com). Solo founder and developer. Vite + Reac
 
 Pro is checked with `isPro` from `src/context/AuthContext.tsx` (reads `profiles.is_pro`, set by `api/stripe-webhook.ts`). Pages are gated with `<ProGate>` (`src/components/ProGate.tsx`); locked cards open `<ProModal>`.
 
-- **Pro:** Random Practice (`/play`, `/play/solo`, `/play/game`), Combine, Grid Game, Fairway Game, My Sessions / custom sessions, logging GIR, fairways, putts and up and downs, round stat tiles, the Recommended card on Practice.
-- **Free:** Practice session builder, all putting modes, Round Warm Up, Closest to Pin, bag editor, club yardages, handicap updates, handicap trend chart, round history, all-time stats.
+- **Pro:** Random Practice (`/play`, `/play/solo`, `/play/game`), Combine, Grid Game, Fairway Game, My Sessions / custom sessions, logging GIR, fairways, putts and up and downs, round stat tiles, Built for you sessions on Practice (the last logged round shapes the range session; putting-heavy rounds point to the Putting Green).
+- **Free:** Range practice (Quick or Full, Control and Tee shots add-ons, Learning or Experienced cues, Tip pills, wedge targets from saved yardages), all putting modes, Round Warm Up, Closest to Pin, bag editor, club yardages, handicap updates, handicap trend chart, round history, all-time stats.
 - Saved generated sessions: free accounts are capped at 1 (`FREE_LIMIT` in `src/lib/favorites.ts`); Pro is unlimited.
 - Promo codes: entered on Stripe's hosted checkout (`allow_promotion_codes: true` in `api/create-checkout-session.ts`). No in-app code field.
+
+## Range practice (redesigned 2026-11-08)
+
+- Engine: `src/lib/practicePlan.ts`. A fixed list of block templates (club slot, balls, one-line cue, Tip detail) resolved against the user's bag. No stats are tracked in a session; finishing saves only balls hit and blocks done to `sessions` (Home's weekly ball count reads it).
+- Runner: `src/components/BlockSessionView.tsx` (club, balls, one cue, Tip, Next/Back/End, screen wake lock). Active run is stored in localStorage `range-rat:active-session` under `run`.
+- Saved favorites store blocks as `SessionDrill` rows (cue in `drillName`, tip in `description`); old generated favorites and Pro custom sessions open in the same runner.
+- The old `generateSession` engine in `drills.ts` is no longer used by Practice; `/custom-session` and `recommendGoal` still use parts of that file.
+- Planned step 2: free basic round-stat logging, one free Built for you session a month, Pro plan library (Scoring day, Ball striking day, Pre-round, Play holes), and a session focus column for practice balance. Step 3: "Is it working?" progress card and miss-based cues.
 
 ## Data notes
 
@@ -39,7 +47,6 @@ Goal: like GHIN, let golfers record which way they missed, then use it to pick w
 ## Open items
 
 - Run `supabase-migration-combine.sql` in the Supabase SQL Editor if it hasn't been run yet. Until then Combine history stays browser-only.
-- The upgrade page lists "Priority support" as a Pro perk; confirm it's offered or remove it (`src/routes/upgrade.tsx`).
 - `StatsSection` in `src/routes/profile.tsx` (Last 7 days chart and Recent sessions) is defined but never rendered.
 - The "Welcome to Pro" modal on Practice (`?upgraded=true`) is unreachable; checkout returns to `/pro-welcome`.
 - Leftover branches `fix/up-and-downs-rate` and `claude/bold-babbage-t4vd7u` can be deleted on GitHub.
