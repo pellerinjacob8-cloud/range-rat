@@ -351,7 +351,10 @@ function ProfilePage() {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-4 gap-1 border-t border-border pt-[10px]">
+                <div
+                  className={cn("relative grid grid-cols-4 gap-1 border-t border-border pt-[10px]", !isPro && "cursor-pointer")}
+                  onClick={!isPro ? () => setProOpen(true) : undefined}
+                >
                   {[
                     { label: "GIR", value: entry.gir !== undefined ? `${entry.gir}%` : "–" },
                     { label: "FWY", value: entry.fairways !== undefined ? `${entry.fairways}%` : "–" },
@@ -360,7 +363,7 @@ function ProfilePage() {
                   ].map(({ label, value }) => (
                     <div key={label} className="text-center">
                       <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
-                      <p className="mt-[3px] font-stats text-[20px] font-bold text-foreground leading-none">{value}</p>
+                      <p className={cn("mt-[3px] font-stats text-[20px] font-bold text-foreground leading-none", !isPro && value !== "–" && "blur-[5px] select-none")} aria-hidden={!isPro && value !== "–"}>{value}</p>
                     </div>
                   ))}
                 </div>
@@ -368,6 +371,7 @@ function ProfilePage() {
             ))}
           </div>
         </div>
+        <ProModal open={proOpen} onClose={() => setProOpen(false)} reason="Pro keeps the stats from every round and turns them into practice sessions built for your game." />
       </AppShell>
     );
   }
@@ -550,7 +554,7 @@ function ProfilePage() {
             </div>
             <button type="button" onClick={openLogRound}
               className="shrink-0 flex items-center gap-1.5 border border-border rounded-[10px] bg-muted px-3 py-[7px] text-[12px] font-bold text-primary">
-              <Plus className="h-3 w-3" /> {isPro ? "Log Round" : "Update"}
+              <Plus className="h-3 w-3" /> Log Round
             </button>
           </div>
 
@@ -566,7 +570,7 @@ function ProfilePage() {
                 {roundHistory.length > 1 ? (
                   <HandicapChart history={roundHistory} />
                 ) : (
-                  <p className="text-[12px] text-muted-foreground">{isPro ? "Log more rounds to see your trend." : "Update your handicap after each round to track your progress."}</p>
+                  <p className="text-[12px] text-muted-foreground">Log a round after you play to see your trend.</p>
                 )}
               </div>
             )}
@@ -644,7 +648,7 @@ function ProfilePage() {
             <div className="relative w-full max-w-[430px] max-h-[90dvh] overflow-y-auto overflow-x-hidden rounded-[28px] bg-background p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="flex items-start justify-between mb-[18px]">
                 <div>
-                  <h2 className="font-display text-[26px] leading-none">{isPro ? "Log Round Stats" : "Update Handicap"}</h2>
+                  <h2 className="font-display text-[26px] leading-none">Log Round Stats</h2>
                   <input
                     type="date"
                     value={roundInputs.date}
@@ -674,7 +678,8 @@ function ProfilePage() {
               </div>
 
               {/* 2×2 stat inputs. GIR/Fairways accept a percent or a count like "11/18". */}
-              {isPro ? (
+              {/* Logging is free; what Pro does with the numbers (tiles, trends, built-for-you practice) is not. */}
+              <>
                 <div className="grid grid-cols-2 gap-[9px] mb-[18px]">
                   {[
                     { key: "gir" as const, label: "GIR", placeholder: "48 or 11/18", percent: true },
@@ -703,14 +708,13 @@ function ProfilePage() {
                     );
                   })}
                 </div>
-              ) : (
-                <button type="button" onClick={() => { setLogOpen(false); setProOpen(true); }}
-                  className="w-full mb-[18px] rounded-[16px] border border-gold-border bg-gold-bg p-4 text-center">
-                  <span className="inline-flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.08em] text-gold">
-                    <Zap className="h-3.5 w-3.5" fill="currentColor" /> Upgrade to log GIR, Fairways, Putts & more
-                  </span>
-                </button>
-              )}
+                {!isPro && (
+                  <p className="-mt-2 mb-[18px] flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                    <Zap className="h-3 w-3 shrink-0 text-gold" fill="currentColor" />
+                    Pro turns these into practice sessions built for your game.
+                  </p>
+                )}
+              </>
 
               <div className="flex gap-[9px]">
                 <button type="button" onClick={() => setLogOpen(false)}
@@ -755,7 +759,7 @@ function ProfilePage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[15px] font-bold">Upgrade to Pro</p>
-              <p className="text-[12.5px] text-muted-foreground mt-0.5">Unlock Combine, Grid Game, custom sessions & more.</p>
+              <p className="text-[12.5px] text-muted-foreground mt-0.5">Turn your round stats into practice sessions, plus Combine & more.</p>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>

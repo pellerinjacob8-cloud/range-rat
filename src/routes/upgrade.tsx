@@ -11,14 +11,16 @@ export const Route = createFileRoute("/upgrade")({
 // How Pro works, in three steps. This is the pitch: practice that follows
 // your rounds, not a pile of extra features.
 const PRO_LOOP = [
-  { title: "Log your round", body: "GIR, fairways, putts, and up and downs." },
+  { title: "Log your round", body: "GIR, fairways, putts, and up and downs. Free for everyone." },
   { title: "Get a session built for it", body: "Range Rat finds your weak spot and builds today's practice around it." },
   { title: "Practice with a purpose", body: "Every ball goes toward what costs you the most strokes." },
 ];
 
 const PRO_FEATURES = [
   "Practice sessions built from your last round",
-  "Round stats: GIR, fairways, putts, up and downs",
+  "Practice balance: adds what you've been skipping",
+  "Pro plans: Scoring day, Ball striking, Pre-round, Play holes",
+  "Round stat tiles, trends, and history",
   "Range Rat Combine benchmark and history",
   "Random Practice, Grid Game, and Fairway Game",
   "Custom sessions and unlimited saves",

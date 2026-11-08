@@ -42,6 +42,7 @@ export interface SavedSession {
   area?: PracticeArea; // absent on legacy rows = "range"
   makes?: number;      // putting sessions only: total putts made / holed
   attempts?: number;   // putting sessions only: total putts attempted (== totalBalls)
+  practiceAreas?: string[]; // range sessions: areas covered (needs supabase-migration-practice-areas.sql)
 }
 
 export interface Club {
@@ -251,6 +252,7 @@ export async function fetchSessions(): Promise<SavedSession[]> {
     area: (r.area as PracticeArea) ?? "range",
     makes: r.makes ?? undefined,
     attempts: r.attempts ?? undefined,
+    practiceAreas: Array.isArray(r.practice_areas) ? r.practice_areas : undefined,
   }));
 }
 
@@ -271,13 +273,19 @@ export async function saveSession(session: SavedSession): Promise<void> {
 
   // Try with the area/makes/attempts columns first; fall back without them
   // if the migration hasn't run yet (same pattern as the handicap-history
-  // stats columns).
-  const { error } = await supabase.from("sessions").upsert({
+  // stats columns). practice_areas has its own migration, so it is dropped
+  // first on its own before falling back further.
+  const withArea = {
     ...row,
     area: session.area ?? "range",
     ...(session.makes !== undefined ? { makes: session.makes } : {}),
     ...(session.attempts !== undefined ? { attempts: session.attempts } : {}),
-  });
+  };
+  if (session.practiceAreas?.length) {
+    const { error: areasError } = await supabase.from("sessions").upsert({ ...withArea, practice_areas: session.practiceAreas });
+    if (!areasError) return;
+  }
+  const { error } = await supabase.from("sessions").upsert(withArea);
   if (!error) return;
 
   const { error: fallbackError } = await supabase.from("sessions").upsert(row);

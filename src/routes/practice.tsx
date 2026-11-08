@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect } from "react";
 import { BlockSessionView } from "@/components/BlockSessionView";
-import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Plus, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Lock, Plus, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,14 +23,19 @@ import {
 } from "@/lib/favorites";
 import { TIMES, type GenerateInput, type TimeAvailable } from "@/lib/drills";
 import {
+  PLANS,
+  areasOf,
   buildPlan,
   blocksToDrills,
   drillsToBlocks,
   estimateMinutes,
   levelFrom,
   pickFocus,
+  pickNeglected,
   totalBalls,
   type AddOn,
+  type PlanKind,
+  type TrackedSession,
   type PlanFocus,
   type PlanLength,
   type PlanLevel,
@@ -38,7 +43,7 @@ import {
   type RoundStats,
   type SwingYards,
 } from "@/lib/practicePlan";
-import { fetchProfile, fetchHandicapHistory, fetchPlayableBag, fetchYardages } from "@/lib/db";
+import { fetchProfile, fetchHandicapHistory, fetchPlayableBag, fetchSessions, fetchYardages } from "@/lib/db";
 import type { Club } from "@/lib/db";
 import {
   PUTTING_MODES,
@@ -99,6 +104,7 @@ interface DoneState {
 }
 
 interface PlanPrefs {
+  plan: PlanKind;
   length: PlanLength;
   addOns: AddOn[];
   forYou: boolean;
@@ -106,7 +112,7 @@ interface PlanPrefs {
 }
 
 function loadPrefs(): PlanPrefs {
-  const fallback: PlanPrefs = { length: "quick", addOns: [], forYou: true };
+  const fallback: PlanPrefs = { plan: "standard", length: "quick", addOns: [], forYou: true };
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     return raw ? { ...fallback, ...(JSON.parse(raw) as Partial<PlanPrefs>) } : fallback;
@@ -188,6 +194,7 @@ interface SavedSession {
   filters: { goal: string; bucket: string; time: number };
   totalBalls: number;
   drillCount: number;
+  practiceAreas?: string[];
 }
 
 // Records balls hit and blocks done so Home's weekly count keeps working.
@@ -199,6 +206,7 @@ function saveRangeSession(blocksDone: PracticeBlock[], label: string): SavedSess
     filters: { goal: label, bucket: "plan", time: estimateMinutes(blocksDone) },
     totalBalls: totalBalls(blocksDone),
     drillCount: blocksDone.length,
+    practiceAreas: areasOf(blocksDone),
   };
   import("@/lib/db")
     .then(({ saveSession: dbSave }) => dbSave(record).catch(() => dbSave(record)))
@@ -259,17 +267,20 @@ function PracticePage() {
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
   const [proOpen, setProOpen] = useState(false);
+  const [proText, setProText] = useState("");
+  const openPro = (text: string) => { setProText(text); setProOpen(true); };
 
   // Builder choices, remembered between visits
   const [prefs] = useState(loadPrefs);
+  const [planKind, setPlanKind] = useState<PlanKind>(prefs.plan);
   const [length, setLength] = useState<PlanLength>(prefs.length);
   const [addOns, setAddOns] = useState<AddOn[]>(prefs.addOns);
   const [forYouOn, setForYouOn] = useState(prefs.forYou);
   const [levelOverride, setLevelOverride] = useState<PlanLevel | null>(prefs.level ?? null);
 
   useEffect(() => {
-    savePrefs({ length, addOns, forYou: forYouOn, level: levelOverride ?? undefined });
-  }, [length, addOns, forYouOn, levelOverride]);
+    savePrefs({ plan: planKind, length, addOns, forYou: forYouOn, level: levelOverride ?? undefined });
+  }, [planKind, length, addOns, forYouOn, levelOverride]);
 
   // Level comes from handicap (cached so it doesn't flash), then the old
   // self-rated level, unless the golfer picked one here.
@@ -288,6 +299,7 @@ function PracticePage() {
   const [userBag, setUserBag] = useState<Club[]>([]);
   const [bagLoaded, setBagLoaded] = useState(false);
   const [yardages, setYardages] = useState<Record<string, SwingYards>>({});
+  const [history, setHistory] = useState<TrackedSession[]>([]);
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -304,18 +316,33 @@ function PracticePage() {
     });
     fetchPlayableBag().then((b) => { setUserBag(b); setBagLoaded(true); }).catch(() => setBagLoaded(true));
     fetchYardages().then(setYardages).catch(() => {});
+    fetchSessions()
+      .then((all) => setHistory(all.filter((x) => (x.area ?? "range") === "range")))
+      .catch(() => {});
   }, []);
 
+  // Free accounts can only run the Standard plan, even if a Pro plan was
+  // remembered from before a subscription ended.
+  const plan_: PlanKind = isPro ? planKind : "standard";
+  const isStandard = plan_ === "standard";
+
   const focusPick = useMemo(() => pickFocus(latestStats), [latestStats]);
-  const activeFocus: PlanFocus | null = isPro && forYouOn && focusPick ? focusPick.focus : null;
+  const neglected = useMemo(() => pickNeglected(history), [history]);
+  const activeFocus: PlanFocus | null = isPro && isStandard && forYouOn && focusPick ? focusPick.focus : null;
+  // Practice balance only adds something on a Quick session that doesn't already include it.
+  const activeBalance: AddOn | null =
+    isPro && isStandard && forYouOn && length === "quick" && neglected && !addOns.includes(neglected.addOn)
+      ? neglected.addOn
+      : null;
+  const hasForYou = !!(focusPick && focusPick.focus !== "putting") || !!neglected;
 
   const plan = useMemo(
-    () => buildPlan({ length, addOns, level, focus: activeFocus }, userBag, yardages),
-    [length, addOns, level, activeFocus, userBag, yardages],
+    () => buildPlan({ plan: plan_, length, addOns, level, focus: activeFocus, balance: activeBalance }, userBag, yardages),
+    [plan_, length, addOns, level, activeFocus, activeBalance, userBag, yardages],
   );
   const quickMinutes = useMemo(
-    () => estimateMinutes(buildPlan({ length: "quick", addOns, level, focus: activeFocus }, userBag, yardages)),
-    [addOns, level, activeFocus, userBag, yardages],
+    () => estimateMinutes(buildPlan({ length: "quick", addOns, level, focus: activeFocus, balance: activeBalance }, userBag, yardages)),
+    [addOns, level, activeFocus, activeBalance, userBag, yardages],
   );
   const fullMinutes = useMemo(
     () => estimateMinutes(buildPlan({ length: "full", addOns: [], level, focus: activeFocus }, userBag, yardages)),
@@ -385,7 +412,9 @@ function PracticePage() {
     setRun({
       blocks: plan,
       index: 0,
-      label: length === "quick" ? "Quick session" : "Full session",
+      label: isStandard
+        ? (length === "quick" ? "Quick session" : "Full session")
+        : PLANS.find((p) => p.value === plan_)?.label ?? "Practice",
       source: "plan",
       focus: activeFocus,
     });
@@ -401,7 +430,10 @@ function PracticePage() {
     clearActiveSession();
     const finished = run.blocks.slice(0, blocksDone);
     const balls = totalBalls(finished);
-    if (finished.length > 0) saveRangeSession(finished, run.label);
+    if (finished.length > 0) {
+      const record = saveRangeSession(finished, run.label);
+      setHistory((h) => [{ completedAt: record.completedAt, practiceAreas: record.practiceAreas }, ...h]);
+    }
     setDone({ blocks: run.blocks, blocksDone: finished.length, balls, label: run.label, source: run.source, focus: run.focus });
     setRun(null);
   };
@@ -608,15 +640,88 @@ function PracticePage() {
               </p>
             </div>
 
+            {/* Plan picker: Standard is free, the rest are Pro */}
+            <div className="space-y-2">
+              <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex w-max gap-2">
+                  {PLANS.map((p) => {
+                    const locked = p.pro && !isPro;
+                    const active = plan_ === p.value;
+                    return (
+                      <button
+                        key={p.value}
+                        type="button"
+                        onClick={() => {
+                          if (locked) {
+                            openPro(`${p.label} is a Pro plan. Pro adds Scoring day, Ball striking, Pre-round, and Play holes, plus sessions built from your rounds.`);
+                          } else {
+                            setPlanKind(p.value);
+                          }
+                        }}
+                        aria-pressed={active}
+                        className={cn(
+                          "inline-flex h-10 items-center gap-1.5 rounded-full border px-4 text-[13px] font-bold transition-colors",
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : locked
+                            ? "border-border bg-card text-muted-foreground active:bg-muted"
+                            : "border-border bg-card text-foreground active:bg-muted",
+                        )}
+                      >
+                        {locked && <Lock className="h-3 w-3 text-gold" />}
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {!isStandard && (
+                <p className="text-[13px] text-muted-foreground">{PLANS.find((p) => p.value === plan_)?.blurb}</p>
+              )}
+            </div>
+
             {/* Built for you (Pro), or the one Pro prompt for free users */}
-            {isPro ? (
-              focusPick ? (
-                focusPick.focus === "putting" ? (
-                  <div className="rounded-[18px] border border-gold-border bg-gold-bg p-4">
-                    <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-gold">
-                      <Sparkles className="h-3.5 w-3.5" /> Built for you
-                    </p>
-                    <p className="mt-1.5 text-[14px] leading-snug text-foreground">{focusPick.reason}</p>
+            {isStandard && (isPro ? (
+              focusPick || neglected ? (
+                <div
+                  className={cn(
+                    "rounded-[18px] border p-4 transition-colors",
+                    forYouOn || focusPick?.focus === "putting" ? "border-gold-border bg-gold-bg" : "border-border bg-card",
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-gold">
+                        <Sparkles className="h-3.5 w-3.5" /> Built for you
+                      </p>
+                      {focusPick && (
+                        <p className="mt-1.5 text-[14px] leading-snug text-foreground">{focusPick.reason}</p>
+                      )}
+                      {neglected && (
+                        <p className="mt-1.5 text-[14px] leading-snug text-foreground">
+                          {neglected.line}
+                          {length === "full" || addOns.includes(neglected.addOn)
+                            ? ", and it's in today's session."
+                            : forYouOn ? ". Added today." : "."}
+                        </p>
+                      )}
+                    </div>
+                    {hasForYou && (
+                      <button
+                        type="button"
+                        onClick={() => setForYouOn((v) => !v)}
+                        aria-pressed={forYouOn}
+                        aria-label={forYouOn ? "Turn off Built for you" : "Turn on Built for you"}
+                        className={cn(
+                          "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                          forYouOn ? "border-gold bg-gold text-white" : "border-muted-foreground/40",
+                        )}
+                      >
+                        {forYouOn && <Check className="h-4 w-4" />}
+                      </button>
+                    )}
+                  </div>
+                  {focusPick?.focus === "putting" && (
                     <button
                       type="button"
                       onClick={() => setAreaView("putting")}
@@ -624,34 +729,8 @@ function PracticePage() {
                     >
                       Go to Putting Green <ChevronRight className="h-4 w-4" />
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setForYouOn((v) => !v)}
-                    aria-pressed={forYouOn}
-                    className={cn(
-                      "flex w-full items-start gap-3 rounded-[18px] border p-4 text-left transition-colors",
-                      forYouOn ? "border-gold-border bg-gold-bg" : "border-border bg-card",
-                    )}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-gold">
-                        <Sparkles className="h-3.5 w-3.5" /> Built for you
-                      </p>
-                      <p className="mt-1.5 text-[14px] leading-snug text-foreground">{focusPick.reason}</p>
-                    </div>
-                    <span
-                      className={cn(
-                        "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
-                        forYouOn ? "border-gold bg-gold text-white" : "border-muted-foreground/40",
-                      )}
-                      aria-hidden
-                    >
-                      {forYouOn && <Check className="h-3.5 w-3.5" />}
-                    </span>
-                  </button>
-                )
+                  )}
+                </div>
               ) : (
                 <button
                   type="button"
@@ -668,20 +747,23 @@ function PracticePage() {
             ) : (
               <button
                 type="button"
-                onClick={() => setProOpen(true)}
+                onClick={() => openPro("Pro reads your last round and builds today's practice around it, plus Pro plans, Combine, and more.")}
                 className="flex w-full items-center gap-2.5 rounded-[18px] border border-gold-border bg-gold-bg p-4 text-left active:opacity-90"
               >
                 <Sparkles className="h-4 w-4 shrink-0 text-gold" />
                 <span className="flex-1 text-[13.5px] leading-snug text-foreground">
-                  {focusPick && focusPick.focus !== "putting"
-                    ? <>Your last round points to <span className="font-bold">{FOCUS_LABEL[focusPick.focus]}</span>. Pro builds today's session around it.</>
+                  {focusPick
+                    ? <>{focusPick.stat}. <span className="font-bold">Pro</span> turns that into today's practice plan.</>
+                    : neglected
+                    ? <>{neglected.line}. <span className="font-bold">Pro</span> plans your sessions around what you've been skipping.</>
                     : <><span className="font-bold">Pro</span> builds today's session around your last round.</>}
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-gold" />
               </button>
-            )}
+            ))}
 
-            {/* Length */}
+            {/* Length (Standard only; Pro plans are fixed) */}
+            {isStandard && (
             <div className="grid grid-cols-2 gap-2">
               {([
                 { value: "quick" as const, label: "Quick", sub: `About ${quickMinutes} min` },
@@ -706,8 +788,10 @@ function PracticePage() {
               })}
             </div>
 
+            )}
+
             {/* Add-ons (Full already includes both) */}
-            {length === "quick" && (
+            {isStandard && length === "quick" && (
               <div className="space-y-2">
                 <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Add on</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -825,7 +909,7 @@ function PracticePage() {
       <ProModal
         open={proOpen}
         onClose={() => setProOpen(false)}
-        reason="Pro reads your last round and builds today's practice around it, plus Combine, Pro games, and more."
+        reason={proText || undefined}
       />
     </AppShell>
   );
