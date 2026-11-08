@@ -58,6 +58,7 @@ export interface SessionDrill {
   isTarget?: boolean;
   type?: ContentType;
   phase?: SessionPhase;
+  section?: string; // range practice plan section label
 }
 
 // ─── Canonical club registry ─────────────────────────────────────────────────
