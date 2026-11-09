@@ -45,7 +45,7 @@ export const PLANS: { value: PlanKind; label: string; blurb: string; pro: boolea
   { value: "scoring",    label: "Scoring day",   blurb: "Wedges and short irons, where strokes are saved.", pro: true },
   { value: "striking",   label: "Ball striking", blurb: "Irons through driver, solid contact.",           pro: true },
   { value: "pre-round",  label: "Pre-round",     blurb: "A quick warm-up before you tee off.",            pro: true },
-  { value: "play-holes", label: "Play holes",    blurb: "One ball per shot, like the course.",             pro: true },
+  { value: "play-holes", label: "Play holes",    blurb: "Par 5, par 4, par 3. One ball per shot.",          pro: true },
 ];
 
 // Which templates each Pro plan uses, in session order, with ball overrides.
@@ -61,7 +61,7 @@ const PLAN_BLOCKS: Record<Exclude<PlanKind, "standard">, { ids: string[]; balls?
     balls: { "dist-1": 5, "iron-1": 5, "iron-2": 5, "tee-2": 5 },
   },
   "play-holes": {
-    ids: ["warm-1", "warm-2", "warm-3", "dist-1", "h1-tee", "h1-approach", "h1-wedge", "h2-tee", "h2-approach", "h2-wedge", "h3-tee", "h3-wedge"],
+    ids: ["warm-1", "warm-2", "warm-3", "dist-1", "p5-tee", "p5-iron", "p5-wedge", "p4-tee", "p4-approach", "p3-flag"],
   },
 };
 
@@ -140,9 +140,18 @@ interface Template {
   detail: Record<PlanLevel, string>;
 }
 
-const HOLE_TIP = {
-  learning: "One ball, then move on, just like the course. No do-overs.",
-  experienced: "One ball per shot, no mulligans. Full routine every time, then play the next shot from wherever it went.",
+// Play holes tips: how many shots reach the green in regulation on each hole.
+const PAR5_TIP = {
+  learning: "A par 5 takes three shots to reach the green: tee shot, second shot, then a wedge in. One ball per shot, no do-overs, and play the next one from wherever it went.",
+  experienced: "Three shots to hit the green in regulation: tee shot, second shot, wedge in. One ball per shot, no mulligans, play the next shot from wherever it went.",
+};
+const PAR4_TIP = {
+  learning: "A par 4 takes two shots to reach the green: a drive, then a wedge or short iron in. One ball per shot, no do-overs.",
+  experienced: "Two shots to hit the green in regulation: drive, then a wedge or short iron in. One ball per shot, no mulligans.",
+};
+const PAR3_TIP = {
+  learning: "A par 3 is one shot to the green. Pick a flag, go through your routine, one ball, no do-overs.",
+  experienced: "One shot to the green. Pick a flag, full routine, one ball, no mulligans.",
 };
 
 // {half}, {three} and {full} are replaced with the golfer's saved wedge yardages.
@@ -259,46 +268,36 @@ const TEMPLATES: Template[] = [
       experienced: "Every ball is a first tee shot. Full routine, pick the fairway, commit.",
     },
   },
-  // ── Play holes: one ball per shot, like the course ──
+  // ── Play holes: par 5, par 4, par 3, one ball per shot ──
   {
-    id: "h1-tee", section: "Play holes", area: "holes", slot: { same: "tee-2" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 1: hit it between two flags", experienced: "Hole 1: pick a fairway, full routine" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p5-tee", section: "Play holes", area: "holes", slot: { same: "tee-2" }, balls: 1, include: "plan",
+    cue: { learning: "Par 5: hit it between two flags", experienced: "Par 5: pick a fairway, full routine" },
+    detail: { learning: PAR5_TIP.learning, experienced: PAR5_TIP.experienced },
   },
   {
-    id: "h1-approach", section: "Play holes", area: "holes", slot: { same: "iron-1" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 1: aim at the nearest green", experienced: "Hole 1: approach, pick your target" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p5-iron", section: "Play holes", area: "holes", slot: { same: "iron-2" }, balls: 1, include: "plan",
+    cue: { learning: "Par 5: second shot, aim at a far green", experienced: "Par 5: long second shot, pick your target" },
+    detail: { learning: PAR5_TIP.learning, experienced: PAR5_TIP.experienced },
   },
   {
-    id: "h1-wedge", section: "Play holes", area: "holes", slot: { same: "dist-1" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 1: land it near a flag", experienced: "Hole 1: get it close" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p5-wedge", section: "Play holes", area: "holes", slot: { same: "dist-1" }, balls: 1, include: "plan",
+    cue: { learning: "Par 5: land it near a flag", experienced: "Par 5: third shot, get it close" },
+    detail: { learning: PAR5_TIP.learning, experienced: PAR5_TIP.experienced },
   },
   {
-    id: "h2-tee", section: "Play holes", area: "holes", slot: { same: "tee-2" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 2: pick new flags for your fairway", experienced: "Hole 2: new fairway, full routine" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p4-tee", section: "Play holes", area: "holes", slot: { same: "tee-2" }, balls: 1, include: "plan",
+    cue: { learning: "Par 4: hit it between two flags", experienced: "Par 4: pick a fairway, full routine" },
+    detail: { learning: PAR4_TIP.learning, experienced: PAR4_TIP.experienced },
   },
   {
-    id: "h2-approach", section: "Play holes", area: "holes", slot: { same: "iron-2" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 2: aim at a far green", experienced: "Hole 2: long approach, pick your target" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p4-approach", section: "Play holes", area: "holes", slot: { same: "dist-1" }, balls: 1, include: "plan",
+    cue: { learning: "Par 4: wedge or short iron, aim at a flag", experienced: "Par 4: wedge or short iron, get it close" },
+    detail: { learning: PAR4_TIP.learning, experienced: PAR4_TIP.experienced },
   },
   {
-    id: "h2-wedge", section: "Play holes", area: "holes", slot: { same: "dist-1" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 2: land it near a flag", experienced: "Hole 2: get it close" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
-  },
-  {
-    id: "h3-tee", section: "Play holes", area: "holes", slot: { same: "iron-1" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 3: short hole, aim at a flag", experienced: "Hole 3: par 3, pick a flag, full routine" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
-  },
-  {
-    id: "h3-wedge", section: "Play holes", area: "holes", slot: { same: "dist-1" }, balls: 1, include: "plan",
-    cue: { learning: "Hole 3: land it near a flag", experienced: "Hole 3: get it close" },
-    detail: { learning: HOLE_TIP.learning, experienced: HOLE_TIP.experienced },
+    id: "p3-flag", section: "Play holes", area: "holes", slot: { same: "iron-1" }, balls: 1, include: "plan",
+    cue: { learning: "Par 3: aim at a flag", experienced: "Par 3: pick a flag, full routine" },
+    detail: { learning: PAR3_TIP.learning, experienced: PAR3_TIP.experienced },
   },
 ];
 
@@ -442,15 +441,19 @@ function areaOfBlock(b: PracticeBlock): PracticeAreaKey | null {
   return "tee-shots";
 }
 
-// Distinct areas covered by the blocks a golfer actually finished. A tee
-// shot on a par 4 in Play holes counts as tee shot work too.
+// Distinct areas covered by the blocks a golfer actually finished. The par 5
+// and par 4 tee shots in Play holes count as tee shot work too. h1-tee and
+// h2-tee are the old hole ids, kept so a run started before the par 5, 4, 3
+// layout still gets credit when it finishes.
+const TEE_SHOT_HOLE_IDS = new Set(["p5-tee", "p4-tee", "h1-tee", "h2-tee"]);
+
 export function areasOf(blocks: PracticeBlock[]): PracticeAreaKey[] {
   const out = new Set<PracticeAreaKey>();
   for (const blk of blocks) {
     const a = areaOfBlock(blk);
     if (!a) continue;
     out.add(a);
-    if (a === "holes" && (blk.id === "h1-tee" || blk.id === "h2-tee")) out.add("tee-shots");
+    if (a === "holes" && TEE_SHOT_HOLE_IDS.has(blk.id)) out.add("tee-shots");
   }
   return Array.from(out);
 }
