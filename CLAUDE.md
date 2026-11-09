@@ -26,6 +26,7 @@ Pro is checked with `isPro` from `src/context/AuthContext.tsx` (reads `profiles.
 - Saved favorites store blocks as `SessionDrill` rows (cue in `drillName`, tip in `description`); old generated favorites and Pro custom sessions open in the same runner.
 - The old `generateSession` engine in `drills.ts` is no longer used by Practice; `/custom-session` and `recommendGoal` still use parts of that file.
 - Plans: `PLANS` / `PLAN_BLOCKS` in `practicePlan.ts`. Standard is free; Pro plans are fixed block lists and ignore Built for you and balance.
+- Play holes (Pro): warm-up and one wedge block, then a par 5, par 4 and par 3 played with 6 hole shots, 1 ball each (p5-tee, p5-iron, p5-wedge, p4-tee, p4-approach, p3-flag), matching shots to reach the green in regulation. The par 5 and par 4 tee shots also count as tee shot work for practice balance.
 - Practice balance: each finished session saves `practice_areas` (wedges, irons, control, tee-shots, holes) on `sessions`. `pickNeglected` flags tee shots or control once 3+ sessions have areas and one hasn't been hit in 14 days. Needs `supabase-migration-practice-areas.sql`; until it runs, saves fall back without the column and balance stays off.
 - Next (step 3): "Is it working?" progress card on Profile and miss-based cues.
 
