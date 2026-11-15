@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { BlockSessionView } from "@/components/BlockSessionView";
 import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Lock, Plus, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -44,6 +44,7 @@ import {
   type SwingYards,
 } from "@/lib/practicePlan";
 import { fetchProfile, fetchHandicapHistory, fetchPlayableBag, fetchSessions, fetchYardages } from "@/lib/db";
+import { quickStartStep, quickStartBlocks } from "@/lib/quickStart";
 import type { Club } from "@/lib/db";
 import {
   PUTTING_MODES,
@@ -65,6 +66,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/practice")({
   validateSearch: (search: Record<string, unknown>) => ({
     upgraded: search.upgraded === "true" ? true : undefined,
+    start: search.start === "quick" ? ("quick" as const) : undefined,
   }),
   head: () => ({
     meta: [
@@ -262,7 +264,7 @@ const FOCUS_LABEL: Record<PlanFocus, string> = {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function PracticePage() {
-  const { upgraded } = Route.useSearch();
+  const { upgraded, start } = Route.useSearch();
   const { isPro } = useAuth();
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
@@ -298,6 +300,7 @@ function PracticePage() {
   const [latestStats, setLatestStats] = useState<RoundStats | undefined>(undefined);
   const [userBag, setUserBag] = useState<Club[]>([]);
   const [bagLoaded, setBagLoaded] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [yardages, setYardages] = useState<Record<string, SwingYards>>({});
   const [history, setHistory] = useState<TrackedSession[]>([]);
 
@@ -309,7 +312,7 @@ function PracticePage() {
         if (p.handicap !== undefined) localStorage.setItem("rangeRat_handicap", String(p.handicap));
         else localStorage.removeItem("rangeRat_handicap");
       } catch {}
-    });
+    }).catch(() => {}).finally(() => setProfileLoaded(true));
     fetchHandicapHistory().then((h) => {
       const latest = h[h.length - 1];
       if (latest) setLatestStats({ gir: latest.gir, fairways: latest.fairways, putts: latest.putts, upAndDowns: latest.upAndDowns });
@@ -420,6 +423,31 @@ function PracticePage() {
     });
   };
 
+  // Quick start (?start=quick): once the bag and level are known, start a
+  // Standard Quick session one time. A session already in progress resumes
+  // instead. The param is cleared so a refresh resumes rather than restarts.
+  const quickHandled = useRef(false);
+  const [quickPending, setQuickPending] = useState(start === "quick");
+  useEffect(() => {
+    const step = quickStartStep({
+      requested: start === "quick",
+      alreadyHandled: quickHandled.current,
+      hasActiveRun: !!run || (!!puttingConfig && puttingStations.length > 0),
+      dataLoaded: bagLoaded && profileLoaded,
+    });
+    if (step === "none" || step === "wait") return;
+    quickHandled.current = true;
+    if (step === "start") {
+      const blocks = quickStartBlocks(level, userBag, yardages);
+      if (blocks.length > 0) {
+        setDone(null);
+        setRun({ blocks, index: 0, label: "Quick session", source: "plan", focus: null });
+      }
+    }
+    setQuickPending(false);
+    navigate({ to: "/practice", search: {}, replace: true });
+  }, [start, run, puttingConfig, puttingStations, bagLoaded, profileLoaded, level, userBag, yardages, navigate]);
+
   const startFavorite = (fav: Favorite, source: RunSource) => {
     setDone(null);
     setRun({ blocks: drillsToBlocks(fav.session), index: 0, label: fav.name, source });
@@ -505,6 +533,15 @@ function PracticePage() {
         onFinish={finishRun}
         onDiscard={discardRun}
       />
+    );
+  }
+
+  // ── Quick start loading (bag and level still on their way)
+  if (quickPending) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-6 w-6 rounded-full border-[2.5px] border-border border-t-primary animate-spin" />
+      </div>
     );
   }
 

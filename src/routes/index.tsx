@@ -177,9 +177,10 @@ function Home() {
         </div>
       )}
 
-      {statsStatus === "ready" && !hasHistory && (
+      {/* First session card: hidden while a Resume card is showing */}
+      {statsStatus === "ready" && !hasHistory && !activeSession && (
         <button
-          onClick={() => navigate({ to: "/practice" })}
+          onClick={() => navigate({ to: "/practice", search: { start: "quick" } })}
           className="mt-4 w-full rounded-[22px] bg-primary p-4 shadow-[0_12px_30px_-14px_rgba(13,45,90,0.5)] flex items-center gap-3.5 text-left active:opacity-90 transition-opacity"
         >
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 border border-white/[0.18]">
@@ -188,7 +189,7 @@ function Home() {
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-bold uppercase tracking-[0.16em] text-white/70">Get started</p>
             <p className="mt-0.5 text-[17px] font-semibold text-white leading-tight">Start your first session</p>
-            <p className="text-[13px] text-white/60 mt-0.5">Generate a plan and start tracking.</p>
+            <p className="text-[13px] text-white/60 mt-0.5">One quick range session. Tap to start.</p>
           </div>
           <ChevronRight className="h-5 w-5 text-white/70 shrink-0" />
         </button>
