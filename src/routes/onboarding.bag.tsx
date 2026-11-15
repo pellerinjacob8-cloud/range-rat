@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronLeft, Check } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { saveBag } from "@/lib/db";
+import { isHomeScreenDone, isMobileDevice } from "@/lib/pwa";
 import type { Club } from "@/lib/db";
 import { toast } from "sonner";
 
@@ -110,6 +111,12 @@ function OnboardingBag() {
     try {
       if (!skip && selected.size > 0) {
         await saveBag(buildBag(selected));
+      }
+      // On a phone without the app on the home screen, show the install step
+      // first. It marks onboarding complete when the user leaves it.
+      if (isMobileDevice() && !isHomeScreenDone()) {
+        window.location.href = "/onboarding/install";
+        return;
       }
       try {
         localStorage.setItem("rangeRat_onboarding_complete", "true");
