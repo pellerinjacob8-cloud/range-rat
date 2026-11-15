@@ -23,6 +23,7 @@ import { Route as OnboardingWelcomeRouteImport } from './routes/onboarding.welco
 import { Route as OnboardingSignupRouteImport } from './routes/onboarding.signup'
 import { Route as OnboardingNameRouteImport } from './routes/onboarding.name'
 import { Route as OnboardingBagRouteImport } from './routes/onboarding.bag'
+import { Route as OnboardingInstallRouteImport } from './routes/onboarding.install'
 import { Route as GamesGridGameRouteImport } from './routes/games.grid-game'
 import { Route as GamesFairwayGameRouteImport } from './routes/games.fairway-game'
 import { Route as GamesClosestToPinRouteImport } from './routes/games.closest-to-pin'
@@ -104,6 +105,11 @@ const OnboardingBagRoute = OnboardingBagRouteImport.update({
   path: '/onboarding/bag',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingInstallRoute = OnboardingInstallRouteImport.update({
+  id: '/onboarding/install',
+  path: '/onboarding/install',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GamesGridGameRoute = GamesGridGameRouteImport.update({
   id: '/grid-game',
   path: '/grid-game',
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/install': typeof OnboardingInstallRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByTo {
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/install': typeof OnboardingInstallRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -222,6 +230,7 @@ export interface FileRoutesById {
   '/games/fairway-game': typeof GamesFairwayGameRoute
   '/games/grid-game': typeof GamesGridGameRoute
   '/onboarding/bag': typeof OnboardingBagRoute
+  '/onboarding/install': typeof OnboardingInstallRoute
   '/onboarding/name': typeof OnboardingNameRoute
   '/onboarding/signup': typeof OnboardingSignupRoute
   '/onboarding/welcome': typeof OnboardingWelcomeRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/games/fairway-game'
     | '/games/grid-game'
     | '/onboarding/bag'
+    | '/onboarding/install'
     | '/onboarding/name'
     | '/onboarding/signup'
     | '/onboarding/welcome'
@@ -274,6 +284,7 @@ export interface FileRouteTypes {
     | '/games/fairway-game'
     | '/games/grid-game'
     | '/onboarding/bag'
+    | '/onboarding/install'
     | '/onboarding/name'
     | '/onboarding/signup'
     | '/onboarding/welcome'
@@ -299,6 +310,7 @@ export interface FileRouteTypes {
     | '/games/fairway-game'
     | '/games/grid-game'
     | '/onboarding/bag'
+    | '/onboarding/install'
     | '/onboarding/name'
     | '/onboarding/signup'
     | '/onboarding/welcome'
@@ -321,6 +333,7 @@ export interface RootRouteChildren {
   UpgradeRoute: typeof UpgradeRoute
   RoundWarmupRoute: typeof RoundWarmupRoute
   OnboardingBagRoute: typeof OnboardingBagRoute
+  OnboardingInstallRoute: typeof OnboardingInstallRoute
   OnboardingNameRoute: typeof OnboardingNameRoute
   OnboardingSignupRoute: typeof OnboardingSignupRoute
   OnboardingWelcomeRoute: typeof OnboardingWelcomeRoute
@@ -428,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/bag'
       fullPath: '/onboarding/bag'
       preLoaderRoute: typeof OnboardingBagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/install': {
+      id: '/onboarding/install'
+      path: '/onboarding/install'
+      fullPath: '/onboarding/install'
+      preLoaderRoute: typeof OnboardingInstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/games/grid-game': {
@@ -542,6 +562,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProWelcomeRoute: ProWelcomeRoute,
   RoundWarmupRoute: RoundWarmupRoute,
   OnboardingBagRoute: OnboardingBagRoute,
+  OnboardingInstallRoute: OnboardingInstallRoute,
   OnboardingNameRoute: OnboardingNameRoute,
   OnboardingSignupRoute: OnboardingSignupRoute,
   OnboardingWelcomeRoute: OnboardingWelcomeRoute,

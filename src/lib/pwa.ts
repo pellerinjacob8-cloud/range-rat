@@ -18,6 +18,17 @@ export function isIOSDevice(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent) && !(navigator as any).standalone;
 }
 
+// Phones and tablets, where a home screen icon is what brings people back at the range.
+export function isMobileDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+}
+
+export function isAndroidDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/.test(navigator.userAgent);
+}
+
 // "Done" when actually installed (standalone) or the user marked it added.
 export function isHomeScreenDone(): boolean {
   if (isStandalone()) return true;
