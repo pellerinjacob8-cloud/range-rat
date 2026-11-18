@@ -33,11 +33,16 @@ import {
 } from "@/lib/combine";
 import {
   canStartCombine,
+  challengeHeadline,
+  challengeOutcome,
+  clearChallenge,
   copyLink,
+  loadChallenge,
   drawScoreCard,
   shareFromAttempt,
   shareScore,
   shareUrl,
+  type PendingChallenge,
   type ShareResult,
 } from "@/lib/combineShare";
 
@@ -160,6 +165,7 @@ function CombineLobby({ onStart, isPro, monitor, onMonitorChange }: { onStart: (
   const [synced, setSynced] = useState(false);
   useEffect(() => { syncCombineAttempts().then((a) => { setAttempts(a); setSynced(true); }); }, []);
   const [showPro, setShowPro] = useState(false);
+  const [challenge] = useState(() => loadChallenge());
   const canStart = canStartCombine(isPro, attempts.length);
   const checking = !isPro && !synced;
   const last     = attempts[attempts.length - 1];
@@ -179,6 +185,14 @@ function CombineLobby({ onStart, isPro, monitor, onMonitorChange }: { onStart: (
         </p>
         {!isPro && synced && attempts.length === 0 && (
           <p className="mt-3 text-[14px] font-semibold text-primary">Your first Combine is free.</p>
+        )}
+        {challenge && (
+          <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-3">
+            <Trophy className="h-5 w-5 shrink-0 text-primary" />
+            <p className="text-[15px] font-semibold">
+              Beat {challenge.name ? `${challenge.name}'s` : "your friend's"} {challenge.overall}
+            </p>
+          </div>
         )}
 
         {/* Est. time */}
@@ -571,6 +585,16 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
 function ResultsView({ attempt, isPro, onDone }: { attempt: CombineAttempt; isPro: boolean; onDone: () => void }) {
   const all     = loadCombineAttempts();
   const [showPro, setShowPro] = useState(false);
+  // Head-to-head from a shared score: compared once, on the next finished Combine
+  const [challenge] = useState(() => loadChallenge());
+  const challengeLogged = useRef(false);
+  useEffect(() => {
+    if (!challenge || challengeLogged.current) return;
+    challengeLogged.current = true;
+    clearChallenge();
+    const { outcome, margin } = challengeOutcome(attempt.overallScore, challenge.overall);
+    track("challenge_completed", { result: outcome, margin });
+  }, [challenge, attempt.overallScore]);
   const pb      = Math.max(...all.map(a => a.overallScore));
   const isNewPb = attempt.overallScore === pb && all.length > 1;
   const prev    = all.length >= 2 ? all[all.length - 2] : null;
@@ -618,7 +642,9 @@ function ResultsView({ attempt, isPro, onDone }: { attempt: CombineAttempt; isPr
           </p>
         )}
 
-        <ShareScore attempt={attempt} />
+        {challenge && <ChallengeResult mine={attempt.overallScore} challenge={challenge} />}
+
+        <ShareScore attempt={attempt} beat={challenge} />
 
         {/* Free accounts: the one free Combine is done */}
         {!isPro && (
@@ -709,7 +735,22 @@ function ResultsView({ attempt, isPro, onDone }: { attempt: CombineAttempt; isPr
 
 // "Share my score": a score card image plus a "beat my score" link. The card
 // is drawn when results open so the tap can open the share sheet right away.
-function ShareScore({ attempt }: { attempt: CombineAttempt }) {
+function ChallengeResult({ mine, challenge }: { mine: number; challenge: PendingChallenge }) {
+  const { outcome } = challengeOutcome(mine, challenge.overall);
+  return (
+    <div className={cn(
+      "mt-5 rounded-2xl border p-4 motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95",
+      outcome === "won" ? "border-primary/40 bg-primary/10" : "border-border bg-card",
+    )}>
+      <p className="font-display text-[26px] leading-tight">{challengeHeadline(mine, challenge)}</p>
+      <p className="mt-1 text-[14px] text-muted-foreground tabular-nums">
+        You {mine} · {challenge.name || "Friend"} {challenge.overall}
+      </p>
+    </div>
+  );
+}
+
+function ShareScore({ attempt, beat }: { attempt: CombineAttempt; beat?: PendingChallenge | null }) {
   const [data] = useState(() => shareFromAttempt(attempt, loadProfileName()));
   const [card, setCard] = useState<Blob | null>(null);
   const [busy, setBusy] = useState(false);
@@ -724,7 +765,7 @@ function ShareScore({ attempt }: { attempt: CombineAttempt }) {
     if (result === "copied") toast("Link copied. Send it to a friend.");
     if (result === "failed") toast("Couldn't share. Please try again.");
     if (result === "image" || result === "link" || result === "copied") {
-      track("combine_shared", { method: result, score: data.overall, monitor: data.monitor });
+      track("combine_shared", { method: result, score: data.overall, monitor: data.monitor, send_back: !!beat });
     }
   };
 
@@ -733,10 +774,10 @@ function ShareScore({ attempt }: { attempt: CombineAttempt }) {
       <button
         type="button"
         disabled={busy}
-        onClick={async () => { setBusy(true); done(await shareScore(data, url, card)); setBusy(false); }}
+        onClick={async () => { setBusy(true); done(await shareScore(data, url, card, beat)); setBusy(false); }}
         className="h-12 rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60"
       >
-        <Share className="h-4 w-4" /> Share my score
+        <Share className="h-4 w-4" /> {beat ? "Send it back" : "Share my score"}
       </button>
       <button
         type="button"

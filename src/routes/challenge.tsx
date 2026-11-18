@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/context/AuthContext";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { skillLabel } from "@/lib/combine";
-import { parseShare, rememberShareVisit, type ShareSearch } from "@/lib/combineShare";
+import { parseShare, rememberChallenge, rememberShareVisit, type ShareSearch } from "@/lib/combineShare";
 
 // Public "beat my score" page opened from a shared Combine link. No sign-in
 // needed (listed with the auth routes in __root.tsx). The score comes from
@@ -26,6 +26,8 @@ function ChallengePage() {
   const shared = parseShare(Route.useSearch());
 
   const takeIt = () => {
+    // Their next finished Combine is compared against this score
+    if (shared) rememberChallenge(shared);
     if (session) { navigate({ to: "/combine" }); return; }
     rememberShareVisit();
     navigate({ to: "/onboarding/signup" });
