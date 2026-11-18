@@ -14,6 +14,8 @@ import {
   saveCombineAttempt,
   syncCombineAttempts,
   skillLabel,
+  monitorWindows,
+  isMonitorAttempt,
   CATEGORY_LABELS,
   type CombineAttempt,
   type CombineCategory,
@@ -23,6 +25,8 @@ import {
   type Direction,
   type DistanceControl,
 } from "@/lib/combine";
+
+const MONITOR_KEY = "range-rat:combine-monitor";
 
 export const Route = createFileRoute("/combine")({
   component: CombinePage,
@@ -42,9 +46,18 @@ function CombinePageInner() {
   const [screen, setScreen] = useState<Screen>("lobby");
   const [scored, setScored] = useState<ScoredShot[]>([]);
   const [attempt, setAttempt] = useState<CombineAttempt | null>(null);
+  // Launch monitor or simulator: same shots and taps, buttons show yard windows.
+  // Remembered on this device so simulator regulars don't pick it every time.
+  const [monitor, setMonitor] = useState<boolean>(() => {
+    try { return localStorage.getItem(MONITOR_KEY) === "true"; } catch { return false; }
+  });
+  const chooseMonitor = (on: boolean) => {
+    setMonitor(on);
+    try { localStorage.setItem(MONITOR_KEY, String(on)); } catch {}
+  };
 
   const startCombine = () => {
-    track("game_started", { game: "combine" });
+    track("game_started", { game: "combine", monitor });
     setScored([]);
     setAttempt(null);
     setScreen("shot");
@@ -73,7 +86,7 @@ function CombinePageInner() {
         overallScore: scores.overall,
       };
       saveCombineAttempt(record);
-      track("game_completed", { game: "combine", score_or_result: scores.overall });
+      track("game_completed", { game: "combine", score_or_result: scores.overall, monitor: isMonitorAttempt(record) });
       setAttempt(record);
       setScreen("results");
     } else {
@@ -96,6 +109,7 @@ function CombinePageInner() {
       <ShotFlow
         scored={scored}
         onScored={(ss) => { setRestoredInput(null); handleShotScored(ss); }}
+        monitor={monitor}
         onBack={handleBack}
         onQuit={() => setScreen("lobby")}
         restoredInput={restoredInput}
@@ -112,12 +126,12 @@ function CombinePageInner() {
     );
   }
 
-  return <CombineLobby onStart={startCombine} />;
+  return <CombineLobby onStart={startCombine} monitor={monitor} onMonitorChange={chooseMonitor} />;
 }
 
 // ─── Lobby ────────────────────────────────────────────────────────────────────
 
-function CombineLobby({ onStart }: { onStart: () => void }) {
+function CombineLobby({ onStart, monitor, onMonitorChange }: { onStart: () => void; monitor: boolean; onMonitorChange: (on: boolean) => void }) {
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState<CombineAttempt[]>(loadCombineAttempts);
   useEffect(() => { syncCombineAttempts().then(setAttempts); }, []);
@@ -147,6 +161,20 @@ function CombineLobby({ onStart }: { onStart: () => void }) {
           </span>
         </div>
 
+        {/* Where they're hitting: range by eye (default) or a launch monitor */}
+        <div className="mt-6">
+          <p className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">Where are you hitting?</p>
+          <div className="grid grid-cols-2 gap-2">
+            <PillBtn active={!monitor} onClick={() => onMonitorChange(false)}>At the range</PillBtn>
+            <PillBtn active={monitor} onClick={() => onMonitorChange(true)}>Launch monitor or sim</PillBtn>
+          </div>
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            {monitor
+              ? "Same shots and taps. Each button shows the yards to read off your monitor."
+              : "Judge each shot by eye against your target."}
+          </p>
+        </div>
+
         {/* Stats strip */}
         {attempts.length > 0 && (
           <div className="mt-6 grid grid-cols-2 gap-3">
@@ -158,7 +186,9 @@ function CombineLobby({ onStart }: { onStart: () => void }) {
             <div className="rounded-2xl border border-border bg-card p-4">
               <p className="text-[13px] font-bold uppercase tracking-widest text-muted-foreground">Last Score</p>
               <p className="mt-2 font-stats text-[40px] leading-none tabular-nums text-primary">{last.overallScore}</p>
-              <p className="mt-1 text-[13px] font-semibold text-muted-foreground">{skillLabel(last.overallScore)}</p>
+              <p className="mt-1 text-[13px] font-semibold text-muted-foreground">
+                {skillLabel(last.overallScore)}{isMonitorAttempt(last) && <MonitorBadge className="ml-2" />}
+              </p>
             </div>
           </div>
         )}
@@ -237,13 +267,31 @@ interface ShotFlowProps {
   onBack: (idx: number) => void;
   onQuit: () => void;
   restoredInput?: ShotScoreInput | null;
+  monitor?: boolean;
 }
 
-function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput }: ShotFlowProps) {
+function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = false }: ShotFlowProps) {
   const idx  = scored.length;       // 0-based index of current shot
   const shot = COMBINE_SHOTS[idx];
   const total = COMBINE_SHOTS.length;
   const isDriver = shot.category === "driver";
+  // Monitor mode: yard windows for this shot, shown under each judged button
+  const win = monitor ? monitorWindows(shot) : null;
+  const dirSub = (v: Direction): string | undefined => {
+    if (!win) return undefined;
+    const d = win.direction;
+    if (v === "On Line") return `0-${d.onLine} yds offline`;
+    if (v.startsWith("Slight")) return `${d.onLine + 1}-${d.slight} yds`;
+    if (v.startsWith("Moderate")) return `${d.slight + 1}-${d.moderate} yds`;
+    return `${d.moderate + 1}+ yds`;
+  };
+  const dcSub = (v: DistanceControl): string | undefined => {
+    const w = win?.distance;
+    if (!w) return undefined;
+    if (v === "Perfect") return `${w.perfect[0]}-${w.perfect[1]} carry`;
+    if (v === "Close") return `${w.close[0]}-${w.close[1]}`;
+    return `outside ${w.close[0]}-${w.close[1]}`;
+  };
 
   const [strike,   setStrike]   = useState<StrikeQuality | null>(null);
   const [dir,      setDir]      = useState<Direction | null>(null);
@@ -269,7 +317,7 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput }: ShotFlowP
       ...(isDriver ? { fairwayHit: fairway! } : { distanceControl: dc! }),
     };
     const shotScore = calcShotScore(shot, input);
-    onScored({ shot, input, shotScore });
+    onScored({ shot, input, shotScore, ...(monitor ? { monitor: true } : {}) });
     // Reset fields for next shot
     setStrike(null);
     setDir(null);
@@ -327,6 +375,11 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput }: ShotFlowP
             <Chip>{shot.shape}</Chip>
             <Chip>{shot.traj} Traj.</Chip>
           </div>
+          {monitor && (
+            <p className="mt-3 text-[13px] text-muted-foreground">
+              Read carry and offline yards on your monitor, then tap the matching buttons.
+            </p>
+          )}
         </div>
 
         {/* ── Scoring inputs ── */}
@@ -342,20 +395,20 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput }: ShotFlowP
           {/* Direction */}
           <ScoringGroup label="Direction">
             {(["On Line", "Slight Left", "Slight Right", "Moderate Left", "Moderate Right", "Severe Left", "Severe Right"] as Direction[]).map((v) => (
-              <PillBtn key={v} active={dir === v} onClick={() => setDir(v)}>{v}</PillBtn>
+              <PillBtn key={v} active={dir === v} onClick={() => setDir(v)} sub={dirSub(v)}>{v}</PillBtn>
             ))}
           </ScoringGroup>
 
           {/* Distance Control or Fairway */}
           {isDriver ? (
             <ScoringGroup label="Fairway Hit?">
-              <PillBtn active={fairway === true}  onClick={() => setFairway(true)}>Yes</PillBtn>
-              <PillBtn active={fairway === false} onClick={() => setFairway(false)}>Miss</PillBtn>
+              <PillBtn active={fairway === true}  onClick={() => setFairway(true)} sub={win?.fairwayYards ? `within ${win.fairwayYards} yds offline` : undefined}>Yes</PillBtn>
+              <PillBtn active={fairway === false} onClick={() => setFairway(false)} sub={win?.fairwayYards ? `${win.fairwayYards + 1}+ yds offline` : undefined}>Miss</PillBtn>
             </ScoringGroup>
           ) : (
             <ScoringGroup label="Distance Control">
               {(["Perfect", "Close", "Off"] as DistanceControl[]).map((v) => (
-                <PillBtn key={v} active={dc === v} onClick={() => setDc(v)}>{v}</PillBtn>
+                <PillBtn key={v} active={dc === v} onClick={() => setDc(v)} sub={dcSub(v)}>{v}</PillBtn>
               ))}
             </ScoringGroup>
           )}
@@ -432,6 +485,11 @@ function ResultsView({ attempt, onDone }: { attempt: CombineAttempt; onDone: () 
         <p className="mt-1 font-display text-[28px] leading-none text-foreground">
           {skillLabel(attempt.overallScore)}
         </p>
+        {isMonitorAttempt(attempt) && (
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            <MonitorBadge className="mr-2" />Scored from launch monitor numbers.
+          </p>
+        )}
 
         {/* vs last */}
         {diff !== null && (
@@ -525,19 +583,30 @@ function ScoringGroup({ label, children }: { label: string; children: React.Reac
   );
 }
 
-function PillBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function PillBtn({ active, onClick, children, sub }: { active: boolean; onClick: () => void; children: React.ReactNode; sub?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
         "rounded-full border px-4 py-2 text-[14px] font-semibold transition-colors",
+        sub && "rounded-[14px] text-left leading-tight",
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-muted text-foreground active:opacity-80",
       )}
     >
       {children}
+      {/* Monitor mode: the yard window this answer means */}
+      {sub && <span className={cn("block mt-0.5 text-[11px] font-medium", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{sub}</span>}
     </button>
+  );
+}
+
+function MonitorBadge({ className }: { className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em] text-primary align-middle", className)}>
+      Monitor
+    </span>
   );
 }
