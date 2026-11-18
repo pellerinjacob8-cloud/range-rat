@@ -114,6 +114,56 @@ export function takeLandingPath(): string {
   } catch { return "/"; }
 }
 
+// ─── Head-to-head ─────────────────────────────────────────────────────────────
+
+// The score someone was challenged with on a shared page, kept on this device
+// until their next finished Combine, then compared on the results screen.
+const CHALLENGE_KEY = "rangeRat_challenge";
+const CHALLENGE_DAYS = 30;
+
+export interface PendingChallenge {
+  name: string;
+  overall: number;
+  savedAt: number;
+}
+
+export function rememberChallenge(s: SharedScore, now = Date.now()): void {
+  try {
+    localStorage.setItem(CHALLENGE_KEY, JSON.stringify({ name: s.name, overall: s.overall, savedAt: now }));
+  } catch {}
+}
+
+export function loadChallenge(now = Date.now()): PendingChallenge | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CHALLENGE_KEY) ?? "null");
+    if (!raw || typeof raw !== "object") return null;
+    const overall = score(raw.overall);
+    const savedAt = typeof raw.savedAt === "number" ? raw.savedAt : NaN;
+    if (overall === null || !(now - savedAt <= CHALLENGE_DAYS * 86_400_000)) return null;
+    return { name: cleanFirstName(raw.name), overall, savedAt };
+  } catch { return null; }
+}
+
+export function clearChallenge(): void {
+  try { localStorage.removeItem(CHALLENGE_KEY); } catch {}
+}
+
+export type ChallengeOutcome = "won" | "lost" | "tied";
+
+export function challengeOutcome(mine: number, theirs: number): { outcome: ChallengeOutcome; margin: number } {
+  const margin = Math.abs(mine - theirs);
+  return { outcome: mine > theirs ? "won" : mine < theirs ? "lost" : "tied", margin };
+}
+
+export function challengeHeadline(mine: number, c: PendingChallenge): string {
+  const who = c.name || "your friend";
+  const Who = c.name || "Your friend";
+  const { outcome, margin } = challengeOutcome(mine, c.overall);
+  if (outcome === "won") return `You beat ${who} by ${margin}`;
+  if (outcome === "lost") return `${Who} wins by ${margin}`;
+  return `Tied with ${who} at ${mine}`;
+}
+
 // ─── Score card image ─────────────────────────────────────────────────────────
 
 const CARD_W = 1080;
@@ -257,7 +307,17 @@ export async function drawScoreCard(s: SharedScore): Promise<Blob | null> {
 
 export type ShareResult = "image" | "link" | "copied" | "cancelled" | "failed";
 
-export function shareText(s: SharedScore): string {
+// "an 80", "an 8", "an 11", "an 18"; "a 74" otherwise
+function withArticle(n: number): string {
+  const an = String(n).startsWith("8") || n === 11 || n === 18;
+  return `${an ? "an" : "a"} ${n}`;
+}
+
+// After a head-to-head win, the share says who was beaten.
+export function shareText(s: SharedScore, beat?: PendingChallenge | null): string {
+  if (beat && beat.name && s.overall > beat.overall) {
+    return `I beat ${beat.name}'s ${beat.overall} with ${withArticle(s.overall)} on the Range Rat Combine. Can you beat it?`;
+  }
   return `I scored ${s.overall} on the Range Rat Combine. Can you beat it?`;
 }
 
@@ -269,8 +329,8 @@ function isAbort(e: unknown): boolean {
 // then copying the link where sharing isn't supported (most desktops).
 // The card is drawn ahead of time (drawScoreCard) because Safari only opens
 // the share sheet straight from a tap, with no slow work in between.
-export async function shareScore(s: SharedScore, url: string, card: Blob | null): Promise<ShareResult> {
-  const text = shareText(s);
+export async function shareScore(s: SharedScore, url: string, card: Blob | null, beat?: PendingChallenge | null): Promise<ShareResult> {
+  const text = shareText(s, beat);
   try {
     if (card && typeof navigator.canShare === "function") {
       const file = new File([card], `range-rat-combine-${s.overall}.png`, { type: "image/png" });
