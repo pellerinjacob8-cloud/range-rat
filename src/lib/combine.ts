@@ -33,6 +33,7 @@ export interface ScoredShot {
   input: ShotScoreInput;
   shotScore: number; // 0–100
   monitor?: boolean; // judged from a launch monitor using the yard windows below
+  sameAsLast?: boolean; // entered with "Same as last shot" (one deliberate tap)
 }
 
 export interface CombineAttempt {
@@ -141,6 +142,27 @@ export function skillLabel(score: number): string {
   if (score >= 70) return "Competitive";
   if (score >= 55) return "Developing";
   return "Building";
+}
+
+// ─── Fast entry ───────────────────────────────────────────────────────────────
+
+// "Same as last shot" only makes sense when both shots ask the same questions:
+// driver shots ask Fairway Hit instead of Distance Control.
+export function canRepeatLast(prev: CombineShot | undefined, shot: CombineShot): boolean {
+  return !!prev && (prev.category === "driver") === (shot.category === "driver");
+}
+
+export function isInputComplete(
+  shot: CombineShot,
+  sel: { strike: StrikeQuality | null; dir: Direction | null; dc: DistanceControl | null; fairway: boolean | null },
+): sel is { strike: StrikeQuality; dir: Direction; dc: DistanceControl | null; fairway: boolean | null } {
+  return sel.strike !== null && sel.dir !== null && (shot.category === "driver" ? sel.fairway !== null : sel.dc !== null);
+}
+
+// Short summary for the "Same as last shot" button, e.g. "Solid · On Line · Close"
+export function describeInput(input: ShotScoreInput): string {
+  const last = input.fairwayHit !== undefined ? (input.fairwayHit ? "Fairway" : "Missed fairway") : input.distanceControl;
+  return [input.strikeQuality, input.direction, last].filter(Boolean).join(" · ");
 }
 
 // ─── Monitor mode ─────────────────────────────────────────────────────────────
