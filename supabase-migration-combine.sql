@@ -31,3 +31,10 @@ create policy "Users update own combine attempts" on combine_attempts
 drop policy if exists "Users delete own combine attempts" on combine_attempts;
 create policy "Users delete own combine attempts" on combine_attempts
   for delete using (auth.uid() = user_id);
+
+-- This project doesn't grant table access automatically to tables made in the
+-- SQL Editor, so grant it here. RLS above still limits signed-in users to their
+-- own rows. service_role is used by api/delete-account.ts to clear this table;
+-- without it, account deletion fails.
+grant select, insert, update, delete on combine_attempts to authenticated;
+grant select, insert, update, delete on combine_attempts to service_role;

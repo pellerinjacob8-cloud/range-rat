@@ -23,3 +23,7 @@ create policy "insert own events"
   for insert
   to authenticated
   with check (user_id = auth.uid());
+
+-- This project doesn't grant table access automatically to tables made in the
+-- SQL Editor. Insert only: there is still no select, update, or delete access.
+grant insert on public.app_events to authenticated;
