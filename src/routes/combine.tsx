@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { track } from "@/lib/trackEvent";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ProGate } from "@/components/ProGate";
-import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Repeat2, Trophy } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -16,6 +16,9 @@ import {
   skillLabel,
   monitorWindows,
   isMonitorAttempt,
+  canRepeatLast,
+  isInputComplete,
+  describeInput,
   CATEGORY_LABELS,
   type CombineAttempt,
   type CombineCategory,
@@ -86,7 +89,12 @@ function CombinePageInner() {
         overallScore: scores.overall,
       };
       saveCombineAttempt(record);
-      track("game_completed", { game: "combine", score_or_result: scores.overall, monitor: isMonitorAttempt(record) });
+      track("game_completed", {
+        game: "combine",
+        score_or_result: scores.overall,
+        monitor: isMonitorAttempt(record),
+        same_as_last: next.filter((s) => s.sameAsLast).length,
+      });
       setAttempt(record);
       setScreen("results");
     } else {
@@ -309,23 +317,76 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
 
   const canSubmit = strike !== null && dir !== null && (isDriver ? fairway !== null : dc !== null);
 
-  const submit = () => {
-    if (!canSubmit) return;
-    const input: ShotScoreInput = {
-      strikeQuality: strike!,
-      direction: dir!,
-      ...(isDriver ? { fairwayHit: fairway! } : { distanceControl: dc! }),
-    };
+  // Fast entry: once a shot's answers are all picked by tapping (or with
+  // "Same as last shot"), show a short confirmation, then move on by itself.
+  // Answers restored by Previous never auto-advance; Next still works.
+  const ADVANCE_MS = 550;
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pending, setPending] = useState<{ score: number; same: boolean } | null>(null);
+  useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
+
+  const cancelAdvance = () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+    setPending(null);
+  };
+
+  const commit = (input: ShotScoreInput, sameAsLast: boolean) => {
+    cancelAdvance();
     const shotScore = calcShotScore(shot, input);
-    onScored({ shot, input, shotScore, ...(monitor ? { monitor: true } : {}) });
+    onScored({ shot, input, shotScore, ...(monitor ? { monitor: true } : {}), ...(sameAsLast ? { sameAsLast: true } : {}) });
     // Reset fields for next shot
     setStrike(null);
     setDir(null);
     setDc(null);
     setFairway(null);
+    // The next shot card slides in at the top of the screen
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch {}
   };
 
-  const progressPct = (idx / total) * 100;
+  const toInput = (s: StrikeQuality, d: Direction, c: DistanceControl | null, f: boolean | null): ShotScoreInput => ({
+    strikeQuality: s,
+    direction: d,
+    ...(isDriver ? { fairwayHit: f! } : { distanceControl: c! }),
+  });
+
+  const scheduleAdvance = (input: ShotScoreInput, sameAsLast: boolean) => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    setPending({ score: calcShotScore(shot, input), same: sameAsLast });
+    advanceTimer.current = setTimeout(() => commit(input, sameAsLast), ADVANCE_MS);
+  };
+
+  // A tap on any answer: update it, then advance if the shot is now complete.
+  // Changing an answer during the confirmation restarts it with the new answer.
+  const choose = (next: Partial<{ strike: StrikeQuality; dir: Direction; dc: DistanceControl; fairway: boolean }>) => {
+    const sel = { strike, dir, dc, fairway, ...next };
+    if (next.strike !== undefined) setStrike(next.strike);
+    if (next.dir !== undefined) setDir(next.dir);
+    if (next.dc !== undefined) setDc(next.dc);
+    if (next.fairway !== undefined) setFairway(next.fairway);
+    if (isInputComplete(shot, sel)) scheduleAdvance(toInput(sel.strike, sel.dir, sel.dc, sel.fairway), false);
+    else cancelAdvance();
+  };
+
+  const prevScored = idx > 0 ? scored[idx - 1] : undefined;
+  const showRepeat = canRepeatLast(prevScored?.shot, shot) && !pending;
+  const repeatLast = () => {
+    if (!prevScored) return;
+    const input = prevScored.input;
+    setStrike(input.strikeQuality);
+    setDir(input.direction);
+    setDc(input.distanceControl ?? null);
+    setFairway(input.fairwayHit ?? null);
+    scheduleAdvance(input, true);
+  };
+
+  const submit = () => {
+    if (!canSubmit) return;
+    commit(toInput(strike!, dir!, dc, fairway), pending?.same ?? false);
+  };
+
+  // The bar fills for the shot being confirmed, so progress shows right away
+  const progressPct = ((idx + (pending ? 1 : 0)) / total) * 100;
 
   // Category transition banner
   const prevShot = idx > 0 ? COMBINE_SHOTS[idx - 1] : null;
@@ -358,8 +419,8 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
           </div>
         )}
 
-        {/* Shot assignment card */}
-        <div className="mt-4 rounded-2xl border border-border bg-card px-5 py-4">
+        {/* Shot assignment card: slides in for each new shot */}
+        <div key={idx} className="mt-4 rounded-2xl border border-border bg-card px-5 py-4 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-right-6 duration-300">
           <div className="flex items-baseline gap-3">
             {shot.yardage ? (
               <>
@@ -382,33 +443,48 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
           )}
         </div>
 
+        {/* Same as last shot: one deliberate tap copies the last answers */}
+        {showRepeat && prevScored && (
+          <button
+            type="button"
+            onClick={repeatLast}
+            className="mt-4 w-full flex items-center gap-3 rounded-[14px] border border-primary/40 bg-primary/5 px-4 py-3 text-left active:opacity-80"
+          >
+            <Repeat2 className="h-5 w-5 text-primary shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-[14px] font-bold text-primary">Same as last shot</span>
+              <span className="block text-[12px] text-muted-foreground truncate">{describeInput(prevScored.input)}</span>
+            </span>
+          </button>
+        )}
+
         {/* ── Scoring inputs ── */}
         <div className="mt-6 space-y-5">
 
           {/* Strike Quality */}
           <ScoringGroup label="Strike Quality">
             {(["Pure", "Solid", "Average", "Thin", "Fat", "Toe", "Heel"] as StrikeQuality[]).map((v) => (
-              <PillBtn key={v} active={strike === v} onClick={() => setStrike(v)}>{v}</PillBtn>
+              <PillBtn key={v} active={strike === v} onClick={() => choose({ strike: v })}>{v}</PillBtn>
             ))}
           </ScoringGroup>
 
           {/* Direction */}
           <ScoringGroup label="Direction">
             {(["On Line", "Slight Left", "Slight Right", "Moderate Left", "Moderate Right", "Severe Left", "Severe Right"] as Direction[]).map((v) => (
-              <PillBtn key={v} active={dir === v} onClick={() => setDir(v)} sub={dirSub(v)}>{v}</PillBtn>
+              <PillBtn key={v} active={dir === v} onClick={() => choose({ dir: v })} sub={dirSub(v)}>{v}</PillBtn>
             ))}
           </ScoringGroup>
 
           {/* Distance Control or Fairway */}
           {isDriver ? (
             <ScoringGroup label="Fairway Hit?">
-              <PillBtn active={fairway === true}  onClick={() => setFairway(true)} sub={win?.fairwayYards ? `within ${win.fairwayYards} yds offline` : undefined}>Yes</PillBtn>
-              <PillBtn active={fairway === false} onClick={() => setFairway(false)} sub={win?.fairwayYards ? `${win.fairwayYards + 1}+ yds offline` : undefined}>Miss</PillBtn>
+              <PillBtn active={fairway === true}  onClick={() => choose({ fairway: true })} sub={win?.fairwayYards ? `within ${win.fairwayYards} yds offline` : undefined}>Yes</PillBtn>
+              <PillBtn active={fairway === false} onClick={() => choose({ fairway: false })} sub={win?.fairwayYards ? `${win.fairwayYards + 1}+ yds offline` : undefined}>Miss</PillBtn>
             </ScoringGroup>
           ) : (
             <ScoringGroup label="Distance Control">
               {(["Perfect", "Close", "Off"] as DistanceControl[]).map((v) => (
-                <PillBtn key={v} active={dc === v} onClick={() => setDc(v)} sub={dcSub(v)}>{v}</PillBtn>
+                <PillBtn key={v} active={dc === v} onClick={() => choose({ dc: v })} sub={dcSub(v)}>{v}</PillBtn>
               ))}
             </ScoringGroup>
           )}
@@ -419,6 +495,17 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
       <div className="fixed inset-x-0 z-40 bg-gradient-to-t from-background via-background/95 to-transparent"
            style={{ bottom: "calc(68px + env(safe-area-inset-bottom))" }}>
         <div className="mx-auto w-full max-w-[430px] px-4 pt-4 pb-4 space-y-2">
+          {/* Moved-on confirmation: the shot's score, just before the next shot */}
+          {pending && (
+            <div
+              key={`${idx}-${pending.score}-${pending.same}`}
+              className="flex items-center justify-center gap-2 rounded-[14px] bg-primary/10 py-2 text-[14px] font-bold text-primary motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 duration-200"
+              role="status"
+            >
+              <Check className="h-4 w-4" />
+              Shot {idx + 1} · {pending.score} pts{pending.same ? " · same as last" : ""}
+            </div>
+          )}
           <button
             type="button"
             onClick={submit}
@@ -431,14 +518,14 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
             <button
               type="button"
               disabled={idx === 0}
-              onClick={() => onBack(idx)}
+              onClick={() => { cancelAdvance(); onBack(idx); }}
               className="flex flex-1 items-center justify-center gap-1 rounded-[14px] border border-border bg-card py-3.5 text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground disabled:opacity-30 active:bg-muted"
             >
               <ChevronLeft className="h-4 w-4" /> Previous
             </button>
             <button
               type="button"
-              onClick={onQuit}
+              onClick={() => { cancelAdvance(); onQuit(); }}
               className="flex flex-1 items-center justify-center rounded-[14px] border border-border bg-card py-3.5 text-[13px] font-bold uppercase tracking-[0.06em] text-muted-foreground active:bg-muted"
             >
               Quit
