@@ -1,11 +1,28 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { ensureSentry, Sentry } from "./_sentry.js";
-import { getSupabaseAdmin, missingEnv } from "./_config.js";
+import type Stripe from "stripe";
+import { getStripe, getSupabaseAdmin, missingEnv } from "./_config.js";
 
 // Tables keyed by user_id that hold this user's data. profiles is keyed by id
 // and handled separately. Deleting rows explicitly (rather than relying on a
 // cascade) keeps cleanup correct regardless of the FK setup.
 const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages", "combine_attempts"] as const;
+
+// Subscription statuses that are already over and need no cancel call.
+const ENDED_STATUSES: Stripe.Subscription.Status[] = ["canceled", "incomplete_expired"];
+
+// Cancel every live Stripe subscription for this email, immediately. Checkout
+// passes customer_email, so Stripe can create a new customer per checkout and
+// one email may map to several customers: check all of them. Throws on any
+// Stripe failure so the caller keeps the account and the user can retry.
+async function cancelStripeSubscriptions(stripe: Stripe, email: string): Promise<void> {
+  for await (const customer of stripe.customers.list({ email, limit: 100 })) {
+    for await (const sub of stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 100 })) {
+      if (ENDED_STATUSES.includes(sub.status)) continue;
+      await stripe.subscriptions.cancel(sub.id);
+    }
+  }
+}
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   ensureSentry();
@@ -46,7 +63,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const userId = user.id;
 
-    // 1. Remove the user's data rows.
+    // 1. Stop billing first. If this fails, nothing is deleted yet and the
+    //    user can retry. Accounts with no Stripe customer skip straight through.
+    if (user.email) {
+      await cancelStripeSubscriptions(getStripe(), user.email);
+    }
+
+    // 2. Remove the user's data rows.
     for (const table of USER_TABLES) {
       const { error } = await supabase.from(table).delete().eq("user_id", userId);
       // Tolerate tables whose migration hasn't run yet (undefined_table);
@@ -58,7 +81,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const { error: profileError } = await supabase.from("profiles").delete().eq("id", userId);
     if (profileError) throw new Error(`Failed to clear profile: ${profileError.message}`);
 
-    // 2. Delete the auth user last, so a failure above leaves the account intact.
+    // 3. Delete the auth user last, so a failure above leaves the account intact.
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteError) throw new Error(deleteError.message);
 

@@ -91,7 +91,7 @@ function PrivacyPage() {
               "Access and export your data by contacting us.",
               "Correct inaccurate information in your profile at any time.",
               "Delete your account and your golf data instantly from your profile via Delete account, or by emailing us at the address below.",
-              "Cancel your Pro subscription at any time through the Manage subscription option on your profile, which opens the Stripe customer portal. Deleting your account does not cancel a subscription, so cancel it first.",
+              "Cancel your Pro subscription at any time through the Manage subscription option on your profile, which opens the Stripe customer portal. Deleting your account also cancels any active subscription immediately.",
             ]} />
             If you are located in the European Economic Area (EEA), United Kingdom, or California,
             you may have additional rights under GDPR or CCPA. Contact us and we will accommodate
