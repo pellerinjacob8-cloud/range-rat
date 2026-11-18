@@ -32,6 +32,7 @@ export interface ScoredShot {
   shot: CombineShot;
   input: ShotScoreInput;
   shotScore: number; // 0–100
+  monitor?: boolean; // judged from a launch monitor using the yard windows below
 }
 
 export interface CombineAttempt {
@@ -140,6 +141,40 @@ export function skillLabel(score: number): string {
   if (score >= 70) return "Competitive";
   if (score >= 55) return "Developing";
   return "Building";
+}
+
+// ─── Monitor mode ─────────────────────────────────────────────────────────────
+
+// Same 33 shots, same taps and scoring. With a launch monitor or simulator,
+// each answer is read off the numbers: the buttons show yard windows built
+// from the shot's target, so taps match what a by-eye range golfer would pick.
+const DRIVER_CARRY = 230; // no target for driver; direction windows assume a typical carry
+const FAIRWAY_YARDS = 15; // offline yards still counted as a fairway hit
+
+function yards(base: number, pct: number): number {
+  return Math.max(1, Math.round(base * pct));
+}
+
+export interface MonitorWindows {
+  distance?: { perfect: [number, number]; close: [number, number] }; // carry yards, not for driver
+  direction: { onLine: number; slight: number; moderate: number };   // max offline yards per band
+  fairwayYards?: number;                                              // driver only
+}
+
+export function monitorWindows(shot: CombineShot): MonitorWindows {
+  const base = shot.yardage ?? DRIVER_CARRY;
+  const direction = { onLine: yards(base, 0.03), slight: yards(base, 0.07), moderate: yards(base, 0.12) };
+  if (shot.category === "driver" || shot.yardage === undefined) {
+    return { direction, fairwayYards: FAIRWAY_YARDS };
+  }
+  const t = shot.yardage;
+  const p = yards(t, 0.04);
+  const c = yards(t, 0.08);
+  return { distance: { perfect: [t - p, t + p], close: [t - c, t + c] }, direction };
+}
+
+export function isMonitorAttempt(attempt: CombineAttempt): boolean {
+  return attempt.shots.some((s) => s.monitor);
 }
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
