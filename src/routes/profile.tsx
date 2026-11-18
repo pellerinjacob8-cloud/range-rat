@@ -811,7 +811,7 @@ function ProfilePage() {
             </div>
             <h2 className="font-display text-[24px] leading-tight mb-2">Delete your account?</h2>
             <p className="text-[14px] text-muted-foreground leading-relaxed mb-6">
-              This permanently removes your profile, bag, stats, and session history. This cannot be undone.
+              This permanently removes your profile, bag, stats, and session history, and cancels any Pro subscription. This cannot be undone.
             </p>
             <button type="button" onClick={handleDeleteAccount} disabled={deleting}
               className="h-13 w-full rounded-[14px] bg-destructive text-white font-bold text-[14px] uppercase tracking-[0.06em] py-3.5 disabled:opacity-50 active:opacity-90 transition-opacity">
