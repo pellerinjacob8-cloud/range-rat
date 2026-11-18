@@ -24,7 +24,7 @@ function PrivacyPage() {
         </div>
 
         <h1 className="mt-4 font-display text-[34px] leading-tight tracking-[-0.01em]">Privacy Policy</h1>
-        <p className="mt-2 text-[13px] text-muted-foreground">Effective June 21, 2026</p>
+        <p className="mt-2 text-[13px] text-muted-foreground">Effective November 18, 2026</p>
 
         <div className="mt-8 space-y-7 text-[15px] leading-relaxed text-foreground">
           <Section title="Introduction">
@@ -36,17 +36,20 @@ function PrivacyPage() {
 
           <Section title="Information we collect">
             <BulletList items={[
-              <><strong>Account information.</strong> When you sign up we collect your name and email address to create and secure your account.</>,
-              <><strong>Golf data.</strong> Practice sessions, on-course rounds, scores, handicap index, club bag configuration (brands, degrees, yardages), and goals you enter while using the app.</>,
-              <><strong>Subscription data.</strong> If you subscribe to Range Rat Pro, Stripe collects your payment method and billing details on our behalf. We receive your Stripe customer ID, subscription status, and billing history but never see or store your full card number.</>,
-              <><strong>Device and usage data.</strong> We automatically collect basic technical information needed to operate the Service, including browser type, device type, IP address, and pages visited. We do not use third-party advertising trackers.</>,
+              <><strong>Account information.</strong> When you sign up we collect your email address, name, and which hand you play, to create and secure your account.</>,
+              <><strong>Golf data.</strong> What you enter or do in the app: your handicap index and its history, round stats (greens in regulation, fairways, putts, up and downs), the clubs in your bag (with optional brand and model), swing yardages, finished practice sessions (balls hit, blocks completed, areas practiced, putting results), saved sessions, and Combine results.</>,
+              <><strong>Subscription data.</strong> If you subscribe to Range Rat Pro, Stripe collects your payment method and billing details. We only store whether your Pro subscription is active. We never see or store your card number.</>,
+              <><strong>Feature usage.</strong> When you are signed in, we record which screens and features you use: for example opening a screen, starting or finishing a practice session or game (including its score), saving your bag or yardages, and viewing or tapping upgrade options. These records are linked to your account ID and never include your name, email, or anything you type.</>,
+              <><strong>Device and technical data.</strong> Our hosting and error monitoring providers receive basic technical information when you use the Service, such as browser type, device type, IP address, and the page where an error happened. We do not use advertising trackers.</>,
             ]} />
           </Section>
 
           <Section title="How we use your information">
             <BulletList items={[
               "To create, authenticate, and maintain your account.",
-              "To provide, personalize, and improve app features such as practice recommendations, stat tracking, and handicap-based drill selection.",
+              "To provide and personalize app features such as practice sessions built from your bag, sessions matched to your handicap, and recommendations from your round stats.",
+              "To understand which features are used so we can improve the app.",
+              "To find and fix errors.",
               "To process and manage your Range Rat Pro subscription.",
               "To communicate with you about your account, subscription, or changes to this policy.",
               "To monitor and protect the security and integrity of the Service.",
@@ -59,23 +62,27 @@ function PrivacyPage() {
               <><strong>Supabase</strong> provides authentication and database hosting. Your account and golf data are stored in Supabase's infrastructure.</>,
               <><strong>Stripe</strong> processes subscription payments. Stripe's handling of your payment information is governed by the <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Stripe Privacy Policy</a>.</>,
               <><strong>Vercel</strong> hosts the application and serves web pages.</>,
-              <><strong>Resend</strong> delivers transactional emails (account confirmations, password resets).</>,
+              <><strong>Resend</strong> delivers account emails (sign-up codes, confirmations, password resets) and notifies us when a new account is created, including the new user's name and email.</>,
+              <><strong>Sentry</strong> receives error reports when something in the app breaks, so we can fix it.</>,
             ]} />
             We do not sell, rent, or share your personal information with advertisers or unrelated third parties.
           </Section>
 
           <Section title="Cookies and local storage">
-            The Service uses essential cookies and browser local storage to keep you signed in and
-            to store in-progress session data. We do not use cookies for advertising or cross-site
-            tracking. You can clear local storage through your browser settings, but doing so will
-            sign you out.
+            The Service uses your browser's local storage to keep you signed in, remember settings
+            such as your theme and practice choices, and save a session that is in progress. Feature
+            usage records are stored on our servers, not in cookies. We do not use cookies for
+            advertising or cross-site tracking. You can clear local storage through your browser
+            settings, but doing so will sign you out.
           </Section>
 
           <Section title="Data retention">
-            We retain your account and golf data for as long as your account is active. If you
-            delete your account, we will remove your personal data from our active systems within
-            30 days. Some data may persist in encrypted backups for a limited time before being
-            purged in the normal backup rotation cycle.
+            We retain your account and golf data for as long as your account is active. When you
+            delete your account from your profile, your account and golf data are removed right away.
+            Feature usage records are kept only with the link to your account removed, so they can no
+            longer be connected to you. Stripe keeps billing records as required by law. Some data may
+            persist in encrypted backups for a limited time before being purged in the normal backup
+            rotation cycle.
           </Section>
 
           <Section title="Your rights and choices">
@@ -83,8 +90,8 @@ function PrivacyPage() {
             <BulletList items={[
               "Access and export your data by contacting us.",
               "Correct inaccurate information in your profile at any time.",
-              "Delete your account and all associated data instantly from your profile via Delete account, or by emailing us at the address below.",
-              "Cancel your Pro subscription at any time through the Manage Subscription option on your profile, which opens the Stripe customer portal.",
+              "Delete your account and your golf data instantly from your profile via Delete account, or by emailing us at the address below.",
+              "Cancel your Pro subscription at any time through the Manage subscription option on your profile, which opens the Stripe customer portal. Deleting your account does not cancel a subscription, so cancel it first.",
             ]} />
             If you are located in the European Economic Area (EEA), United Kingdom, or California,
             you may have additional rights under GDPR or CCPA. Contact us and we will accommodate
