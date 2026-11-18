@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { track } from "@/lib/trackEvent";
 import { useEffect, useRef, useState } from "react";
-import { ProGate } from "@/components/ProGate";
-import { Check, ChevronLeft, ChevronRight, Repeat2, Trophy } from "lucide-react";
+import { ProModal } from "@/components/ProModal";
+import { useAuth } from "@/context/AuthContext";
+import { loadProfileName } from "@/lib/profile";
+import { toast } from "sonner";
+import { Check, ChevronLeft, ChevronRight, Link2, Repeat2, Share, Trophy, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -28,6 +31,15 @@ import {
   type Direction,
   type DistanceControl,
 } from "@/lib/combine";
+import {
+  canStartCombine,
+  copyLink,
+  drawScoreCard,
+  shareFromAttempt,
+  shareScore,
+  shareUrl,
+  type ShareResult,
+} from "@/lib/combineShare";
 
 const MONITOR_KEY = "range-rat:combine-monitor";
 
@@ -37,15 +49,15 @@ export const Route = createFileRoute("/combine")({
 
 type Screen = "lobby" | "shot" | "results";
 
+// Free accounts can take one Combine (so a friend from a shared score can
+// try it); the lobby asks for Pro before a retake.
 function CombinePage() {
-  return (
-    <ProGate feature="Combine">
-      <CombinePageInner />
-    </ProGate>
-  );
+  const { isPro, loading } = useAuth();
+  if (loading) return null;
+  return <CombinePageInner isPro={isPro} />;
 }
 
-function CombinePageInner() {
+function CombinePageInner({ isPro }: { isPro: boolean }) {
   const [screen, setScreen] = useState<Screen>("lobby");
   const [scored, setScored] = useState<ScoredShot[]>([]);
   const [attempt, setAttempt] = useState<CombineAttempt | null>(null);
@@ -129,20 +141,27 @@ function CombinePageInner() {
     return (
       <ResultsView
         attempt={attempt}
+        isPro={isPro}
         onDone={() => setScreen("lobby")}
       />
     );
   }
 
-  return <CombineLobby onStart={startCombine} monitor={monitor} onMonitorChange={chooseMonitor} />;
+  return <CombineLobby onStart={startCombine} isPro={isPro} monitor={monitor} onMonitorChange={chooseMonitor} />;
 }
 
 // ─── Lobby ────────────────────────────────────────────────────────────────────
 
-function CombineLobby({ onStart, monitor, onMonitorChange }: { onStart: () => void; monitor: boolean; onMonitorChange: (on: boolean) => void }) {
+function CombineLobby({ onStart, isPro, monitor, onMonitorChange }: { onStart: () => void; isPro: boolean; monitor: boolean; onMonitorChange: (on: boolean) => void }) {
   const navigate = useNavigate();
   const [attempts, setAttempts] = useState<CombineAttempt[]>(loadCombineAttempts);
-  useEffect(() => { syncCombineAttempts().then(setAttempts); }, []);
+  // Free accounts wait for the database copy, so a Combine taken on another
+  // device still counts as their free one.
+  const [synced, setSynced] = useState(false);
+  useEffect(() => { syncCombineAttempts().then((a) => { setAttempts(a); setSynced(true); }); }, []);
+  const [showPro, setShowPro] = useState(false);
+  const canStart = canStartCombine(isPro, attempts.length);
+  const checking = !isPro && !synced;
   const last     = attempts[attempts.length - 1];
   const pb       = attempts.length > 0
     ? Math.max(...attempts.map(a => a.overallScore))
@@ -158,6 +177,9 @@ function CombineLobby({ onStart, monitor, onMonitorChange }: { onStart: () => vo
         <p className="mt-3 text-[15px] text-muted-foreground">
           33 standardized shots: wedges, irons, long game, driver. Same test every time.
         </p>
+        {!isPro && synced && attempts.length === 0 && (
+          <p className="mt-3 text-[14px] font-semibold text-primary">Your first Combine is free.</p>
+        )}
 
         {/* Est. time */}
         <div className="mt-5 flex items-center gap-3">
@@ -256,13 +278,20 @@ function CombineLobby({ onStart, monitor, onMonitorChange }: { onStart: () => vo
         <div className="mx-auto w-full max-w-[430px] px-4 pt-6 pb-4">
           <button
             type="button"
-            onClick={onStart}
-            className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[15px] uppercase tracking-[0.06em] active:opacity-90"
+            disabled={checking}
+            onClick={() => (canStart ? onStart() : setShowPro(true))}
+            className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[15px] uppercase tracking-[0.06em] active:opacity-90 disabled:opacity-40 inline-flex items-center justify-center gap-2"
           >
-            {attempts.length === 0 ? "Start Combine" : "New Attempt"}
+            {checking ? "Loading" : !canStart ? <><Zap className="h-4 w-4" /> Retake with Pro</> : attempts.length === 0 ? "Start Combine" : "New Attempt"}
           </button>
         </div>
       </div>
+      <ProModal
+        open={showPro}
+        onClose={() => setShowPro(false)}
+        feature="combine_retake"
+        reason="Your free Combine is done. Go Pro to retake it, track your trend, and beat your best."
+      />
     </AppShell>
   );
 }
@@ -539,8 +568,9 @@ function ShotFlow({ scored, onScored, onBack, onQuit, restoredInput, monitor = f
 
 // ─── Results ──────────────────────────────────────────────────────────────────
 
-function ResultsView({ attempt, onDone }: { attempt: CombineAttempt; onDone: () => void }) {
+function ResultsView({ attempt, isPro, onDone }: { attempt: CombineAttempt; isPro: boolean; onDone: () => void }) {
   const all     = loadCombineAttempts();
+  const [showPro, setShowPro] = useState(false);
   const pb      = Math.max(...all.map(a => a.overallScore));
   const isNewPb = attempt.overallScore === pb && all.length > 1;
   const prev    = all.length >= 2 ? all[all.length - 2] : null;
@@ -586,6 +616,24 @@ function ResultsView({ attempt, onDone }: { attempt: CombineAttempt; onDone: () 
           )}>
             {diff > 0 ? `+${diff}` : diff} vs last attempt
           </p>
+        )}
+
+        <ShareScore attempt={attempt} />
+
+        {/* Free accounts: the one free Combine is done */}
+        {!isPro && (
+          <button
+            type="button"
+            onClick={() => setShowPro(true)}
+            className="mt-4 w-full rounded-2xl border border-gold-border bg-gold-bg p-4 flex items-center gap-3 text-left active:opacity-90"
+          >
+            <Zap className="h-5 w-5 shrink-0 text-gold" />
+            <span className="flex-1">
+              <span className="block text-[15px] font-bold text-foreground">Retake, track your trend, beat your best</span>
+              <span className="block text-[13px] text-muted-foreground">Retakes and Combine history are Pro. From $4.99/mo.</span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
         )}
 
         {/* Category breakdown */}
@@ -647,7 +695,58 @@ function ResultsView({ attempt, onDone }: { attempt: CombineAttempt; onDone: () 
           </button>
         </div>
       </div>
+      <ProModal
+        open={showPro}
+        onClose={() => setShowPro(false)}
+        feature="combine_retake"
+        reason="Go Pro to retake the Combine, track your trend, and beat your best."
+      />
     </AppShell>
+  );
+}
+
+// ─── Share ────────────────────────────────────────────────────────────────────
+
+// "Share my score": a score card image plus a "beat my score" link. The card
+// is drawn when results open so the tap can open the share sheet right away.
+function ShareScore({ attempt }: { attempt: CombineAttempt }) {
+  const [data] = useState(() => shareFromAttempt(attempt, loadProfileName()));
+  const [card, setCard] = useState<Blob | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    drawScoreCard(data).then((b) => { if (live) setCard(b); }).catch(() => {});
+    return () => { live = false; };
+  }, [data]);
+  const url = shareUrl(window.location.origin, data);
+
+  const done = (result: ShareResult) => {
+    if (result === "copied") toast("Link copied. Send it to a friend.");
+    if (result === "failed") toast("Couldn't share. Please try again.");
+    if (result === "image" || result === "link" || result === "copied") {
+      track("combine_shared", { method: result, score: data.overall, monitor: data.monitor });
+    }
+  };
+
+  return (
+    <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => { setBusy(true); done(await shareScore(data, url, card)); setBusy(false); }}
+        className="h-12 rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-60"
+      >
+        <Share className="h-4 w-4" /> Share my score
+      </button>
+      <button
+        type="button"
+        onClick={async () => done(await copyLink(url))}
+        aria-label="Copy link"
+        className="h-12 w-12 rounded-[14px] border border-border bg-card inline-flex items-center justify-center text-foreground active:bg-muted"
+      >
+        <Link2 className="h-5 w-5" />
+      </button>
+    </div>
   );
 }
 

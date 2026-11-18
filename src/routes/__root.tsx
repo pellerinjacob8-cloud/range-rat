@@ -97,7 +97,7 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname.startsWith("/auth/");
+    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname === "/challenge" || pathname.startsWith("/auth/");
     const isOnboarding = pathname.startsWith("/onboarding");
 
     if (!session) {

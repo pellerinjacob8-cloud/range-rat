@@ -5,6 +5,8 @@ import { useForceLightMode } from "@/hooks/useForceLightMode";
 import { supabase } from "@/lib/supabase";
 import { saveProfile, saveHandicapSnapshot } from "@/lib/db";
 import { toast } from "sonner";
+import { track } from "@/lib/trackEvent";
+import { takeReferralSource } from "@/lib/combineShare";
 
 export const Route = createFileRoute("/onboarding/name")({
   component: OnboardingName,
@@ -50,6 +52,9 @@ function OnboardingName() {
         handicap: effectiveHandicap,
       });
       if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
+      // Signed up from a shared Combine score: logged once, as a usage event
+      const ref = takeReferralSource();
+      if (ref) track("signup_referred", { source: ref });
       navigate({ to: "/onboarding/bag" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";
