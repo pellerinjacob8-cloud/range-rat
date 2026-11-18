@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { track } from "@/lib/trackEvent";
 import { useEffect, useState } from "react";
 import { ProGate } from "@/components/ProGate";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
@@ -43,6 +44,7 @@ function CombinePageInner() {
   const [attempt, setAttempt] = useState<CombineAttempt | null>(null);
 
   const startCombine = () => {
+    track("game_started", { game: "combine" });
     setScored([]);
     setAttempt(null);
     setScreen("shot");
@@ -71,6 +73,7 @@ function CombinePageInner() {
         overallScore: scores.overall,
       };
       saveCombineAttempt(record);
+      track("game_completed", { game: "combine", score_or_result: scores.overall });
       setAttempt(record);
       setScreen("results");
     } else {

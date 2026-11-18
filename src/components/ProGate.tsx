@@ -20,6 +20,7 @@ export function ProGate({ feature, children }: ProGateProps) {
       <ProModal
         open={open}
         onClose={() => { setOpen(false); navigate({ to: "/" }); }}
+        feature={feature.toLowerCase().replace(/\s+/g, "_")}
         reason={`${feature} is a Pro feature. Upgrade to unlock it and the full Range Rat experience.`}
       />
     );

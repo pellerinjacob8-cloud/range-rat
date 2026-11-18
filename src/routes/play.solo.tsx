@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { track, useTrackOnce } from "@/lib/trackEvent";
 import { useEffect, useRef, useState } from "react";
 import { saveActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { Check, Flag, RotateCcw, Trophy, X } from "lucide-react";
@@ -56,6 +57,8 @@ function SoloPage() {
       setShot(generateShot(opts));
     });
   }, []);
+
+  useTrackOnce("game_started", { game: "random_practice_solo" });
 
   useEffect(() => {
     saveActiveMarker({
@@ -139,6 +142,7 @@ function SoloPage() {
           <Button
             variant="outline"
             onClick={() => {
+              track("game_started", { game: "random_practice_solo" });
               setAttempts([]);
               setShot(generateShot(shotOpts));
               setResolved(false);
@@ -238,7 +242,10 @@ function SoloPage() {
         <div className="mt-6 space-y-3">
           <button
             type="button"
-            onClick={() => setSummary(true)}
+            onClick={() => {
+              track("game_completed", { game: "random_practice_solo", score_or_result: `${made}/${total}` });
+              setSummary(true);
+            }}
             disabled={total === 0}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm font-bold uppercase tracking-wide text-white/70 transition active:scale-[0.99] disabled:opacity-50"
           >

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { track, useTrackOnce } from "@/lib/trackEvent";
 import { ProGate } from "@/components/ProGate";
 import { useState, useEffect } from "react";
 import { saveActiveMarker } from "@/lib/active-session";
@@ -73,6 +74,7 @@ function GridGameInner() {
     return (
       <SetupView
         onStart={(c) => {
+          track("game_started", { game: "grid" });
           setConfig(c);
           setCaller(0);
           setLetters([0, 0]);
@@ -93,6 +95,7 @@ function GridGameInner() {
         letters={letters}
         winnerIdx={winnerIdx}
         onPlayAgain={() => {
+          track("game_started", { game: "grid" });
           setLetters([0, 0]);
           setCaller(0);
           setPhase({ kind: "pick" });
@@ -444,6 +447,7 @@ function WinnerView({
   onPlayAgain: () => void;
   onNewMatch: () => void;
 }) {
+  useTrackOnce("game_completed", { game: "grid", score_or_result: `letters ${letters[0]}-${letters[1]}` });
   const winnerName = winnerIdx === 0 ? config.p1 : config.p2;
   const loserName = winnerIdx === 0 ? config.p2 : config.p1;
   const word = config.word;

@@ -1,9 +1,10 @@
-import { Component, useEffect, useState } from "react";
+import { Component, useEffect, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import { Outlet, Link, createRootRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { fetchProfile } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
+import { track } from "@/lib/trackEvent";
 
 function NotFoundComponent() {
   return (
@@ -43,6 +44,15 @@ function AuthGate() {
     const t = setTimeout(() => setMinTimeElapsed(true), 800);
     return () => clearTimeout(t);
   }, []);
+
+  // Usage events: one tab_viewed per screen change (path only, never search
+  // params). Logged-out visitors are skipped inside track().
+  const lastTrackedPath = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading || lastTrackedPath.current === pathname) return;
+    lastTrackedPath.current = pathname;
+    track("tab_viewed", { tab: pathname });
+  }, [pathname, loading]);
 
   useEffect(() => {
     if (!session) { setHasProfile(null); return; }

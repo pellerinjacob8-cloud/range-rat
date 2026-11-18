@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { track, useTrackOnce } from "@/lib/trackEvent";
 import { ProGate } from "@/components/ProGate";
 import { useState, useEffect } from "react";
 import { saveActiveMarker } from "@/lib/active-session";
@@ -64,6 +65,7 @@ function FairwayGame() {
     return (
       <SetupView
         onStart={(c) => {
+          track("game_started", { game: "fairway", mode: c.mode });
           setConfig(c);
           setResults([[], []]);
           setShowHandoff(false);
@@ -89,6 +91,7 @@ function FairwayGame() {
         config={config}
         results={results}
         onPlayAgain={() => {
+          track("game_started", { game: "fairway", mode: config.mode });
           setResults([[], []]);
           setShowHandoff(false);
         }}
@@ -350,6 +353,13 @@ function ResultsView({
   onPlayAgain: () => void;
   onNewMatch: () => void;
 }) {
+  useTrackOnce("game_completed", {
+    game: "fairway",
+    mode: config.mode,
+    score_or_result: config.mode === "solo"
+      ? `${results[0].filter(Boolean).length}/${results[0].length}`
+      : `${results[0].filter(Boolean).length}-${results[1].filter(Boolean).length}`,
+  });
   if (config.mode === "solo") {
     const arr = results[0];
     const hits = arr.filter(Boolean).length;

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { track, useTrackOnce } from "@/lib/trackEvent";
 import { useEffect, useRef, useState } from "react";
 import { saveActiveMarker } from "@/lib/active-session";
 import { Minus, Plus, Sparkles, Star, Trophy, Undo2 } from "lucide-react";
@@ -59,7 +60,7 @@ function ClosestToPin() {
   }, [config]);
 
   if (!config) {
-    return <SetupView onStart={(c) => setConfig(c)} />;
+    return <SetupView onStart={(c) => { setConfig(c); track("game_started", { game: "closest_to_pin" }); }} />;
   }
 
   const score = [0, 0];
@@ -75,7 +76,7 @@ function ClosestToPin() {
         config={config}
         score={score as [number, number]}
         winnerIdx={winnerIdx}
-        onPlayAgain={() => setHistory([])}
+        onPlayAgain={() => { setHistory([]); track("game_started", { game: "closest_to_pin" }); }}
         onNewMatch={() => {
           setConfig(null);
           setHistory([]);
@@ -343,6 +344,7 @@ function WinnerView({
   const loserName = winnerIdx === 0 ? config.p2 : config.p1;
   const winnerScore = score[winnerIdx];
   const loserScore = score[winnerIdx === 0 ? 1 : 0];
+  useTrackOnce("game_completed", { game: "closest_to_pin", score_or_result: `${winnerScore}-${loserScore}` });
 
   return (
     <AppShell showBack>
