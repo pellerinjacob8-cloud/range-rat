@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { trackBeforeLeaving } from "@/lib/trackEvent";
 import { useState } from "react";
 import { ChevronLeft, Check } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
@@ -111,6 +112,7 @@ function OnboardingBag() {
     try {
       if (!skip && selected.size > 0) {
         await saveBag(buildBag(selected));
+        await trackBeforeLeaving("bag_saved", { club_count: selected.size });
       }
       // On a phone without the app on the home screen, show the install step
       // first. It marks onboarding complete when the user leaves it.

@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { trackSettled } from "@/lib/trackEvent";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -1037,9 +1038,12 @@ function BagSection() {
     // Persist to localStorage for offline/instant reads
     try { localStorage.setItem(BAG_KEY, JSON.stringify(next)); } catch {}
     // Persist to Supabase
-    dbSaveBag(next as DbClub[]).catch(() =>
-      toast.error("Couldn't sync your bag. Check your connection and try again.")
-    );
+    dbSaveBag(next as DbClub[])
+      // Iron set header rows aren't clubs, so they're left out of the count.
+      .then(() => trackSettled("bag_saved", { club_count: next.filter((c) => c.type !== "iron-set").length }))
+      .catch(() =>
+        toast.error("Couldn't sync your bag. Check your connection and try again.")
+      );
   };
 
   // ── Add ──
@@ -1565,9 +1569,11 @@ function YardageSection() {
       localStorage.setItem(YARDAGE_KEY, JSON.stringify(all));
     } catch {}
     // Persist to Supabase
-    dbSaveYardage(clubId, next).catch(() =>
-      toast.error("Couldn't sync yardages. Check your connection and try again.")
-    );
+    dbSaveYardage(clubId, next)
+      .then(() => trackSettled("yardages_saved"))
+      .catch(() =>
+        toast.error("Couldn't sync yardages. Check your connection and try again.")
+      );
   };
 
   if (clubs.length === 0) {

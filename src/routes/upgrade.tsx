@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
+import { track } from "@/lib/trackEvent";
 import { useState } from "react";
 import { Check, ChevronLeft, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -38,6 +39,7 @@ function UpgradePage() {
     if (!user) { navigate({ to: "/login" }); return; }
     setLoading(true);
     setError(null);
+    track("upgrade_clicked", { plan });
     try {
       await startCheckout(plan === "monthly" ? PRICES.monthly : PRICES.yearly);
     } catch (err: any) {

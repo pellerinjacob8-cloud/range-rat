@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { track, useTrackOnce } from "@/lib/trackEvent";
 import { useEffect, useRef, useState } from "react";
 import { Check, Minus, Plus, Trophy, X } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -92,6 +93,7 @@ function GamePage() {
 
   if (!config) {
     return <SetupView onStart={(c) => {
+      track("game_started", { game: "random_practice_game" });
       setConfig(c);
       saveActiveMarker({
         type: "play-game",
@@ -109,6 +111,7 @@ function GamePage() {
         score={score}
         winnerIdx={winnerIdx}
         onPlayAgain={() => {
+          track("game_started", { game: "random_practice_game" });
           setScore([0, 0]);
           setPicks([null, null]);
           setShot(generateShot(shotOpts));
@@ -343,6 +346,7 @@ function WinnerView({
   const loserName = winnerIdx === 0 ? config.p2 : config.p1;
   const winnerScore = score[winnerIdx];
   const loserScore = score[winnerIdx === 0 ? 1 : 0];
+  useTrackOnce("game_completed", { game: "random_practice_game", score_or_result: `${winnerScore}-${loserScore}` });
 
   return (
     <AppShell showBack>

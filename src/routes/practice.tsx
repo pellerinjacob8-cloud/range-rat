@@ -45,6 +45,7 @@ import {
 } from "@/lib/practicePlan";
 import { fetchProfile, fetchHandicapHistory, fetchPlayableBag, fetchSessions, fetchYardages } from "@/lib/db";
 import { quickStartStep, quickStartBlocks } from "@/lib/quickStart";
+import { track } from "@/lib/trackEvent";
 import type { Club } from "@/lib/db";
 import {
   PUTTING_MODES,
@@ -94,6 +95,9 @@ interface RunState {
   label: string;
   source: RunSource;
   focus?: PlanFocus | null;
+  // Usage event details (plan kind and length). Never a user-entered name.
+  goal?: string;
+  bucket?: string;
 }
 
 interface DoneState {
@@ -303,6 +307,9 @@ function PracticePage() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [yardages, setYardages] = useState<Record<string, SwingYards>>({});
   const [history, setHistory] = useState<TrackedSession[]>([]);
+  // Finished sessions (all areas) saved before this visit: null until loaded,
+  // so first_session_completed only fires when the count is known.
+  const priorSessions = useRef<number | null>(null);
 
   useEffect(() => {
     fetchProfile().then((p) => {
@@ -320,7 +327,10 @@ function PracticePage() {
     fetchPlayableBag().then((b) => { setUserBag(b); setBagLoaded(true); }).catch(() => setBagLoaded(true));
     fetchYardages().then(setYardages).catch(() => {});
     fetchSessions()
-      .then((all) => setHistory(all.filter((x) => (x.area ?? "range") === "range")))
+      .then((all) => {
+        priorSessions.current = all.length;
+        setHistory(all.filter((x) => (x.area ?? "range") === "range"));
+      })
       .catch(() => {});
   }, []);
 
@@ -420,7 +430,10 @@ function PracticePage() {
         : PLANS.find((p) => p.value === plan_)?.label ?? "Practice",
       source: "plan",
       focus: activeFocus,
+      goal: plan_,
+      bucket: length,
     });
+    track("session_started", { area: "range", goal: plan_, bucket: length });
   };
 
   // Quick start (?start=quick): once the bag and level are known, start a
@@ -441,7 +454,8 @@ function PracticePage() {
       const blocks = quickStartBlocks(level, userBag, yardages);
       if (blocks.length > 0) {
         setDone(null);
-        setRun({ blocks, index: 0, label: "Quick session", source: "plan", focus: null });
+        setRun({ blocks, index: 0, label: "Quick session", source: "plan", focus: null, goal: "standard", bucket: "quick" });
+        track("session_started", { area: "range", goal: "standard", bucket: "quick", quick_start: true });
       }
     }
     setQuickPending(false);
@@ -450,7 +464,8 @@ function PracticePage() {
 
   const startFavorite = (fav: Favorite, source: RunSource) => {
     setDone(null);
-    setRun({ blocks: drillsToBlocks(fav.session), index: 0, label: fav.name, source });
+    setRun({ blocks: drillsToBlocks(fav.session), index: 0, label: fav.name, source, goal: source });
+    track("session_started", { area: "range", goal: source, bucket: null });
   };
 
   const finishRun = (blocksDone: number) => {
@@ -461,9 +476,22 @@ function PracticePage() {
     if (finished.length > 0) {
       const record = saveRangeSession(finished, run.label);
       setHistory((h) => [{ completedAt: record.completedAt, practiceAreas: record.practiceAreas }, ...h]);
+      trackSessionCompleted({
+        area: "range",
+        goal: run.goal ?? run.source,
+        bucket: run.bucket ?? null,
+        total_balls: balls,
+        time_minutes: record.filters.time,
+      });
     }
     setDone({ blocks: run.blocks, blocksDone: finished.length, balls, label: run.label, source: run.source, focus: run.focus });
     setRun(null);
+  };
+
+  const trackSessionCompleted = (props: Record<string, string | number | null>) => {
+    track("session_completed", props);
+    if (priorSessions.current === 0) track("first_session_completed");
+    if (priorSessions.current !== null) priorSessions.current += 1;
   };
 
   const discardRun = () => {
@@ -477,6 +505,13 @@ function PracticePage() {
     clearActiveSession();
     const config = puttingConfig!;
     const record = savePuttingSession(results, config);
+    trackSessionCompleted({
+      area: "putting",
+      goal: record.filters.goal,
+      bucket: record.filters.bucket,
+      total_balls: record.totalBalls,
+      time_minutes: record.filters.time,
+    });
     setPuttingFinalResults(results);
     setPuttingCompletedRecord(record);
   };
@@ -560,6 +595,7 @@ function PracticePage() {
       <PuttingBuilder
         onBack={() => setAreaView("picker")}
         onGenerate={(config) => {
+          track("session_started", { area: "putting", goal: `putting-${config.mode}`, bucket: String(config.ballCount) });
           setPuttingConfig(config);
           setPuttingStations(planStations(config));
           setPuttingResults([]);

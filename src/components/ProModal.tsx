@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, X, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "@tanstack/react-router";
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { track } from "@/lib/trackEvent";
 
 const PERKS = [
   "Practice sessions built from your last round",
@@ -17,11 +18,20 @@ interface ProModalProps {
   open: boolean;
   onClose: () => void;
   reason?: string;
+  // Usage events: which Pro feature was asked for. Defaults to the current screen.
+  feature?: string;
 }
 
-export function ProModal({ open, onClose, reason }: ProModalProps) {
+export function ProModal({ open, onClose, reason, feature }: ProModalProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (open) track("paywall_viewed", { feature: feature ?? pathname });
+    // Once per opening, not on every route or prop change while open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
