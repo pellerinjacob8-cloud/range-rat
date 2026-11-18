@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CombineRouteImport } from './routes/combine'
+import { Route as ChallengeRouteImport } from './routes/challenge'
 import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticeRouteImport } from './routes/practice'
@@ -38,6 +39,11 @@ import { Route as TermsRouteImport } from './routes/terms'
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
   path: '/combine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChallengeRoute = ChallengeRouteImport.update({
+  id: '/challenge',
+  path: '/challenge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoundWarmupRoute = RoundWarmupRouteImport.update({
@@ -164,6 +170,7 @@ const TermsRoute = TermsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/combine'
+    | '/challenge'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/combine'
+    | '/challenge'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/combine'
+    | '/challenge'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -324,6 +336,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CombineRoute: typeof CombineRoute
+  ChallengeRoute: typeof ChallengeRoute
   GamesRoute: typeof GamesRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlayRoute: typeof PlayRouteWithChildren
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/combine'
       fullPath: '/combine'
       preLoaderRoute: typeof CombineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/challenge': {
+      id: '/challenge'
+      path: '/challenge'
+      fullPath: '/challenge'
+      preLoaderRoute: typeof ChallengeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/round-warmup': {
@@ -552,6 +572,7 @@ const PlayRouteWithChildren = PlayRoute._addFileChildren(PlayRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CombineRoute: CombineRoute,
+  ChallengeRoute: ChallengeRoute,
   GamesRoute: GamesRouteWithChildren,
   LoginRoute: LoginRoute,
   PlayRoute: PlayRouteWithChildren,

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Share, SquarePlus, EllipsisVertical } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
+import { takeLandingPath } from "@/lib/combineShare";
 import { isAndroidDevice, markHomeScreenInstalled } from "@/lib/pwa";
 
 export const Route = createFileRoute("/onboarding/install")({
@@ -27,7 +28,8 @@ function OnboardingInstall() {
     try {
       localStorage.setItem("rangeRat_onboarding_complete", "true");
     } catch {}
-    window.location.href = "/";
+    // New users from a shared Combine score go straight to the Combine
+    window.location.href = takeLandingPath();
   };
 
   return (

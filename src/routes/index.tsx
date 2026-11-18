@@ -7,6 +7,7 @@ import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { fetchSessions } from "@/lib/db";
+import { loadCombineAttempts } from "@/lib/combine";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -75,6 +76,8 @@ function Home() {
   const name = loadProfileName();
   const [activeSession, setActiveSession] = useState(() => loadActiveMarker());
   const { isPro } = useAuth();
+  // This device's copy only; the Combine lobby checks the database before a retake
+  const [freeCombineLeft] = useState(() => loadCombineAttempts().length === 0);
   const [proReason, setProReason] = useState<string | null>(null);
   const [stats, setStats] = useState({ sessions: 0, balls: 0, streak: 0 });
   const [hasHistory, setHasHistory] = useState(false);
@@ -241,7 +244,8 @@ function Home() {
         Track
       </p>
       <div className="mt-3 space-y-2.5">
-        <ProNavCard isPro={isPro} onLock={() => setProReason("Range Rat Combine is a Pro feature. Upgrade to benchmark your game and track progress over time.")} to="/combine" title="Range Rat Combine" subtitle="33-shot benchmark. Track your progress across wedges, irons, and driver." Icon={Trophy} />
+        {/* Free accounts get one Combine; the card stays locked after that */}
+        <ProNavCard isPro={isPro || freeCombineLeft} onLock={() => setProReason("Range Rat Combine is a Pro feature. Upgrade to benchmark your game and track progress over time.")} to="/combine" title="Range Rat Combine" subtitle={!isPro && freeCombineLeft ? "33-shot benchmark. Your first one is free." : "33-shot benchmark. Track your progress across wedges, irons, and driver."} Icon={Trophy} />
       </div>
 
       {/* Upgrade nudge, free users only */}

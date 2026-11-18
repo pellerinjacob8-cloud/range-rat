@@ -3,6 +3,7 @@ import { trackBeforeLeaving } from "@/lib/trackEvent";
 import { useState } from "react";
 import { ChevronLeft, Check } from "lucide-react";
 import { useForceLightMode } from "@/hooks/useForceLightMode";
+import { takeLandingPath } from "@/lib/combineShare";
 import { saveBag } from "@/lib/db";
 import { isHomeScreenDone, isMobileDevice } from "@/lib/pwa";
 import type { Club } from "@/lib/db";
@@ -123,7 +124,8 @@ function OnboardingBag() {
       try {
         localStorage.setItem("rangeRat_onboarding_complete", "true");
       } catch {}
-      window.location.href = "/";
+      // New users from a shared Combine score go straight to the Combine
+      window.location.href = takeLandingPath();
     } catch {
       toast("Something went wrong. Please try again.");
       setSaving(false);
