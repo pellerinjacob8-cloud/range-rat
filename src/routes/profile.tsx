@@ -12,6 +12,7 @@ import { openCustomerPortal } from "@/lib/stripe";
 import { deleteAccount } from "@/lib/account";
 import { InstallSheet } from "@/components/InstallSheet";
 import { isHomeScreenDone, markHomeScreenInstalled } from "@/lib/pwa";
+import { sortForBag, sortForYardages } from "@/lib/clubOrder";
 import {
   fetchProfile, saveProfile as dbSaveProfile,
   fetchSessions, fetchBag, saveBag as dbSaveBag,
@@ -964,23 +965,7 @@ function loadBag(): Club[] {
 
 /** Return clubs in golf-bag display order. Iron-set children follow their parent immediately. */
 function sortedForDisplay(clubs: Club[]): Club[] {
-  const byType = (t: ClubType) => clubs.filter((c) => c.type === t && !c.parentSetId);
-  const result: Club[] = [
-    ...byType("driver"),
-    ...byType("wood"),
-    ...byType("hybrid"),
-  ];
-  for (const set of byType("iron-set")) {
-    result.push(set);
-    result.push(
-      ...clubs
-        .filter((c) => c.parentSetId === set.id)
-        .sort((a, b) => (a.ironNumber ?? 99) - (b.ironNumber ?? 99)),
-    );
-  }
-  result.push(...clubs.filter((c) => c.type === "iron" && !c.parentSetId));
-  result.push(...byType("wedge"), ...byType("putter"));
-  return result;
+  return sortForBag(clubs);
 }
 
 function generateIronSet(
@@ -1547,14 +1532,14 @@ const SWING_COLS: { key: keyof SwingYardages; label: string }[] = [
 
 function YardageSection() {
   const [clubs, setClubs] = useState<Club[]>(() =>
-    sortedForDisplay(loadBag()).filter((c) => c.type !== "iron-set" && c.type !== "putter")
+    sortForYardages(loadBag())
   );
   const [yardages, setYardages] = useState<YardageMap>(loadYardages);
 
   useEffect(() => {
     fetchBag().then((dbClubs) => {
       if (dbClubs.length > 0)
-        setClubs(sortedForDisplay(dbClubs as Club[]).filter((c) => c.type !== "iron-set" && c.type !== "putter"));
+        setClubs(sortForYardages(dbClubs as Club[]));
     });
     fetchYardages().then((y) => { if (Object.keys(y).length > 0) setYardages(y); });
   }, []);
