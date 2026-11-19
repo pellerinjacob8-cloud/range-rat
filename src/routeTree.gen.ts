@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as CombineRouteImport } from './routes/combine'
+import { Route as YardagesRouteImport } from './routes/yardages'
 import { Route as ChallengeRouteImport } from './routes/challenge'
 import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -39,6 +40,11 @@ import { Route as TermsRouteImport } from './routes/terms'
 const CombineRoute = CombineRouteImport.update({
   id: '/combine',
   path: '/combine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YardagesRoute = YardagesRouteImport.update({
+  id: '/yardages',
+  path: '/yardages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChallengeRoute = ChallengeRouteImport.update({
@@ -170,6 +176,7 @@ const TermsRoute = TermsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
@@ -197,6 +204,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/combine': typeof CombineRoute
+  '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
@@ -254,6 +263,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/combine'
+    | '/yardages'
     | '/challenge'
     | '/custom-session'
     | '/games'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/combine'
+    | '/yardages'
     | '/challenge'
     | '/custom-session'
     | '/games'
@@ -308,6 +319,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/combine'
+    | '/yardages'
     | '/challenge'
     | '/custom-session'
     | '/games'
@@ -336,6 +348,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CombineRoute: typeof CombineRoute
+  YardagesRoute: typeof YardagesRoute
   ChallengeRoute: typeof ChallengeRoute
   GamesRoute: typeof GamesRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/combine'
       fullPath: '/combine'
       preLoaderRoute: typeof CombineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yardages': {
+      id: '/yardages'
+      path: '/yardages'
+      fullPath: '/yardages'
+      preLoaderRoute: typeof YardagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/challenge': {
@@ -572,6 +592,7 @@ const PlayRouteWithChildren = PlayRoute._addFileChildren(PlayRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CombineRoute: CombineRoute,
+  YardagesRoute: YardagesRoute,
   ChallengeRoute: ChallengeRoute,
   GamesRoute: GamesRouteWithChildren,
   LoginRoute: LoginRoute,

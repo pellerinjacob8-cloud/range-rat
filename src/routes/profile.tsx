@@ -29,6 +29,9 @@ export const Route = createFileRoute("/profile")({
       { name: "description", content: "Your golfer profile, bag setup, and all-time stats." },
     ],
   }),
+  // ?view=yardage opens Club Yardages directly (the Yardages page's Edit button)
+  validateSearch: (search: Record<string, unknown>): { view?: "yardage" } =>
+    search.view === "yardage" ? { view: "yardage" } : {},
   component: ProfilePage,
 });
 
@@ -108,7 +111,8 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [firstInput, setFirstInput] = useState(() => loadLocalProfile().firstName);
   const [lastInput, setLastInput] = useState(() => loadLocalProfile().lastName);
-  const [subView, setSubView] = useState<SubView>(null);
+  const { view } = Route.useSearch();
+  const [subView, setSubView] = useState<SubView>(view ?? null);
   const [proOpen, setProOpen] = useState(false);
   const { theme, toggle: toggleTheme } = useTheme();
   const [allTimeSessions, setAllTimeSessions] = useState<SavedSession[]>([]);
