@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, Flag, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
+import { ChevronRight, Flag, Ruler, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
@@ -245,6 +245,7 @@ function Home() {
       </p>
       <div className="mt-3 space-y-2.5">
         {/* Free accounts get one Combine; the card stays locked after that */}
+        <NavCard to="/yardages" title="Yardages" subtitle="Your carry distances at a glance, ready for the course." Icon={Ruler} />
         <ProNavCard isPro={isPro || freeCombineLeft} onLock={() => setProReason("Range Rat Combine is a Pro feature. Upgrade to benchmark your game and track progress over time.")} to="/combine" title="Range Rat Combine" subtitle={!isPro && freeCombineLeft ? "33-shot benchmark. Your first one is free." : "33-shot benchmark. Track your progress across wedges, irons, and driver."} Icon={Trophy} />
       </div>
 
@@ -285,7 +286,7 @@ interface NavCardProps {
 function NavCard({ to, title, subtitle, Icon }: NavCardProps) {
   return (
     <Link
-      to={to as "/practice" | "/games" | "/play" | "/round-warmup" | "/profile"}
+      to={to as "/practice" | "/games" | "/play" | "/round-warmup" | "/profile" | "/yardages"}
       className="group block rounded-[22px] border border-border bg-card p-3.5 flex items-center gap-3.5 transition active:scale-[0.99]"
     >
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-primary text-primary-foreground">
