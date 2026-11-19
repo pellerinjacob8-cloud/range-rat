@@ -29,9 +29,9 @@ export const Route = createFileRoute("/profile")({
       { name: "description", content: "Your golfer profile, bag setup, and all-time stats." },
     ],
   }),
-  // ?view=yardage opens Club Yardages directly (the Yardages page's Edit button)
-  validateSearch: (search: Record<string, unknown>): { view?: "yardage" } =>
-    search.view === "yardage" ? { view: "yardage" } : {},
+  // ?view=yardage or ?view=bag opens that screen directly (from the Yardages page)
+  validateSearch: (search: Record<string, unknown>): { view?: "yardage" | "bag" } =>
+    search.view === "yardage" || search.view === "bag" ? { view: search.view } : {},
   component: ProfilePage,
 });
 
