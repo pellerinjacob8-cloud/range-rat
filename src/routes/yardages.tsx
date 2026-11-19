@@ -37,9 +37,9 @@ const COLS: { key: Col; label: string }[] = [
   { key: "fullSwing", label: "Full" },
 ];
 
-// Print card size in inches; most yardage books take a 4 x 6.5 page.
-const CARD_W = 4;
-const CARD_H = 6.5;
+// Print card size in inches (an index card that fits a yardage book).
+const CARD_W = 3;
+const CARD_H = 5;
 
 function YardagesPage() {
   const navigate = useNavigate();
@@ -153,7 +153,7 @@ function YardagesPage() {
   );
 }
 
-// Only shown when printing. A 4 x 6.5 inch card with a thin cut line, so it
+// Only shown when printing. A 3 x 5 inch card with a thin cut line, so it
 // fits a yardage book even when the printer uses letter paper.
 function PrintCard({ clubs, cols, value }: {
   clubs: Club[];
@@ -163,12 +163,12 @@ function PrintCard({ clubs, cols, value }: {
   const name = loadProfileFullName();
   const date = new Date().toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   // Shrink rows to fit long bags on one card
-  const rowPt = Math.max(9, Math.min(14, Math.floor(250 / Math.max(clubs.length, 1))));
+  const rowPt = Math.max(9, Math.min(14, Math.floor(160 / Math.max(clubs.length, 1))));
   return (
     <div className="hidden print:block">
       <style>{`@media print { @page { size: ${CARD_W}in ${CARD_H}in; margin: 0; } html, body { background: #fff !important; } }`}</style>
       <div
-        style={{ width: `${CARD_W}in`, height: `${CARD_H}in`, padding: "0.25in", boxSizing: "border-box", border: "0.5pt dashed #999", color: "#000", fontFamily: "'Inter Tight', system-ui, sans-serif", display: "flex", flexDirection: "column" }}
+        style={{ width: `${CARD_W}in`, height: `${CARD_H}in`, padding: "0.2in", boxSizing: "border-box", border: "0.5pt dashed #999", color: "#000", fontFamily: "'Inter Tight', system-ui, sans-serif", display: "flex", flexDirection: "column" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: "1pt solid #000", paddingBottom: "4pt" }}>
           <span style={{ fontSize: "12pt", fontWeight: 700 }}>{name || "Yardages"}</span>
@@ -179,16 +179,16 @@ function PrintCard({ clubs, cols, value }: {
             <tr>
               <th style={{ textAlign: "left", fontSize: "7pt", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "2pt 0", color: "#555" }}>Club</th>
               {cols.map((col) => (
-                <th key={col.key} style={{ textAlign: "right", fontSize: "7pt", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "2pt 0", color: "#555", width: "0.6in" }}>{col.label}</th>
+                <th key={col.key} style={{ textAlign: "right", fontSize: "7pt", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", padding: "2pt 0", color: "#555", width: "0.45in" }}>{col.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {clubs.map((c) => (
               <tr key={c.id} style={{ borderTop: "0.5pt solid #ccc" }}>
-                <td style={{ padding: "2.5pt 0", fontWeight: 600 }}>{c.name}</td>
+                <td style={{ padding: "2pt 0", fontWeight: 600 }}>{c.name}</td>
                 {cols.map((col) => (
-                  <td key={col.key} style={{ textAlign: "right", padding: "2.5pt 0", fontWeight: col.key === "fullSwing" ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>
+                  <td key={col.key} style={{ textAlign: "right", padding: "2pt 0", fontWeight: col.key === "fullSwing" ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>
                     {value(c.id, col.key) ?? "–"}
                   </td>
                 ))}
