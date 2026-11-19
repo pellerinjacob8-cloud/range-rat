@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Pencil, Printer, Ruler, Zap } from "lucide-react";
+import { Briefcase, Pencil, Printer, Ruler, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { ProModal } from "@/components/ProModal";
 import { useAuth } from "@/context/AuthContext";
@@ -58,6 +58,8 @@ function YardagesPage() {
   // Only show the half and three-quarter columns when any club has one
   const cols = COLS.filter((col) => col.key === "fullSwing" || filled.some((c) => value(c.id, col.key) !== null));
   const editYardages = () => navigate({ to: "/profile", search: { view: "yardage" } });
+  const editBag = () => navigate({ to: "/profile", search: { view: "bag" } });
+  const noClubs = clubs.length === 0;
 
   const print = () => {
     if (!isPro) { setShowPro(true); return; }
@@ -77,14 +79,23 @@ function YardagesPage() {
               <div className="mt-6 rounded-2xl border border-border bg-card p-6 text-center">
                 <Ruler className="mx-auto h-8 w-8 text-muted-foreground" />
                 <p className="mt-3 font-display text-[24px] leading-tight">No yardages yet</p>
-                <p className="mt-1 text-[14px] text-muted-foreground">Add how far you carry each club and they'll show here, ready for the course.</p>
+                <p className="mt-1 text-[14px] text-muted-foreground">
+                  {noClubs
+                    ? "Pick the clubs in your bag, then add how far you carry each one."
+                    : "Add how far you carry each club and they'll show here, ready for the course."}
+                </p>
                 <button
                   type="button"
-                  onClick={editYardages}
+                  onClick={noClubs ? editBag : editYardages}
                   className="mt-5 h-12 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] active:opacity-90"
                 >
-                  Add yardages
+                  {noClubs ? "Set up your bag" : "Add yardages"}
                 </button>
+                {!noClubs && (
+                  <button type="button" onClick={editBag} className="mt-3 text-[14px] font-semibold text-primary p-2 -m-2">
+                    Edit your bag
+                  </button>
+                )}
               </div>
             ) : (
               <>
@@ -122,12 +133,19 @@ function YardagesPage() {
                     onClick={editYardages}
                     className="h-12 rounded-[14px] border border-border bg-card text-[14px] font-bold uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:bg-muted"
                   >
-                    <Pencil className="h-4 w-4" /> Edit
+                    <Pencil className="h-4 w-4" /> Yardages
+                  </button>
+                  <button
+                    type="button"
+                    onClick={editBag}
+                    className="h-12 rounded-[14px] border border-border bg-card text-[14px] font-bold uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:bg-muted"
+                  >
+                    <Briefcase className="h-4 w-4" /> Bag
                   </button>
                   <button
                     type="button"
                     onClick={print}
-                    className="h-12 rounded-[14px] bg-primary text-primary-foreground text-[14px] font-bold uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:opacity-90"
+                    className="col-span-2 h-12 rounded-[14px] bg-primary text-primary-foreground text-[14px] font-bold uppercase tracking-[0.06em] inline-flex items-center justify-center gap-2 active:opacity-90"
                   >
                     {isPro ? <Printer className="h-4 w-4" /> : <Zap className="h-4 w-4" />} Print card
                   </button>
