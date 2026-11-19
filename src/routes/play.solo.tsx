@@ -7,7 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { generateShot, type Shot, type GenerateShotOptions } from "@/lib/shots";
 import { deriveStyle } from "@/lib/drills";
-import { fetchProfile, fetchPlayableBag } from "@/lib/db";
+import { fetchProfile, fetchPlayableBag, fetchYardages } from "@/lib/db";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
@@ -50,8 +50,9 @@ function SoloPage() {
 
   useEffect(() => {
     const opts: GenerateShotOptions = {};
-    Promise.all([fetchProfile(), fetchPlayableBag()]).then(([profile, bag]) => {
+    Promise.all([fetchProfile(), fetchPlayableBag(), fetchYardages().catch(() => ({}))]).then(([profile, bag, yardages]) => {
       if (bag.length > 0) opts.bag = bag;
+      opts.yardages = yardages;
       if (profile?.handicap !== undefined) opts.style = deriveStyle(profile.handicap);
       setShotOpts(opts);
       setShot(generateShot(opts));
