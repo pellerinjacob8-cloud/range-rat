@@ -100,6 +100,7 @@ interface RunState {
   // Usage event details (plan kind and length). Never a user-entered name.
   goal?: string;
   bucket?: string;
+  shareCode?: string; // link code when started from a shared session
 }
 
 interface DoneState {
@@ -259,14 +260,14 @@ function savePuttingSession(results: StationResult[], config: PuttingSessionConf
 // Share sheet for a session, with a toast for anything but a normal share.
 // `from` says which screen it came from; the session name is never tracked.
 async function shareBlocks(name: string, blocks: PracticeBlock[], from: "done" | "saved" | "custom") {
-  const result = await shareSession(name, blocks, loadProfileName());
+  const { result, code } = await shareSession(name, blocks, loadProfileName());
   if (result === "cancelled") return;
   if (result === "failed") {
     toast.error("Couldn't create the share link. Check your connection and try again.");
     return;
   }
   if (result === "copied") toast.success("Link copied. Send it to anyone.");
-  track("session_shared", { from, blocks: blocks.length });
+  track("session_shared", { from, blocks: blocks.length, code });
 }
 
 // Favorites need a GenerateInput to count as a saved generated session (vs a
@@ -498,9 +499,9 @@ function PracticePage() {
       .then((s) => {
         if (!s) { toast.error("That shared session isn't available."); return; }
         setDone(null);
-        setRun({ blocks: s.blocks, index: 0, label: s.name, source: "shared", goal: "shared" });
+        setRun({ blocks: s.blocks, index: 0, label: s.name, source: "shared", goal: "shared", shareCode: shared });
         track("session_started", { area: "range", goal: "shared", bucket: null });
-        track("shared_session_started", { blocks: s.blocks.length });
+        track("shared_session_started", { blocks: s.blocks.length, code: shared });
       })
       .catch(() => toast.error("Couldn't load the shared session. Check your connection and try again."))
       .finally(clearParam);
@@ -527,7 +528,7 @@ function PracticePage() {
         total_balls: balls,
         time_minutes: record.filters.time,
       });
-      if (run.source === "shared") track("shared_session_completed", { blocks_done: finished.length });
+      if (run.source === "shared") track("shared_session_completed", { blocks_done: finished.length, ...(run.shareCode ? { code: run.shareCode } : {}) });
     }
     setDone({ blocks: run.blocks, blocksDone: finished.length, balls, label: run.label, source: run.source, focus: run.focus });
     setRun(null);

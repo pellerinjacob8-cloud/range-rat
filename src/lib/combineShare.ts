@@ -102,16 +102,20 @@ export function rememberShareVisit(): void {
 // existing account isn't a referred signup, so it skips the referral source.
 export function rememberSessionShareVisit(code: string, referral = true): void {
   try {
-    if (referral) localStorage.setItem(REF_KEY, "session_share");
+    if (referral) localStorage.setItem(REF_KEY, `session_share:${code}`);
     localStorage.setItem(LANDING_KEY, `/practice?shared=${code}`);
   } catch {}
 }
 
-export function takeReferralSource(): string | null {
+// A shared session's referral also carries its link code (random, never
+// typed text), so signups can be traced to the link that brought them.
+export function takeReferralSource(): { source: string; code?: string } | null {
   try {
     const ref = localStorage.getItem(REF_KEY);
     localStorage.removeItem(REF_KEY);
-    return ref;
+    if (!ref) return null;
+    const [source, code] = ref.split(":");
+    return code && /^[a-z0-9]{8}$/.test(code) ? { source, code } : { source };
   } catch { return null; }
 }
 

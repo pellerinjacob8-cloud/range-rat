@@ -54,7 +54,7 @@ function OnboardingName() {
       if (effectiveHandicap !== undefined) await saveHandicapSnapshot(effectiveHandicap);
       // Signed up from a shared Combine score: logged once, as a usage event
       const ref = takeReferralSource();
-      if (ref) track("signup_referred", { source: ref });
+      if (ref) track("signup_referred", ref.code ? { source: ref.source, code: ref.code } : { source: ref.source });
       navigate({ to: "/onboarding/bag" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Unknown error";

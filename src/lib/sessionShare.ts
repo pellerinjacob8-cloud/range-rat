@@ -74,7 +74,7 @@ function isAbort(e: unknown): boolean {
 // Saves the share and opens the phone's share sheet. The share sheet is
 // opened right away (Safari only allows it straight from a tap), while the
 // row saves in the background; a failed save still reports "failed".
-export async function shareSession(name: string, blocks: PracticeBlock[], senderFirstName: string): Promise<ShareResult> {
+export async function shareSession(name: string, blocks: PracticeBlock[], senderFirstName: string): Promise<{ result: ShareResult; code: string }> {
   const code = newShareCode();
   const sender = cleanFirstName(senderFirstName);
   const title = name.trim().slice(0, 80) || "Range session";
@@ -96,6 +96,6 @@ export async function shareSession(name: string, blocks: PracticeBlock[], sender
   } catch (e) {
     result = isAbort(e) ? "cancelled" : await copyLink(url);
   }
-  if (result === "cancelled") return result;
-  return (await saved) ? result : "failed";
+  if (result === "cancelled") return { result, code };
+  return { result: (await saved) ? result : "failed", code };
 }
