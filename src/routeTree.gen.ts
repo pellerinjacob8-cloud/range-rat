@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as CombineRouteImport } from './routes/combine'
 import { Route as YardagesRouteImport } from './routes/yardages'
 import { Route as ChallengeRouteImport } from './routes/challenge'
+import { Route as SCodeRouteImport } from './routes/s.$code'
 import { Route as RoundWarmupRouteImport } from './routes/round-warmup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PracticeRouteImport } from './routes/practice'
@@ -50,6 +51,11 @@ const YardagesRoute = YardagesRouteImport.update({
 const ChallengeRoute = ChallengeRouteImport.update({
   id: '/challenge',
   path: '/challenge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SCodeRoute = SCodeRouteImport.update({
+  id: '/s/$code',
+  path: '/s/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoundWarmupRoute = RoundWarmupRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/combine': typeof CombineRoute
   '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
+  '/s/$code': typeof SCodeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -206,6 +213,7 @@ export interface FileRoutesByTo {
   '/combine': typeof CombineRoute
   '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
+  '/s/$code': typeof SCodeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/combine': typeof CombineRoute
   '/yardages': typeof YardagesRoute
   '/challenge': typeof ChallengeRoute
+  '/s/$code': typeof SCodeRoute
   '/custom-session': typeof CustomSessionRoute
   '/games': typeof GamesRouteWithChildren
   '/login': typeof LoginRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/combine'
     | '/yardages'
     | '/challenge'
+    | '/s/$code'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/combine'
     | '/yardages'
     | '/challenge'
+    | '/s/$code'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/combine'
     | '/yardages'
     | '/challenge'
+    | '/s/$code'
     | '/custom-session'
     | '/games'
     | '/login'
@@ -350,6 +362,7 @@ export interface RootRouteChildren {
   CombineRoute: typeof CombineRoute
   YardagesRoute: typeof YardagesRoute
   ChallengeRoute: typeof ChallengeRoute
+  SCodeRoute: typeof SCodeRoute
   GamesRoute: typeof GamesRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlayRoute: typeof PlayRouteWithChildren
@@ -390,6 +403,13 @@ declare module '@tanstack/react-router' {
       path: '/challenge'
       fullPath: '/challenge'
       preLoaderRoute: typeof ChallengeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/$code': {
+      id: '/s/$code'
+      path: '/s/$code'
+      fullPath: '/s/$code'
+      preLoaderRoute: typeof SCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/round-warmup': {
@@ -594,6 +614,7 @@ const rootRouteChildren: RootRouteChildren = {
   CombineRoute: CombineRoute,
   YardagesRoute: YardagesRoute,
   ChallengeRoute: ChallengeRoute,
+  SCodeRoute: SCodeRoute,
   GamesRoute: GamesRouteWithChildren,
   LoginRoute: LoginRoute,
   PlayRoute: PlayRouteWithChildren,
