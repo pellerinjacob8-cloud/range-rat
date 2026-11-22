@@ -97,6 +97,16 @@ export function rememberShareVisit(): void {
   } catch {}
 }
 
+// Same handoff for a shared range session: after onboarding (or signing in)
+// the user lands in Practice with that session ready to run. Signing in to an
+// existing account isn't a referred signup, so it skips the referral source.
+export function rememberSessionShareVisit(code: string, referral = true): void {
+  try {
+    if (referral) localStorage.setItem(REF_KEY, "session_share");
+    localStorage.setItem(LANDING_KEY, `/practice?shared=${code}`);
+  } catch {}
+}
+
 export function takeReferralSource(): string | null {
   try {
     const ref = localStorage.getItem(REF_KEY);
@@ -110,7 +120,9 @@ export function takeLandingPath(): string {
   try {
     const path = localStorage.getItem(LANDING_KEY);
     localStorage.removeItem(LANDING_KEY);
-    return path === "/combine" ? path : "/";
+    if (path === "/combine") return path;
+    if (path && /^\/practice\?shared=[a-z0-9]{8}$/.test(path)) return path;
+    return "/";
   } catch { return "/"; }
 }
 

@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { BlockSessionView } from "@/components/BlockSessionView";
-import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Lock, Plus, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, ChevronRight, CircleDot, Flag, Lock, Plus, Share, Sparkles, Star, Target, Trash2, Trophy, Zap } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,11 +63,13 @@ import {
 import { PuttingSessionView } from "@/components/PuttingSessionView";
 import { loadProfileName } from "@/lib/profile";
 import { cn } from "@/lib/utils";
+import { loadSharedSession, shareSession, SHARE_CODE_RE } from "@/lib/sessionShare";
 
 export const Route = createFileRoute("/practice")({
   validateSearch: (search: Record<string, unknown>) => ({
     upgraded: search.upgraded === "true" ? true : undefined,
     start: search.start === "quick" ? ("quick" as const) : undefined,
+    shared: typeof search.shared === "string" && SHARE_CODE_RE.test(search.shared) ? search.shared : undefined,
   }),
   head: () => ({
     meta: [
@@ -87,7 +89,7 @@ export const Route = createFileRoute("/practice")({
 const ACTIVE_KEY = "range-rat:active-session";
 const PREFS_KEY  = "range-rat:plan-prefs";
 
-type RunSource = "plan" | "saved" | "custom";
+type RunSource = "plan" | "saved" | "custom" | "shared";
 
 interface RunState {
   blocks: PracticeBlock[];
@@ -254,6 +256,19 @@ function savePuttingSession(results: StationResult[], config: PuttingSessionConf
   return record;
 }
 
+// Share sheet for a session, with a toast for anything but a normal share.
+// `from` says which screen it came from; the session name is never tracked.
+async function shareBlocks(name: string, blocks: PracticeBlock[], from: "done" | "saved" | "custom") {
+  const result = await shareSession(name, blocks, loadProfileName());
+  if (result === "cancelled") return;
+  if (result === "failed") {
+    toast.error("Couldn't create the share link. Check your connection and try again.");
+    return;
+  }
+  if (result === "copied") toast.success("Link copied. Send it to anyone.");
+  track("session_shared", { from, blocks: blocks.length });
+}
+
 // Favorites need a GenerateInput to count as a saved generated session (vs a
 // Pro custom session). Plan sessions store this neutral placeholder.
 const PLAN_INPUT: GenerateInput = { clubGroups: ["full-bag"], bucket: "medium", time: 30, goal: "consistency" };
@@ -268,7 +283,7 @@ const FOCUS_LABEL: Record<PlanFocus, string> = {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function PracticePage() {
-  const { upgraded, start } = Route.useSearch();
+  const { upgraded, start, shared } = Route.useSearch();
   const { isPro } = useAuth();
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
@@ -462,6 +477,35 @@ function PracticePage() {
     navigate({ to: "/practice", search: {}, replace: true });
   }, [start, run, puttingConfig, puttingStations, bagLoaded, profileLoaded, level, userBag, yardages, navigate]);
 
+  // Shared session link (?shared=<code>, from /s/<code>): load it and start
+  // it once. A session already in progress is kept, and the param is cleared
+  // either way so a refresh doesn't start it again.
+  const sharedHandled = useRef(false);
+  const [sharedPending, setSharedPending] = useState(!!shared);
+  useEffect(() => {
+    if (!shared || sharedHandled.current) return;
+    sharedHandled.current = true;
+    const clearParam = () => {
+      setSharedPending(false);
+      navigate({ to: "/practice", search: {}, replace: true });
+    };
+    if (run || (puttingConfig && puttingStations.length > 0)) {
+      toast("Finish or end the session you're in, then open the shared link again.");
+      clearParam();
+      return;
+    }
+    loadSharedSession(shared)
+      .then((s) => {
+        if (!s) { toast.error("That shared session isn't available."); return; }
+        setDone(null);
+        setRun({ blocks: s.blocks, index: 0, label: s.name, source: "shared", goal: "shared" });
+        track("session_started", { area: "range", goal: "shared", bucket: null });
+        track("shared_session_started", { blocks: s.blocks.length });
+      })
+      .catch(() => toast.error("Couldn't load the shared session. Check your connection and try again."))
+      .finally(clearParam);
+  }, [shared, run, puttingConfig, puttingStations, navigate]);
+
   const startFavorite = (fav: Favorite, source: RunSource) => {
     setDone(null);
     setRun({ blocks: drillsToBlocks(fav.session), index: 0, label: fav.name, source, goal: source });
@@ -483,6 +527,7 @@ function PracticePage() {
         total_balls: balls,
         time_minutes: record.filters.time,
       });
+      if (run.source === "shared") track("shared_session_completed", { blocks_done: finished.length });
     }
     setDone({ blocks: run.blocks, blocksDone: finished.length, balls, label: run.label, source: run.source, focus: run.focus });
     setRun(null);
@@ -571,8 +616,8 @@ function PracticePage() {
     );
   }
 
-  // ── Quick start loading (bag and level still on their way)
-  if (quickPending) {
+  // ── Quick start or shared session loading
+  if (quickPending || sharedPending) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="h-6 w-6 rounded-full border-[2.5px] border-border border-t-primary animate-spin" />
@@ -691,6 +736,7 @@ function PracticePage() {
             favorites={autoFavorites}
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
             onRun={(fav) => startFavorite(fav, "saved")}
+            onShare={(fav) => shareBlocks(fav.name, drillsToBlocks(fav.session), "saved")}
           />
         )}
 
@@ -699,6 +745,7 @@ function PracticePage() {
             sessions={customSessions}
             onDelete={(id) => { deleteFavorite(id); reloadFavorites(); }}
             onRun={(fav) => startFavorite(fav, "custom")}
+            onShare={(fav) => shareBlocks(fav.name, drillsToBlocks(fav.session), "custom")}
           />
         )}
 
@@ -1063,7 +1110,7 @@ function RangeCompletionView({
             New Session
           </Button>
 
-          {done.source === "plan" && (saved ? (
+          {(done.source === "plan" || done.source === "shared") && (saved ? (
             <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-primary">
               <BookmarkCheck className="h-4 w-4" />
               Saved
@@ -1075,9 +1122,18 @@ function RangeCompletionView({
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:scale-[0.99]"
             >
               <Bookmark className="h-4 w-4" />
-              Save Session
+              {done.source === "shared" ? "Save to My Sessions" : "Save Session"}
             </button>
           ))}
+
+          <button
+            type="button"
+            onClick={() => shareBlocks(done.label, done.blocks, "done")}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-4 text-sm font-bold uppercase tracking-wide text-muted-foreground transition active:scale-[0.99]"
+          >
+            <Share className="h-4 w-4" />
+            Share Session
+          </button>
 
           <button
             type="button"
@@ -1494,10 +1550,12 @@ function CustomSessionsTab({
   sessions,
   onDelete,
   onRun,
+  onShare,
 }: {
   sessions: Favorite[];
   onDelete: (id: string) => void;
   onRun: (fav: Favorite) => void;
+  onShare: (fav: Favorite) => void;
 }) {
   const navigate = useNavigate();
   const { isPro } = useAuth();
@@ -1594,6 +1652,15 @@ function CustomSessionsTab({
                       </button>
                     </>
                   ) : (
+                    <>
+                    <button
+                      type="button"
+                      onClick={() => onShare(fav)}
+                      aria-label="Share session"
+                      className="rounded-full p-2 text-muted-foreground active:text-primary"
+                    >
+                      <Share className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDelete(fav.id)}
@@ -1601,6 +1668,7 @@ function CustomSessionsTab({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -1625,10 +1693,12 @@ function SavedTab({
   favorites,
   onDelete,
   onRun,
+  onShare,
 }: {
   favorites: Favorite[];
   onDelete: (id: string) => void;
   onRun: (fav: Favorite) => void;
+  onShare: (fav: Favorite) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -1684,6 +1754,15 @@ function SavedTab({
                   </button>
                 </>
               ) : (
+                <>
+                <button
+                  type="button"
+                  onClick={() => onShare(fav)}
+                  aria-label="Share session"
+                  className="rounded-full p-2 text-muted-foreground active:text-primary"
+                >
+                  <Share className="h-4 w-4" />
+                </button>
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(fav.id)}
@@ -1691,6 +1770,7 @@ function SavedTab({
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
+                </>
               )}
             </div>
           </div>

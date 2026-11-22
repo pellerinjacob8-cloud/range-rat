@@ -24,7 +24,7 @@ function PrivacyPage() {
         </div>
 
         <h1 className="mt-4 font-display text-[34px] leading-tight tracking-[-0.01em]">Privacy Policy</h1>
-        <p className="mt-2 text-[13px] text-muted-foreground">Effective November 18, 2026</p>
+        <p className="mt-2 text-[13px] text-muted-foreground">Effective November 22, 2026</p>
 
         <div className="mt-8 space-y-7 text-[15px] leading-relaxed text-foreground">
           <Section title="Introduction">
@@ -37,7 +37,8 @@ function PrivacyPage() {
           <Section title="Information we collect">
             <BulletList items={[
               <><strong>Account information.</strong> When you sign up we collect your email address, name, and which hand you play, to create and secure your account.</>,
-              <><strong>Golf data.</strong> What you enter or do in the app: your handicap index and its history, round stats (greens in regulation, fairways, putts, up and downs), the clubs in your bag (with optional brand and model), swing yardages, finished practice sessions (balls hit, blocks completed, areas practiced, putting results), saved sessions, and Combine results.</>,
+              <><strong>Golf data.</strong> What you enter or do in the app: your handicap index and its history, round stats (greens in regulation, fairways, putts, up and downs), the clubs in your bag (with optional brand and model), swing yardages, finished practice sessions (balls hit, blocks completed, areas practiced, putting results), saved sessions, sessions you share, and Combine results.</>,
+              <><strong>Shared sessions.</strong> When you share a practice session, we store the session (its name, clubs, ball counts, and cues) and your first name. Anyone with the link can see them, without an account. Deleting your account deletes the sessions you shared, and their links stop working.</>,
               <><strong>Subscription data.</strong> If you subscribe to Range Rat Pro, Stripe collects your payment method and billing details. We only store whether your Pro subscription is active. We never see or store your card number.</>,
               <><strong>Feature usage.</strong> When you are signed in, we record which screens and features you use: for example opening a screen, starting or finishing a practice session or game (including its score), saving your bag or yardages, and viewing or tapping upgrade options. These records are linked to your account ID and never include your name, email, or anything you type.</>,
               <><strong>Device and technical data.</strong> Our hosting and error monitoring providers receive basic technical information when you use the Service, such as browser type, device type, IP address, and the page where an error happened. We do not use advertising trackers.</>,

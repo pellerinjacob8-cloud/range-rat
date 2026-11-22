@@ -452,6 +452,37 @@ export async function removeFavorite(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ─── Shared sessions ──────────────────────────────────────────────────────────
+
+export interface SharedSessionRow {
+  senderName: string;
+  name: string;
+  blocks: unknown;
+}
+
+// Throws if signed out or the insert fails (e.g. the migration hasn't run).
+export async function insertSharedSession(code: string, senderName: string, name: string, blocks: unknown[]): Promise<void> {
+  const user = await getLocalUser();
+  if (!user) throw new Error("Not signed in");
+  const { error } = await supabase.from("shared_sessions").insert({
+    code,
+    user_id: user.id,
+    sender_name: senderName,
+    name,
+    blocks,
+  });
+  if (error) throw new Error(error.message);
+}
+
+// Works logged out. Returns null for an unknown code; throws on a failed call.
+export async function fetchSharedSession(code: string): Promise<SharedSessionRow | null> {
+  const { data, error } = await supabase.rpc("get_shared_session", { share_code: code });
+  if (error) throw new Error(error.message);
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+  return { senderName: row.sender_name ?? "", name: row.name ?? "", blocks: row.blocks };
+}
+
 // ─── Combine ──────────────────────────────────────────────────────────────────
 
 // Throws if the query fails (e.g. the combine_attempts migration hasn't run),

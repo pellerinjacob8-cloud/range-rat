@@ -6,7 +6,7 @@ import { getStripe, getSupabaseAdmin, missingEnv } from "./_config.js";
 // Tables keyed by user_id that hold this user's data. profiles is keyed by id
 // and handled separately. Deleting rows explicitly (rather than relying on a
 // cascade) keeps cleanup correct regardless of the FK setup.
-const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages", "combine_attempts"] as const;
+const USER_TABLES = ["sessions", "bag", "favorites", "handicap_history", "yardages", "combine_attempts", "shared_sessions"] as const;
 
 // Subscription statuses that are already over and need no cancel call.
 const ENDED_STATUSES: Stripe.Subscription.Status[] = ["canceled", "incomplete_expired"];

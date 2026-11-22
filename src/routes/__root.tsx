@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { fetchProfile } from "@/lib/db";
 import { supabase } from "@/lib/supabase";
 import { track } from "@/lib/trackEvent";
+import { takeLandingPath } from "@/lib/combineShare";
 
 function NotFoundComponent() {
   return (
@@ -97,7 +98,7 @@ function AuthGate() {
   useEffect(() => {
     if (loading) return;
 
-    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname === "/challenge" || pathname.startsWith("/auth/");
+    const isAuthRoute = pathname === "/login" || pathname === "/reset-password" || pathname === "/pro-welcome" || pathname === "/custom-session" || pathname === "/challenge" || pathname.startsWith("/s/") || pathname.startsWith("/auth/");
     const isOnboarding = pathname.startsWith("/onboarding");
 
     if (!session) {
@@ -137,7 +138,10 @@ function AuthGate() {
     // Only bounce once onboarding is explicitly complete, prevents kicking users
     // mid-flow when a Supabase token refresh re-runs this effect after name is saved
     if (hasProfile && onboardingComplete && (pathname === "/login" || pathname.startsWith("/onboarding"))) {
-      navigate({ to: "/" });
+      // Signed in from a shared session page: go to that session
+      const landing = pathname === "/login" ? takeLandingPath() : "/";
+      if (landing !== "/") window.location.replace(landing);
+      else navigate({ to: "/" });
     }
   }, [session, loading, pathname, navigate, hasProfile]);
 

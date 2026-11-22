@@ -28,7 +28,7 @@ function OnboardingInstall() {
     try {
       localStorage.setItem("rangeRat_onboarding_complete", "true");
     } catch {}
-    // New users from a shared Combine score go straight to the Combine
+    // New users from a shared link go straight to the Combine or that session
     window.location.href = takeLandingPath();
   };
 
