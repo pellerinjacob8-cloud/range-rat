@@ -434,9 +434,9 @@ function BlockCard({
           value={block.tip}
           onChange={(e) => onChange({ tip: e.target.value })}
           placeholder="Tip: how to do it, or what to feel"
-          rows={2}
+          rows={4}
           maxLength={600}
-          className="mt-2 w-full resize-none rounded-[10px] border border-border bg-background px-3 py-2 text-[14px] leading-snug outline-none focus:border-primary placeholder:text-muted-foreground/50"
+          className="mt-2 w-full resize-y rounded-[10px] border border-border bg-background px-3 py-2 text-[14px] leading-snug outline-none focus:border-primary placeholder:text-muted-foreground/50"
         />
       ) : null}
 
