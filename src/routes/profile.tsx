@@ -297,7 +297,7 @@ function ProfilePage() {
           <button type="button" onClick={() => setSubView(null)} className="flex items-center gap-1 text-primary text-[14px] font-semibold mb-4 -ml-1">
             <ChevronLeft className="h-5 w-5" /> Profile
           </button>
-          <h1 className="font-display text-[32px] mb-1">Your Bag</h1>
+          <h1 className="font-display text-[32px] mb-1">Your Bag & Aids</h1>
           <p className="text-[13.5px] text-muted-foreground mb-6">These are the clubs you picked. Tap the pencil on any club to add its brand and model.</p>
           <BagSection />
           <TrainingAidsSection />
@@ -776,7 +776,7 @@ function ProfilePage() {
         {/* ── Your setup ── */}
         <p className="mt-6 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Your setup</p>
         <div className="mt-3 rounded-[22px] border border-border bg-card overflow-hidden">
-          <SetupRow icon={Flag} label="Your bag" detail={undefined} onPress={() => setSubView("bag")} />
+          <SetupRow icon={Flag} label="Bag & training aids" detail={undefined} onPress={() => setSubView("bag")} />
           <div className="h-px bg-border mx-4" />
           <SetupRow
             icon={Target}
