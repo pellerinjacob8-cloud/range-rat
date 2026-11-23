@@ -39,6 +39,19 @@ export function saveCustomSession(name: string, drills: SessionDrill[]): Favorit
   return fav;
 }
 
+// Same as saveCustomSession, but waits for the save and throws if it fails,
+// so the builder can stay open and keep the user's work.
+export async function saveCustomSessionAsync(name: string, drills: SessionDrill[]): Promise<void> {
+  const fav: Favorite = {
+    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: name.trim(),
+    sessionInput: null,
+    session: drills,
+    createdAt: Date.now(),
+  };
+  await insertCustomSession(fav);
+}
+
 export function deleteFavorite(id: string) {
   removeFavorite(id).catch(() => toast.error("Couldn't delete favorite. Check your connection and try again."));
 }
