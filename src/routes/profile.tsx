@@ -1017,10 +1017,19 @@ function BagSection() {
   const [editing, setEditing]     = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<EditDraft>(EMPTY_EDIT);
 
-  // Load from Supabase on mount; fall back to localStorage for instant render
+  // ── Collapse, default all existing iron sets to collapsed ──
+  const [collapsedSets, setCollapsedSets] = useState<Set<string>>(
+    () => new Set(loadBag().filter((c) => c.type === "iron-set").map((c) => c.id)),
+  );
+
+  // Load from Supabase on mount; fall back to localStorage for instant render.
+  // Iron sets from the account start collapsed too, not just the local copy's.
   useEffect(() => {
     fetchBag().then((dbClubs) => {
-      if (dbClubs.length > 0) setClubs(dbClubs as Club[]);
+      if (dbClubs.length === 0) return;
+      setClubs(dbClubs as Club[]);
+      const setIds = dbClubs.filter((c) => c.type === "iron-set").map((c) => c.id);
+      if (setIds.length > 0) setCollapsedSets((prev) => new Set([...prev, ...setIds]));
     });
   }, []);
 
@@ -1120,10 +1129,6 @@ function BagSection() {
     setRemovingSet(null);
   };
 
-  // ── Collapse, default all existing iron sets to collapsed ──
-  const [collapsedSets, setCollapsedSets] = useState<Set<string>>(
-    () => new Set(loadBag().filter((c) => c.type === "iron-set").map((c) => c.id)),
-  );
   const toggleSet = (id: string) =>
     setCollapsedSets((prev) => {
       const next = new Set(prev);
