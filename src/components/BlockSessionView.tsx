@@ -109,6 +109,9 @@ export function BlockSessionView({ blocks, index, onIndexChange, onFinish, onDis
           </div>
 
           <h1 className="mt-3 font-display text-[40px] leading-[1.02] tracking-[-0.01em] text-primary">{block.club}</h1>
+          {block.aid && (
+            <p className="mt-2 text-[13px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Aid: {block.aid}</p>
+          )}
 
           <p className="mt-6 font-stats text-[104px] leading-none tabular-nums text-foreground">
             {block.balls > 0 ? block.balls : "–"}

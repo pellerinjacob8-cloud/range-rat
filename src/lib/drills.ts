@@ -59,6 +59,7 @@ export interface SessionDrill {
   type?: ContentType;
   phase?: SessionPhase;
   section?: string; // range practice plan section label
+  aid?: string;     // training aid for this block (custom sessions)
 }
 
 // ─── Canonical club registry ─────────────────────────────────────────────────

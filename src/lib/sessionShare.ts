@@ -35,6 +35,7 @@ function cleanBlock(raw: unknown, i: number): PracticeBlock | null {
   const cue = text(b.cue, 200);
   if (!club || !cue || !(balls >= 1 && balls <= 200)) return null;
   const detail = text(b.detail, 600);
+  const aid = text(b.aid, 40);
   return {
     id: `shared-${i}`,
     section: text(b.section, 40) || "Practice",
@@ -43,6 +44,7 @@ function cleanBlock(raw: unknown, i: number): PracticeBlock | null {
     unit: b.unit === "min" ? "min" : "balls",
     cue,
     ...(detail ? { detail } : {}),
+    ...(aid ? { aid } : {}),
   };
 }
 
@@ -78,8 +80,8 @@ export async function shareSession(name: string, blocks: PracticeBlock[], sender
   const code = newShareCode();
   const sender = cleanFirstName(senderFirstName);
   const title = name.trim().slice(0, 80) || "Range session";
-  const payload = blocks.slice(0, MAX_BLOCKS).map(({ section, club, balls, unit, cue, detail }) => ({
-    section, club, balls, unit, cue, ...(detail ? { detail } : {}),
+  const payload = blocks.slice(0, MAX_BLOCKS).map(({ section, club, balls, unit, cue, detail, aid }) => ({
+    section, club, balls, unit, cue, ...(detail ? { detail } : {}), ...(aid ? { aid } : {}),
   }));
   const saved = insertSharedSession(code, sender, title, payload).then(() => true, () => false);
   const url = sessionShareUrl(window.location.origin, code);

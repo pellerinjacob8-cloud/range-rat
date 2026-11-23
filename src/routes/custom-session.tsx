@@ -1,11 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown, ChevronLeft, ChevronUp, Minus, Plus, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Minus, Plus, Search, Trash2, X } from "lucide-react";
 import { saveCustomSessionAsync } from "@/lib/favorites";
 import { CANONICAL_CLUBS, DRILLS_BY_GOAL, GOALS, type ClubGroup, type SessionDrill } from "@/lib/drills";
 import { fetchPlayableBag, type Club } from "@/lib/db";
 import { cn } from "@/lib/utils";
+import { addTrainingAid, cleanAidName, fetchTrainingAids, loadCachedAids, MAX_AID_LENGTH } from "@/lib/trainingAids";
 
 export const Route = createFileRoute("/custom-session")({
   component: CustomSessionBuilderPage,
@@ -85,13 +86,17 @@ const LIBRARY_CATEGORIES = ["All", ...Array.from(new Set(LIBRARY.map((d) => d.ca
 
 // ─── Builder block ────────────────────────────────────────────────────────────
 
-interface BuilderBlock {
-  key: string;
+interface BlockValue {
   club: string;
   group?: ClubGroup;
   balls: number;
   focus: string;
   tip: string;
+  aid: string;
+}
+
+interface BuilderBlock extends BlockValue {
+  key: string;
 }
 
 function newKey() {
@@ -115,6 +120,7 @@ function toDrills(blocks: BuilderBlock[]): SessionDrill[] {
     balls: b.balls,
     unit: "balls",
     section: sectionFor(b.group),
+    ...(b.aid ? { aid: b.aid } : {}),
   }));
 }
 
@@ -126,29 +132,49 @@ export default function CustomSessionBuilderPage() {
   const [blocks, setBlocks] = useState<BuilderBlock[]>([]);
   const [bag, setBag] = useState<Club[]>([]);
   const clubs = useMemo(() => clubOptions(bag), [bag]);
-  const [pickClub, setPickClub] = useState<string | null>(null);
-  const [pickBalls, setPickBalls] = useState(5);
+  const [aids, setAids] = useState<string[]>(loadCachedAids);
+  // The block being set up in the panel. Club and balls stay for the next
+  // block; focus, tip and aid clear after each Add.
+  const [draft, setDraft] = useState<BlockValue>({ club: ANY_CLUB, balls: 5, focus: "", tip: "", aid: "" });
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchPlayableBag().then(setBag).catch(() => {});
+    fetchTrainingAids().then(setAids).catch(() => {});
   }, []);
 
   const totalBalls = blocks.reduce((s, b) => s + b.balls, 0);
   const canPreview = name.trim().length > 0 && blocks.length > 0;
 
-  const groupOf = (club: string) => clubs.find((c) => c.name === club)?.group;
-
-  const addBlock = () => {
-    const club = pickClub ?? ANY_CLUB;
-    setBlocks((prev) => [...prev, { key: newKey(), club, group: groupOf(club), balls: pickBalls, focus: "", tip: "" }]);
+  const addAid = async (aidName: string) => {
+    const clean = cleanAidName(aidName);
+    if (!clean) return null;
+    const existing = aids.find((a) => a.toLowerCase() === clean.toLowerCase());
+    if (existing) return existing;
+    setAids((prev) => [...prev, clean]);
+    try {
+      setAids(await addTrainingAid(aids, clean));
+    } catch {
+      toast.error("Couldn't save that aid to My aids, but it's on this block.");
+    }
+    return clean;
   };
 
-  const update = (key: string, patch: Partial<BuilderBlock>) =>
+  const addBlock = () => {
+    setBlocks((prev) => [...prev, { ...draft, key: newKey() }]);
+    setDraft((d) => ({ ...d, focus: "", tip: "", aid: "" }));
+    setEditingKey(null);
+  };
+
+  const update = (key: string, patch: Partial<BlockValue>) =>
     setBlocks((prev) => prev.map((b) => (b.key === key ? { ...b, ...patch } : b)));
 
-  const remove = (key: string) => setBlocks((prev) => prev.filter((b) => b.key !== key));
+  const remove = (key: string) => {
+    setBlocks((prev) => prev.filter((b) => b.key !== key));
+    setEditingKey(null);
+  };
 
   const move = (index: number, dir: -1 | 1) =>
     setBlocks((prev) => {
@@ -171,6 +197,8 @@ export default function CustomSessionBuilderPage() {
       setSaving(false);
     }
   };
+
+  const draftClubLabel = draft.club === ANY_CLUB ? "any club" : draft.club;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -212,80 +240,72 @@ export default function CustomSessionBuilderPage() {
           )}
         </div>
 
-        {/* Blocks */}
-        <div className="mt-4 space-y-3">
-          {blocks.length === 0 && (
-            <div className="rounded-[16px] border-2 border-dashed border-border px-4 py-6 text-center">
-              <p className="text-[15px] font-semibold">No blocks yet</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">Pick a club and a ball count below, then tap Add.</p>
-            </div>
-          )}
-          {blocks.map((b, i) => (
-            <BlockCard
-              key={b.key}
-              block={b}
-              index={i}
-              count={blocks.length}
-              clubs={clubs}
-              onChange={(patch) => update(b.key, patch)}
-              onRemove={() => remove(b.key)}
-              onMove={(dir) => move(i, dir)}
-            />
-          ))}
-        </div>
-
-        {/* Add bar */}
-        <div className="mt-4 rounded-[16px] border border-border bg-card px-4 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Add a block</p>
-
-          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Club</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {[...clubs.map((c) => ({ name: c.name, short: c.short })), { name: ANY_CLUB, short: "Any" }].map((c) => (
-              <button
-                key={c.name}
-                type="button"
-                onClick={() => setPickClub(c.name)}
-                aria-pressed={(pickClub ?? ANY_CLUB) === c.name}
-                className={cn(
-                  "h-9 min-w-[44px] rounded-full border px-3 text-[13px] font-bold transition-colors",
-                  (pickClub ?? ANY_CLUB) === c.name
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-foreground active:bg-muted",
-                )}
-              >
-                {c.short}
-              </button>
-            ))}
+        {/* Added blocks: compact rows, tap to edit */}
+        {blocks.length > 0 && (
+          <div className="mt-4 rounded-[16px] border border-border bg-card divide-y divide-border">
+            {blocks.map((b, i) =>
+              editingKey === b.key ? (
+                <div key={b.key} className="px-4 py-4">
+                  <div className="flex items-center gap-1">
+                    <p className="flex-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                      Editing block {i + 1}
+                    </p>
+                    <button type="button" aria-label="Move block up" disabled={i === 0} onClick={() => move(i, -1)} className="p-1.5 text-muted-foreground disabled:opacity-25">
+                      <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button type="button" aria-label="Move block down" disabled={i === blocks.length - 1} onClick={() => move(i, 1)} className="p-1.5 text-muted-foreground disabled:opacity-25">
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+                    <button type="button" aria-label="Remove block" onClick={() => remove(b.key)} className="p-1.5 text-muted-foreground active:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <BlockFields value={b} clubs={clubs} aids={aids} onAddAid={addAid} onChange={(patch) => update(b.key, patch)} />
+                  <button
+                    type="button"
+                    onClick={() => setEditingKey(null)}
+                    className="mt-4 h-11 w-full rounded-[12px] border border-border bg-background text-[14px] font-bold active:bg-muted"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <button
+                  key={b.key}
+                  type="button"
+                  onClick={() => setEditingKey(b.key)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-muted"
+                >
+                  <span className="w-5 shrink-0 font-stats text-[17px] tabular-nums text-muted-foreground">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <p className="truncate text-[15px] font-bold">{b.club}</p>
+                      <p className="shrink-0 text-[13px] font-semibold text-muted-foreground tabular-nums">{b.balls} {b.balls === 1 ? "ball" : "balls"}</p>
+                    </div>
+                    <p className="truncate text-[13px] text-muted-foreground">
+                      {b.focus.trim() || "Hit to a target"}{b.aid ? ` · ${b.aid}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ),
+            )}
           </div>
+        )}
 
-          <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Balls</p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {BALL_CHIPS.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setPickBalls(n)}
-                aria-pressed={pickBalls === n}
-                className={cn(
-                  "h-9 w-11 rounded-full border text-[14px] font-bold tabular-nums transition-colors",
-                  pickBalls === n
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-foreground active:bg-muted",
-                )}
-              >
-                {n}
-              </button>
-            ))}
-            <Stepper value={pickBalls} onChange={setPickBalls} label="Balls to add" />
-          </div>
-
+        {/* New block panel: set it all up, then add */}
+        <div className="mt-4 rounded-[16px] border-2 border-primary/40 bg-card px-4 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            {blocks.length === 0 ? "First block" : `Block ${blocks.length + 1}`}
+          </p>
+          <BlockFields key={blocks.length} value={draft} clubs={clubs} aids={aids} onAddAid={addAid} onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))} chips />
           <button
             type="button"
             onClick={addBlock}
             className="mt-4 h-12 w-full rounded-[12px] bg-primary text-primary-foreground text-[14px] font-bold active:opacity-90 flex items-center justify-center gap-2"
           >
             <Plus className="h-4 w-4" />
-            Add {pickBalls} ball{pickBalls !== 1 ? "s" : ""} with {(pickClub ?? ANY_CLUB) === ANY_CLUB ? "any club" : pickClub}
+            Add {draft.balls} ball{draft.balls !== 1 ? "s" : ""} with {draftClubLabel}
           </button>
         </div>
       </div>
@@ -354,110 +374,193 @@ function Stepper({ value, onChange, label }: { value: number; onChange: (n: numb
   );
 }
 
-// ─── Block card ───────────────────────────────────────────────────────────────
+// ─── Block fields (new block panel and editing a block) ───────────────────────
 
-function BlockCard({
-  block,
-  index,
-  count,
+function Chip({ active, onClick, children, label }: { active: boolean; onClick: () => void; children: React.ReactNode; label?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={label}
+      className={cn(
+        "h-9 min-w-[44px] rounded-full border px-3 text-[13px] font-bold tabular-nums transition-colors",
+        active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-foreground active:bg-muted",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BlockFields({
+  value,
   clubs,
+  aids,
   onChange,
-  onRemove,
-  onMove,
+  onAddAid,
+  chips = false,
 }: {
-  block: BuilderBlock;
-  index: number;
-  count: number;
+  value: BlockValue;
   clubs: ClubOption[];
-  onChange: (patch: Partial<BuilderBlock>) => void;
-  onRemove: () => void;
-  onMove: (dir: -1 | 1) => void;
+  aids: string[];
+  onChange: (patch: Partial<BlockValue>) => void;
+  onAddAid: (name: string) => Promise<string | null>;
+  chips?: boolean; // big club and ball chips in the new block panel
 }) {
-  const [tipOpen, setTipOpen] = useState(block.tip.length > 0);
-  const [drillsOpen, setDrillsOpen] = useState(false);
+  const [tipOpen, setTipOpen] = useState(value.tip.length > 0);
+  const [panel, setPanel] = useState<"none" | "drills" | "aids">("none");
+  const [newAid, setNewAid] = useState("");
+
+  const setClub = (club: string) => onChange({ club, group: clubs.find((c) => c.name === club)?.group });
 
   const pickDrill = (d: LibraryDrill) => {
-    const tip = (block.group && d.clubTips?.[block.group]) || d.tip;
+    const tip = (value.group && d.clubTips?.[value.group]) || d.tip;
     onChange({ focus: d.name, tip });
     setTipOpen(true);
-    setDrillsOpen(false);
+    setPanel("none");
+  };
+
+  const saveNewAid = async () => {
+    const added = await onAddAid(newAid);
+    if (added) onChange({ aid: added });
+    setNewAid("");
+    setPanel("none");
   };
 
   return (
-    <div className="rounded-[16px] border border-border bg-card px-4 py-3.5">
-      {/* Top row */}
-      <div className="flex items-center gap-1">
-        <p className="flex-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          {index + 1} · {sectionFor(block.group)}
-        </p>
-        <button type="button" aria-label="Move block up" disabled={index === 0} onClick={() => onMove(-1)} className="p-1.5 text-muted-foreground disabled:opacity-25">
-          <ChevronUp className="h-4 w-4" />
-        </button>
-        <button type="button" aria-label="Move block down" disabled={index === count - 1} onClick={() => onMove(1)} className="p-1.5 text-muted-foreground disabled:opacity-25">
-          <ChevronDown className="h-4 w-4" />
-        </button>
-        <button type="button" aria-label="Remove block" onClick={onRemove} className="p-1.5 -mr-1.5 text-muted-foreground active:text-destructive">
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Club and balls */}
-      <div className="mt-2 flex items-center gap-3">
-        <select
-          aria-label="Club"
-          value={block.club}
-          onChange={(e) => onChange({ club: e.target.value, group: clubs.find((c) => c.name === e.target.value)?.group })}
-          className="min-w-0 flex-1 h-9 rounded-[10px] border border-border bg-background px-2.5 text-[15px] font-bold outline-none"
-        >
-          {!clubs.some((c) => c.name === block.club) && block.club !== ANY_CLUB && <option value={block.club}>{block.club}</option>}
-          {clubs.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
-          <option value={ANY_CLUB}>{ANY_CLUB}</option>
-        </select>
-        <Stepper value={block.balls} onChange={(n) => onChange({ balls: n })} label="Balls" />
-      </div>
+    <div>
+      {/* Club */}
+      {chips ? (
+        <>
+          <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Club</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {clubs.map((c) => (
+              <Chip key={c.name} active={value.club === c.name} onClick={() => setClub(c.name)} label={c.name}>{c.short}</Chip>
+            ))}
+            <Chip active={value.club === ANY_CLUB} onClick={() => setClub(ANY_CLUB)} label={ANY_CLUB}>Any</Chip>
+          </div>
+          <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Balls</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {BALL_CHIPS.map((n) => (
+              <Chip key={n} active={value.balls === n} onClick={() => onChange({ balls: n })}>{n}</Chip>
+            ))}
+            <Stepper value={value.balls} onChange={(n) => onChange({ balls: n })} label="Balls" />
+          </div>
+        </>
+      ) : (
+        <div className="mt-2 flex items-center gap-3">
+          <select
+            aria-label="Club"
+            value={value.club}
+            onChange={(e) => setClub(e.target.value)}
+            className="min-w-0 flex-1 h-9 rounded-[10px] border border-border bg-background px-2.5 text-[15px] font-bold outline-none"
+          >
+            {!clubs.some((c) => c.name === value.club) && value.club !== ANY_CLUB && <option value={value.club}>{value.club}</option>}
+            {clubs.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+            <option value={ANY_CLUB}>{ANY_CLUB}</option>
+          </select>
+          <Stepper value={value.balls} onChange={(n) => onChange({ balls: n })} label="Balls" />
+        </div>
+      )}
 
       {/* Focus */}
+      <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Focus</p>
       <input
         type="text"
         aria-label="Focus"
-        value={block.focus}
+        value={value.focus}
         onChange={(e) => onChange({ focus: e.target.value })}
-        placeholder="Focus, e.g. Start it at the flag"
+        placeholder="e.g. Start it at the flag"
         maxLength={200}
-        className="mt-3 w-full bg-transparent outline-none text-[15px] font-semibold placeholder:font-normal placeholder:text-muted-foreground/50"
+        className="mt-1.5 h-10 w-full rounded-[10px] border border-border bg-background px-3 text-[15px] font-semibold outline-none focus:border-primary placeholder:font-normal placeholder:text-muted-foreground/50"
       />
 
       {/* Tip */}
-      {tipOpen ? (
+      {tipOpen && (
         <textarea
           aria-label="Tip"
-          value={block.tip}
+          value={value.tip}
           onChange={(e) => onChange({ tip: e.target.value })}
           placeholder="Tip: how to do it, or what to feel"
           rows={4}
           maxLength={600}
           className="mt-2 w-full resize-y rounded-[10px] border border-border bg-background px-3 py-2 text-[14px] leading-snug outline-none focus:border-primary placeholder:text-muted-foreground/50"
         />
-      ) : null}
+      )}
 
-      <div className="mt-2 flex items-center gap-4">
+      {/* Aid on this block */}
+      {value.aid && (
+        <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary/40 bg-background pl-3 pr-1 py-1 text-[13px] font-semibold text-primary">
+          Aid: {value.aid}
+          <button type="button" aria-label="Remove aid from this block" onClick={() => onChange({ aid: "" })} className="rounded-full p-1">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Extras */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-4">
         {!tipOpen && (
-          <button type="button" onClick={() => setTipOpen(true)} className="text-[13px] font-semibold text-primary py-1">
+          <button type="button" onClick={() => setTipOpen(true)} className="text-[13px] font-semibold text-primary py-1.5">
             + Add a tip
           </button>
         )}
         <button
           type="button"
-          onClick={() => setDrillsOpen((o) => !o)}
-          aria-expanded={drillsOpen}
-          className="text-[13px] font-semibold text-primary py-1 inline-flex items-center gap-1"
+          onClick={() => setPanel((p) => (p === "drills" ? "none" : "drills"))}
+          aria-expanded={panel === "drills"}
+          className="text-[13px] font-semibold text-primary py-1.5 inline-flex items-center gap-1"
         >
-          {drillsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          {panel === "drills" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           Browse drills
+        </button>
+        <button
+          type="button"
+          onClick={() => setPanel((p) => (p === "aids" ? "none" : "aids"))}
+          aria-expanded={panel === "aids"}
+          className="text-[13px] font-semibold text-primary py-1.5 inline-flex items-center gap-1"
+        >
+          {panel === "aids" ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          Training aid
         </button>
       </div>
 
-      {drillsOpen && <DrillBrowser onPick={pickDrill} onClose={() => setDrillsOpen(false)} />}
+      {panel === "drills" && <DrillBrowser onPick={pickDrill} onClose={() => setPanel("none")} />}
+
+      {panel === "aids" && (
+        <div className="mt-2 rounded-[12px] border border-border bg-background p-3">
+          {aids.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {aids.map((a) => (
+                <Chip key={a} active={value.aid === a} onClick={() => { onChange({ aid: value.aid === a ? "" : a }); setPanel("none"); }}>{a}</Chip>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[13px] text-muted-foreground">No aids yet. Add one you own and it's saved to My aids in your bag.</p>
+          )}
+          <div className="mt-2.5 flex gap-2">
+            <input
+              type="text"
+              aria-label="New training aid"
+              value={newAid}
+              onChange={(e) => setNewAid(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveNewAid(); }}
+              placeholder="New aid, e.g. Alignment sticks"
+              maxLength={MAX_AID_LENGTH}
+              className="h-9 min-w-0 flex-1 rounded-[10px] border border-border bg-card px-3 text-[14px] outline-none focus:border-primary"
+            />
+            <button
+              type="button"
+              onClick={saveNewAid}
+              disabled={!newAid.trim()}
+              className="h-9 shrink-0 rounded-[10px] bg-primary px-3 text-[13px] font-bold text-primary-foreground disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -576,6 +679,7 @@ function PreviewSheet({
                   </p>
                 </div>
                 <p className="mt-0.5 text-[14px]">{b.focus.trim() || "Hit to a target"}</p>
+                {b.aid && <p className="mt-0.5 text-[12.5px] font-semibold text-primary">Aid: {b.aid}</p>}
                 {b.tip.trim() && <p className="mt-1 text-[13px] text-muted-foreground leading-snug">{b.tip.trim()}</p>}
               </div>
             </li>

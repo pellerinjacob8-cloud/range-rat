@@ -92,6 +92,7 @@ function SharedSessionPage() {
                       </p>
                     </div>
                     <p className="mt-0.5 text-[14px] text-muted-foreground">{b.cue}</p>
+                    {b.aid && <p className="mt-0.5 text-[12.5px] font-semibold text-primary">Aid: {b.aid}</p>}
                   </div>
                 </li>
               ))}

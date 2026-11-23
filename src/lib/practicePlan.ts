@@ -27,6 +27,7 @@ export interface PracticeBlock {
   unit: string;      // "balls" for normal blocks; legacy saved items may use "min"
   cue: string;
   detail?: string;
+  aid?: string;      // training aid for this block, typed by the golfer
   forYou?: boolean;  // added or boosted by Built for you or practice balance
   area?: PracticeAreaKey;
 }
@@ -504,6 +505,7 @@ export function blocksToDrills(blocks: PracticeBlock[]): SessionDrill[] {
     unit: b.unit,
     type: "drill",
     section: b.section,
+    ...(b.aid ? { aid: b.aid } : {}),
   }));
 }
 
@@ -528,6 +530,7 @@ export function drillsToBlocks(drills: SessionDrill[]): PracticeBlock[] {
       unit: d.unit ?? "balls",
       cue: d.drillName || "Hit to a target",
       detail: d.description || undefined,
+      ...(d.aid ? { aid: d.aid } : {}),
     };
   });
 }
