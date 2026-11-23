@@ -161,7 +161,7 @@ function OnboardingBag() {
         <h1 className="mt-2 font-display text-[38px] leading-[1.0] tracking-[-0.01em]">
           What's in<br />your bag?
         </h1>
-        <p className="mt-3 text-[13.5px] text-muted-foreground">Select the clubs you carry. Add brands and models anytime in Profile, then Your Bag.</p>
+        <p className="mt-3 text-[13.5px] text-muted-foreground">Select the clubs you carry. Add brands and models anytime in Profile, then Bag & training aids.</p>
       </div>
 
       <div className="mt-6 space-y-5 overflow-y-auto pb-4">
