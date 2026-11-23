@@ -4,6 +4,7 @@ import { ProModal } from "@/components/ProModal";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { BarChart2, Briefcase, Check, ChevronDown, ChevronLeft, ChevronRight, Crown, Flag, LogOut, Moon, Pencil, Plus, Ruler, Settings, Sun, Target, Trash2, X, Zap } from "lucide-react";
+import { TrainingAidsSection } from "@/components/TrainingAidsSection";
 import { AppShell } from "@/components/AppShell";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/context/ThemeContext";
@@ -299,6 +300,7 @@ function ProfilePage() {
           <h1 className="font-display text-[32px] mb-1">Your Bag</h1>
           <p className="text-[13.5px] text-muted-foreground mb-6">These are the clubs you picked. Tap the pencil on any club to add its brand and model.</p>
           <BagSection />
+          <TrainingAidsSection />
         </div>
       </AppShell>
     );
