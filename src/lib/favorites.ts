@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import type { GenerateInput, SessionDrill } from "./drills";
 import { fetchFavorites, insertFavorite, insertCustomSession, removeFavorite } from "./db";
+import { supabase } from "./supabase";
 
 export const FAVORITES_KEY = "range-rat:favorites";
 export const FREE_LIMIT = 1;
@@ -42,6 +43,8 @@ export function saveCustomSession(name: string, drills: SessionDrill[]): Favorit
 // Same as saveCustomSession, but waits for the save and throws if it fails,
 // so the builder can stay open and keep the user's work.
 export async function saveCustomSessionAsync(name: string, drills: SessionDrill[]): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not signed in");
   const fav: Favorite = {
     id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     name: name.trim(),
