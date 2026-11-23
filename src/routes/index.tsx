@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
-import { ChevronRight, Flag, Ruler, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
+import { Check, ChevronRight, Flag, Ruler, Flame, RotateCcw, Shuffle, Target, Trophy, X, Zap, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { loadProfileName } from "@/lib/profile";
 import { loadActiveMarker, clearActiveSession } from "@/lib/active-session";
 import { useAuth } from "@/context/AuthContext";
 import { ProModal } from "@/components/ProModal";
-import { fetchSessions } from "@/lib/db";
+import { fetchPlayableBag, fetchSessions, fetchYardages } from "@/lib/db";
+import { fetchTrainingAids } from "@/lib/trainingAids";
 import { loadCombineAttempts } from "@/lib/combine";
 
 export const Route = createFileRoute("/")({
@@ -101,6 +102,19 @@ function Home() {
   }, []);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  // Finish your setup: which of bag, yardages and training aids are saved.
+  // null until all three load; a failed load just hides the card.
+  const [setup, setSetup] = useState<{ bag: boolean; yardages: boolean; aids: boolean } | null>(null);
+  useEffect(() => {
+    Promise.all([fetchPlayableBag(), fetchYardages(), fetchTrainingAids()])
+      .then(([bag, yardages, aids]) => setSetup({
+        bag: bag.length > 0,
+        yardages: Object.values(yardages).some((y) => y.halfSwing != null || y.threeQuarterSwing != null || y.fullSwing != null),
+        aids: aids.length > 0,
+      }))
+      .catch(() => {});
+  }, []);
 
   const dismissResume = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -221,6 +235,11 @@ function Home() {
         </div>
       )}
 
+      {/* Finish your setup: after the first session, until bag, yardages and aids are all saved */}
+      {statsStatus === "ready" && hasHistory && setup && !(setup.bag && setup.yardages && setup.aids) && (
+        <SetupCard setup={setup} />
+      )}
+
       {/* Train section */}
       <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
         Train
@@ -321,5 +340,50 @@ function ProNavCard({ to, title, subtitle, Icon, isPro, onLock }: NavCardProps &
         <span className="text-[10px] font-bold text-gold uppercase tracking-wide">Pro</span>
       </div>
     </button>
+  );
+}
+
+// ─── Finish your setup ───────────────────────────────────────────────────────
+
+function SetupCard({ setup }: { setup: { bag: boolean; yardages: boolean; aids: boolean } }) {
+  const navigate = useNavigate();
+  const items = [
+    { key: "bag", done: setup.bag, label: "Your bag", why: "Sessions use the clubs you carry", go: () => navigate({ to: "/profile", search: { view: "bag" } }) },
+    { key: "yardages", done: setup.yardages, label: "Club yardages", why: "Sharper wedge targets in practice", go: () => navigate({ to: "/profile", search: { view: "yardage" } }) },
+    { key: "aids", done: setup.aids, label: "Training aids", why: "Add them to your sessions", go: () => navigate({ to: "/profile", search: { view: "bag" }, hash: "training-aids" }) },
+  ];
+  const doneCount = items.filter((i) => i.done).length;
+
+  return (
+    <div className="mt-4 rounded-[22px] border border-border bg-card overflow-hidden">
+      <div className="flex items-baseline justify-between px-4 pt-3.5 pb-2">
+        <p className="text-[15px] font-bold">Finish your setup</p>
+        <p className="text-[12.5px] font-semibold text-muted-foreground tabular-nums">{doneCount} of {items.length} done</p>
+      </div>
+      {items.map((i) =>
+        i.done ? (
+          <div key={i.key} className="flex items-center gap-3 px-4 py-2.5 border-t border-border">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Check className="h-3.5 w-3.5" />
+            </span>
+            <p className="text-[14px] font-semibold text-muted-foreground line-through decoration-muted-foreground/40">{i.label}</p>
+          </div>
+        ) : (
+          <button
+            key={i.key}
+            type="button"
+            onClick={i.go}
+            className="flex w-full items-center gap-3 px-4 py-2.5 border-t border-border text-left active:bg-muted transition-colors"
+          >
+            <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold">{i.label}</p>
+              <p className="text-[12.5px] text-muted-foreground">{i.why}</p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </button>
+        ),
+      )}
+    </div>
   );
 }
