@@ -11,6 +11,10 @@ export function TrainingAidsSection() {
 
   useEffect(() => {
     fetchTrainingAids().then(setAids).catch(() => {});
+    // Opened from Home's Finish your setup card
+    if (window.location.hash === "#training-aids") {
+      setTimeout(() => document.getElementById("training-aids")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+    }
   }, []);
 
   const persist = (next: string[]) => {
@@ -27,7 +31,7 @@ export function TrainingAidsSection() {
   };
 
   return (
-    <section className="mt-10">
+    <section id="training-aids" className="mt-10 scroll-mt-6">
       <h2 className="font-display text-[26px] leading-tight">Training Aids</h2>
       <p className="mt-1 text-[13.5px] text-muted-foreground">
         Add the aids you own, like alignment sticks or impact tape. When you build a session, you can put one on any block.
