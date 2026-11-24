@@ -185,13 +185,18 @@ export default function CustomSessionBuilderPage() {
       return next;
     });
 
-  const save = async () => {
+  // Save lands on My Sessions with the new session there; Save & Run starts it.
+  const save = async (andRun: boolean) => {
     if (!canPreview || saving) return;
     setSaving(true);
     try {
-      await saveCustomSessionAsync(name.trim(), toDrills(blocks));
-      toast.success("Session saved to My Sessions.");
-      navigate({ to: "/practice" });
+      const fav = await saveCustomSessionAsync(name.trim(), toDrills(blocks));
+      if (andRun) {
+        navigate({ to: "/practice", search: { run: fav.id } });
+      } else {
+        toast.success("Session saved to My Sessions.");
+        navigate({ to: "/practice", search: { open: "mine" } });
+      }
     } catch {
       toast.error("Couldn't save the session. Your blocks are still here, so try again.");
       setSaving(false);
@@ -647,7 +652,7 @@ function PreviewSheet({
   totalBalls: number;
   saving: boolean;
   onBack: () => void;
-  onSave: () => void;
+  onSave: (andRun: boolean) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -691,7 +696,7 @@ function PreviewSheet({
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
-          onClick={onSave}
+          onClick={() => onSave(true)}
           disabled={saving}
           className="h-14 w-full rounded-[14px] bg-primary text-primary-foreground font-bold text-[14px] uppercase tracking-[0.06em] disabled:opacity-60 active:opacity-90"
         >
@@ -700,7 +705,15 @@ function PreviewSheet({
               <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
               Saving
             </span>
-          ) : "Save Session"}
+          ) : "Save & Run"}
+        </button>
+        <button
+          type="button"
+          onClick={() => onSave(false)}
+          disabled={saving}
+          className="mt-2 h-12 w-full rounded-[14px] border border-border bg-card text-[14px] font-bold uppercase tracking-[0.06em] text-foreground disabled:opacity-60 active:bg-muted"
+        >
+          Save
         </button>
       </div>
     </div>
