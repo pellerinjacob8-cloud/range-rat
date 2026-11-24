@@ -42,7 +42,7 @@ export function saveCustomSession(name: string, drills: SessionDrill[]): Favorit
 
 // Same as saveCustomSession, but waits for the save and throws if it fails,
 // so the builder can stay open and keep the user's work.
-export async function saveCustomSessionAsync(name: string, drills: SessionDrill[]): Promise<void> {
+export async function saveCustomSessionAsync(name: string, drills: SessionDrill[]): Promise<Favorite> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error("Not signed in");
   const fav: Favorite = {
@@ -53,6 +53,7 @@ export async function saveCustomSessionAsync(name: string, drills: SessionDrill[
     createdAt: Date.now(),
   };
   await insertCustomSession(fav);
+  return fav;
 }
 
 export function deleteFavorite(id: string) {

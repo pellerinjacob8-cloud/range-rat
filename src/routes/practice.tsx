@@ -70,6 +70,9 @@ export const Route = createFileRoute("/practice")({
     upgraded: search.upgraded === "true" ? true : undefined,
     start: search.start === "quick" ? ("quick" as const) : undefined,
     shared: typeof search.shared === "string" && SHARE_CODE_RE.test(search.shared) ? search.shared : undefined,
+    // From the session builder: run a just-saved custom session, or open My Sessions
+    run: typeof search.run === "string" && /^custom-[\w-]{1,40}$/.test(search.run) ? search.run : undefined,
+    open: search.open === "mine" ? ("mine" as const) : undefined,
   }),
   head: () => ({
     meta: [
@@ -284,7 +287,7 @@ const FOCUS_LABEL: Record<PlanFocus, string> = {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 function PracticePage() {
-  const { upgraded, start, shared } = Route.useSearch();
+  const { upgraded, start, shared, run: runId, open } = Route.useSearch();
   const { isPro } = useAuth();
   const navigate = useNavigate();
   const [showUpgradedModal, setShowUpgradedModal] = useState(!!upgraded);
@@ -412,7 +415,8 @@ function PracticePage() {
     setAreaView("picker");
   };
 
-  const reloadFavorites = () => loadFavoritesAsync().then(setFavorites);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const reloadFavorites = () => loadFavoritesAsync().then((f) => { setFavorites(f); setFavoritesLoaded(true); });
 
   useEffect(() => {
     reloadFavorites();
@@ -422,6 +426,26 @@ function PracticePage() {
 
   const autoFavorites = favorites.filter((f) => f.sessionInput !== null);
   const customSessions = favorites.filter((f) => f.sessionInput === null);
+
+  // From the session builder: ?open=mine shows My Sessions; ?run=<id> starts
+  // the session just saved (unless one is already in progress). Params are
+  // cleared once handled so a refresh doesn't repeat it.
+  const builderHandled = useRef(false);
+  useEffect(() => {
+    if ((!runId && !open) || builderHandled.current) return;
+    if (runId && !favoritesLoaded) return;
+    builderHandled.current = true;
+    setAreaView("range");
+    setPracticeTab("mine");
+    if (runId) {
+      const fav = favorites.find((f) => f.id === runId);
+      if (fav && !run && !(puttingConfig && puttingStations.length > 0)) startFavorite(fav, "custom");
+      else if (!fav) toast.error("Couldn't open that session. It's in My Sessions.");
+      else toast("Finish or end the session you're in first. Your new session is in My Sessions.");
+    }
+    navigate({ to: "/practice", search: {}, replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId, open, favoritesLoaded, favorites]);
 
   // Persist the active range run whenever it moves
   useEffect(() => {
