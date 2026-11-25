@@ -3,6 +3,7 @@ import { Check, X, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { track } from "@/lib/trackEvent";
+import { foundingPrice, foundingSpots, foundingTerm, useFoundingOffer } from "@/lib/foundingOffer";
 
 const PERKS = [
   "Practice sessions built from your last round",
@@ -26,6 +27,7 @@ export function ProModal({ open, onClose, reason, feature }: ProModalProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { pathname } = useLocation();
+  const founding = useFoundingOffer();
 
   useEffect(() => {
     if (open) track("paywall_viewed", { feature: feature ?? pathname });
@@ -92,9 +94,16 @@ export function ProModal({ open, onClose, reason, feature }: ProModalProps) {
           Upgrade to Pro
         </button>
 
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          $49.99/yr <span className="font-semibold text-gold">(save 17%)</span> or $4.99/mo. Cancel anytime.
-        </p>
+        {founding ? (
+          <p className="mt-3 text-center text-[12px] text-muted-foreground">
+            <span className="font-semibold text-gold">Founding member: {foundingPrice(founding)}/mo {foundingTerm(founding)}.</span>
+            {foundingSpots(founding) ? ` ${foundingSpots(founding)}.` : ""} Cancel anytime.
+          </p>
+        ) : (
+          <p className="mt-3 text-center text-[11px] text-muted-foreground">
+            $49.99/yr <span className="font-semibold text-gold">(save 17%)</span> or $4.99/mo. Cancel anytime.
+          </p>
+        )}
       </div>
     </div>
   );
