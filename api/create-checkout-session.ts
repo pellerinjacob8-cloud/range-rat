@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "http";
 import { ensureSentry, Sentry } from "./_sentry.js";
 import { getStripe, getSupabaseAdmin, missingEnv } from "./_config.js";
+import { getFoundingOffer } from "./_founding.js";
 
 // Only these prices may ever be purchased. A caller cannot pass an arbitrary
 // price ID from your Stripe account.
@@ -74,11 +75,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userEmail = user.email;
 
     const appUrl = process.env.VITE_APP_URL || "https://www.rangeratapp.com";
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      payment_method_types: ["card"],
+    const base = {
+      mode: "subscription" as const,
+      payment_method_types: ["card" as const],
       line_items: [{ price: priceId, quantity: 1 }],
-      allow_promotion_codes: true,
       subscription_data: {
         metadata: { userId },
       },
@@ -86,7 +86,27 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       customer_email: userEmail,
       success_url: `${appUrl}/pro-welcome`,
       cancel_url: `${appUrl}/upgrade`,
-    });
+    };
+
+    // Monthly checkout gets the founding coupon while spots are open. Stripe
+    // won't take a set discount and the promo code box together, so the box
+    // only shows when no founding discount applies.
+    const founding = priceId === process.env.VITE_STRIPE_MONTHLY_PRICE_ID
+      ? await getFoundingOffer(stripe)
+      : { open: false as const };
+
+    let session;
+    if (founding.open && founding.couponId) {
+      try {
+        session = await stripe.checkout.sessions.create({ ...base, discounts: [{ coupon: founding.couponId }] });
+      } catch (err) {
+        // The last spot may have just been taken; fall back to full price.
+        console.error("Founding coupon not applied:", err);
+      }
+    }
+    if (!session) {
+      session = await stripe.checkout.sessions.create({ ...base, allow_promotion_codes: true });
+    }
 
     res.writeHead(200);
     res.end(JSON.stringify({ url: session.url }));

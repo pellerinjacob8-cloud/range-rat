@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
 import { track } from "@/lib/trackEvent";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, ChevronLeft, Zap } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { startCheckout, PRICES } from "@/lib/stripe";
+import { foundingPrice, foundingSpots, foundingTerm, useFoundingOffer } from "@/lib/foundingOffer";
 
 export const Route = createFileRoute("/upgrade")({
   component: UpgradePage,
@@ -34,6 +35,14 @@ function UpgradePage() {
   const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const founding = useFoundingOffer();
+  const pickedPlan = useRef(false);
+  const choosePlan = (p: "monthly" | "yearly") => { pickedPlan.current = true; setPlan(p); };
+
+  // While founding spots are open, monthly is the deal, so start there.
+  useEffect(() => {
+    if (founding && !pickedPlan.current) setPlan("monthly");
+  }, [founding]);
 
   const handleUpgrade = async () => {
     if (!user) { navigate({ to: "/login" }); return; }
@@ -111,23 +120,48 @@ function UpgradePage() {
         ))}
       </div>
 
+      {/* Founding member offer */}
+      {founding && (
+        <div className="mt-8 rounded-[16px] border border-gold-border bg-gold-bg px-4 py-3.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gold">Founding member</p>
+          <p className="mt-1 text-[14.5px] font-bold leading-snug">
+            {foundingPrice(founding)}/mo {foundingTerm(founding)}
+          </p>
+          <p className="mt-0.5 text-[13px] text-muted-foreground leading-snug">
+            Applied at checkout, no code needed.{foundingSpots(founding) ? ` ${foundingSpots(founding)}.` : ""}
+          </p>
+        </div>
+      )}
+
       {/* Plan toggle */}
-      <div className="mt-8 grid grid-cols-2 gap-2.5">
+      <div className={`${founding ? "mt-5" : "mt-8"} grid grid-cols-2 gap-2.5`}>
         <button
-          onClick={() => setPlan("monthly")}
-          className={`rounded-[16px] border p-4 text-left transition-all ${
+          onClick={() => choosePlan("monthly")}
+          className={`rounded-[16px] border p-4 text-left transition-all relative ${
             plan === "monthly"
               ? "border-primary bg-primary/5"
               : "border-border bg-card"
           }`}
         >
+          {founding && (
+            <div className="absolute -top-2.5 right-3 bg-gold text-white text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full">
+              Founding
+            </div>
+          )}
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground mb-1">Monthly</p>
-          <p className="font-display text-[28px] leading-none">$4.99</p>
+          {founding ? (
+            <p className="font-display text-[28px] leading-none">
+              {foundingPrice(founding)}{" "}
+              <span className="text-[15px] text-muted-foreground line-through">$4.99</span>
+            </p>
+          ) : (
+            <p className="font-display text-[28px] leading-none">$4.99</p>
+          )}
           <p className="text-[12px] text-muted-foreground mt-1">per month</p>
         </button>
 
         <button
-          onClick={() => setPlan("yearly")}
+          onClick={() => choosePlan("yearly")}
           className={`rounded-[16px] border p-4 text-left transition-all relative ${
             plan === "yearly"
               ? "border-primary bg-primary/5"
@@ -179,7 +213,11 @@ function UpgradePage() {
         </button>
 
         <p className="mt-3 text-center text-[12px] text-muted-foreground">
-          {plan === "monthly" ? "$4.99/mo" : "$49.99/yr"}. Cancel anytime.
+          {plan === "yearly"
+            ? "$49.99/yr"
+            : founding
+              ? `${foundingPrice(founding)}/mo ${foundingTerm(founding)}${founding.months == null ? "" : ", then $4.99/mo"}`
+              : "$4.99/mo"}. Cancel anytime.
         </p>
         <p className="mt-2 text-center text-[11px] leading-relaxed text-muted-foreground">
           By subscribing you agree to our{" "}
